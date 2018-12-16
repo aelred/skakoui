@@ -334,6 +334,8 @@ pub mod bitboards {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::large_digit_groups)] // We have a lot of bitboards which clippy doesn't like
+
     use super::*;
     use crate::PieceType;
     use crate::Player;
@@ -378,20 +380,20 @@ mod tests {
 
     #[test]
     fn can_reset_bit_on_bitboard() {
-        let mut bitboard = Bitboard(0b11000000);
+        let mut bitboard = Bitboard(0b_11000000);
 
         bitboard.reset(Square::H1);
 
-        assert_eq!(bitboard, Bitboard(0b01000000));
+        assert_eq!(bitboard, Bitboard(0b_01000000));
     }
 
     #[test]
     fn can_move_bit_on_bitboard() {
-        let mut bitboard = Bitboard(0b10000001);
+        let mut bitboard = Bitboard(0b_10000001);
 
         bitboard.move_bit(Square::A1, Square::C1);
 
-        assert_eq!(bitboard, Bitboard(0b10000100));
+        assert_eq!(bitboard, Bitboard(0b_10000100));
     }
 
     #[test]
@@ -405,7 +407,7 @@ mod tests {
         assert_eq!(bitboard, Bitboard(0b11111111_01010101_00000000));
 
         bitboard = bitboard.shift_rank_neg(2);
-        assert_eq!(bitboard, Bitboard(0b11111111));
+        assert_eq!(bitboard, Bitboard(0b_11111111));
 
         bitboard = bitboard.shift_rank(8);
         assert_eq!(bitboard, bitboards::EMPTY);
