@@ -138,7 +138,6 @@ impl Board {
         let piece = Piece::new(P::PLAYER, piece_type);
         let positions = *self.bitboard_piece(piece);
 
-        let occupancy = self.occupancy();
         let occupancy_player = self.occupancy_player(P::PLAYER);
 
         positions.squares().flat_map(move |source| {
@@ -156,7 +155,7 @@ fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
     let mut blockers = movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
     blockers.set(Dir::Type::LAST_SQUARE);
-    let blocking_square = Dir::Type::first_square(blockers.squares()).unwrap();
+    let blocking_square = Dir::Type::first_square(&mut blockers.squares()).unwrap();
     movement ^ Dir::bitboard(blocking_square)
 }
 
@@ -243,14 +242,14 @@ impl SlideDirection for SouthWest {
 
 trait SlideDirectionType {
     const LAST_SQUARE: Square;
-    fn first_square(squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square>;
+    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square>;
 }
 
 struct Positive;
 impl SlideDirectionType for Positive {
     const LAST_SQUARE: Square = Square::H8;
 
-    fn first_square(mut squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
+    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
         squares.next()
     }
 }
@@ -259,7 +258,7 @@ struct Negative;
 impl SlideDirectionType for Negative {
     const LAST_SQUARE: Square = Square::A1;
 
-    fn first_square(mut squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
+    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
         squares.rev().next()
     }
 }
