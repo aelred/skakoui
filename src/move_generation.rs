@@ -29,12 +29,12 @@ impl Board {
     fn pawn_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
 
-        let initial_board = self.bitboard_piece(piece);
+        let pawns = self.bitboard_piece(piece);
         let free_spaces = !self.occupancy();
 
-        let bitboard = P::advance_bitboard(initial_board);
+        let pawns_forward = P::advance_bitboard(pawns);
 
-        let pushes = bitboard & free_spaces;
+        let pushes = pawns_forward & free_spaces;
 
         let pushes_iter = pushes.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION);
@@ -51,14 +51,14 @@ impl Board {
 
         let opponent_pieces = self.occupancy_player(P::PLAYER.opponent());
 
-        let captures_east = bitboard.shift_file_neg(1) & opponent_pieces;
+        let captures_east = pawns_forward.shift_file_neg(1) & opponent_pieces;
 
         let captures_east_iter = captures_east.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION).shift_file(1);
             Move::new(piece, source, target)
         });
 
-        let captures_west = bitboard.shift_file(1) & opponent_pieces;
+        let captures_west = pawns_forward.shift_file(1) & opponent_pieces;
 
         let captures_west_iter = captures_west.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION).shift_file(-1);
@@ -73,14 +73,14 @@ impl Board {
 
     fn king_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
         let piece = Piece::new(P::PLAYER, PieceType::King);
-        let bitboard = *self.bitboard_piece(piece);
+        let kings = *self.bitboard_piece(piece);
         let occupancy_player = self.occupancy_player(P::PLAYER);
 
         // Iterate over all kings on the board, although there is only one in a valid game.
         // This means we can handle games with zero or many kings - good for test cases.
-        bitboard.squares().flat_map(move |source| {
-            let mut attacks = bitboard.shift_rank(1) | bitboard.shift_rank_neg(1);
-            let ranks = bitboard | attacks;
+        kings.squares().flat_map(move |source| {
+            let mut attacks = kings.shift_rank(1) | kings.shift_rank_neg(1);
+            let ranks = kings | attacks;
 
             attacks |= ranks.shift_file(1) | ranks.shift_file_neg(1);
 
