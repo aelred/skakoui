@@ -217,6 +217,7 @@ pub mod bitboards {
     use crate::PieceType;
     use crate::Player;
     use crate::Rank;
+    use crate::Square;
     use enum_map::enum_map;
     use enum_map::EnumMap;
     use lazy_static::lazy_static;
@@ -301,6 +302,32 @@ pub mod bitboards {
             [
                 fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
             ]
+        };
+        pub static ref DIAGONALS: EnumMap<File, EnumMap<Rank, Bitboard>> = {
+            EnumMap::from(|file: File| {
+                EnumMap::from(|rank: Rank| {
+                    let sq = Square::new(file, rank).to_index() as isize;
+                    let maindia =
+                        0b_10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001;
+                    let diag = 8 * (sq & 7) - (sq & 56);
+                    let nort = -diag & (diag >> 31);
+                    let sout = diag & (-diag >> 31);
+                    Bitboard((maindia >> sout) << nort)
+                })
+            })
+        };
+        pub static ref ANTIDIAGONALS: EnumMap<File, EnumMap<Rank, Bitboard>> = {
+            EnumMap::from(|file: File| {
+                EnumMap::from(|rank: Rank| {
+                    let sq = Square::new(file, rank).to_index() as isize;
+                    let maindia =
+                        0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000;
+                    let diag = 56 - 8 * (sq & 7) - (sq & 56);
+                    let nort = -diag & (diag >> 31);
+                    let sout = diag & (-diag >> 31);
+                    Bitboard((maindia >> sout) << nort)
+                })
+            })
         };
     }
 }

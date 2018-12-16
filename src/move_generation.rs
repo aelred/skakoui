@@ -23,7 +23,8 @@ impl Board {
             .pawn_moves::<P>()
             .chain(self.king_moves::<P>())
             .chain(self.knight_moves::<P>())
-            .chain(self.rook_moves::<P>());
+            .chain(self.rook_moves::<P>())
+            .chain(self.bishop_moves::<P>());
 
         Box::new(iter)
     }
@@ -74,54 +75,57 @@ impl Board {
     }
 
     fn king_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        let piece = Piece::new(P::PLAYER, PieceType::King);
-        let kings = *self.bitboard_piece(piece);
-        let occupancy_player = self.occupancy_player(P::PLAYER);
-
-        // Iterate over all kings on the board, although there is only one in a valid game.
-        // This means we can handle games with zero or many kings - good for test cases.
-        kings.squares().flat_map(move |source| {
-            let mut attacks = kings.shift_rank(1) | kings.shift_rank_neg(1);
-            let ranks = kings | attacks;
-
-            attacks |= ranks.shift_file(1) | ranks.shift_file_neg(1);
-
-            attacks &= !occupancy_player;
-
-            attacks
-                .squares()
-                .map(move |target| Move::new(piece, source, target))
+        self.moves_for_piece::<P, _>(PieceType::King, move |source| {
+            let king = Bitboard::from(source);
+            let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
+            let ranks = king | attacks;
+            attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
         })
     }
 
     fn knight_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        let piece = Piece::new(P::PLAYER, PieceType::Knight);
-        let knights = *self.bitboard_piece(piece);
-        let occupancy_player = self.occupancy_player(P::PLAYER);
-
-        knights.squares().flat_map(move |source| {
-            let attacks = Bitboard::from(source).knight_moves() & !occupancy_player;
-
-            attacks
-                .squares()
-                .map(move |target| Move::new(piece, source, target))
+        self.moves_for_piece::<P, _>(PieceType::Knight, move |source| {
+            Bitboard::from(source).knight_moves()
         })
     }
 
     fn rook_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        let piece = Piece::new(P::PLAYER, PieceType::Rook);
-        let rooks = *self.bitboard_piece(piece);
-
         let occupancy = self.occupancy();
-        let occupancy_player = self.occupancy_player(P::PLAYER);
 
-        rooks.squares().flat_map(move |source| {
+        self.moves_for_piece::<P, _>(PieceType::Rook, move |source| {
             let north = slide::<North>(source, occupancy);
             let south = slide::<South>(source, occupancy);
             let east = slide::<East>(source, occupancy);
             let west = slide::<West>(source, occupancy);
+            (north | south | east | west)
+        })
+    }
 
-            let attacks = (north | south | east | west) & !occupancy_player;
+    fn bishop_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        let occupancy = self.occupancy();
+
+        self.moves_for_piece::<P, _>(PieceType::Bishop, move |source| {
+            let nw = slide::<NorthWest>(source, occupancy);
+            let se = slide::<SouthEast>(source, occupancy);
+            let ne = slide::<NorthEast>(source, occupancy);
+            let sw = slide::<SouthWest>(source, occupancy);
+            (nw | se | ne | sw)
+        })
+    }
+
+    fn moves_for_piece<P: PlayerType, F: Fn(Square) -> Bitboard>(
+        &self,
+        piece_type: PieceType,
+        attacks: F,
+    ) -> impl Iterator<Item = Move> {
+        let piece = Piece::new(P::PLAYER, piece_type);
+        let positions = *self.bitboard_piece(piece);
+
+        let occupancy = self.occupancy();
+        let occupancy_player = self.occupancy_player(P::PLAYER);
+
+        positions.squares().flat_map(move |source| {
+            let attacks = attacks(source) & !occupancy_player;
 
             attacks
                 .squares()
@@ -177,6 +181,46 @@ impl SlideDirection for West {
 
     fn bitboard(source: Square) -> Bitboard {
         bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index()]
+    }
+}
+
+struct NorthWest;
+impl SlideDirection for NorthWest {
+    type Type = Positive;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
+            & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
+    }
+}
+
+struct SouthEast;
+impl SlideDirection for SouthEast {
+    type Type = Negative;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
+            & bitboards::RANKS_FILLED[source.rank().to_index()]
+    }
+}
+
+struct NorthEast;
+impl SlideDirection for NorthEast {
+    type Type = Positive;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::DIAGONALS[source.file()][source.rank()]
+            & !bitboards::FILES_FILLED[source.file().to_index() + 1]
+    }
+}
+
+struct SouthWest;
+impl SlideDirection for SouthWest {
+    type Type = Negative;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::DIAGONALS[source.file()][source.rank()]
+            & bitboards::FILES_FILLED[source.file().to_index()]
     }
 }
 
@@ -560,6 +604,33 @@ mod tests {
                 Move::new(Piece::WR, Square::B3, Square::A3),
                 Move::new(Piece::WR, Square::B3, Square::C3),
                 Move::new(Piece::WR, Square::B3, Square::B4),
+            ]
+        );
+    }
+
+    #[test]
+    fn bishop_can_move_and_capture_diagonally() {
+        let board = Board::new(
+            [
+                [__, __, __, BB, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, WB, __, __, __, __, __, __],
+                [__, __, WP, __, __, __, __, __],
+                [__, __, BP, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(
+            board,
+            [
+                Move::new(Piece::WB, Square::B3, Square::D1),
+                Move::new(Piece::WB, Square::B3, Square::A2),
+                Move::new(Piece::WB, Square::B3, Square::C2),
+                Move::new(Piece::WB, Square::B3, Square::A4),
             ]
         );
     }

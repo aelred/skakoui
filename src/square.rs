@@ -277,6 +277,10 @@ impl Square {
         Self::new(File::from_index(rem), Rank::from_index(quot))
     }
 
+    pub fn to_index(self) -> usize {
+        self.file.to_index() + self.rank.to_index() * File::VALUES.len()
+    }
+
     pub fn file(self) -> File {
         self.file
     }
