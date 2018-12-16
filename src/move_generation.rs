@@ -113,11 +113,11 @@ impl Board {
         })
     }
 
-    fn moves_for_piece<P: PlayerType, F: Fn(Square) -> Bitboard>(
-        &self,
-        piece_type: PieceType,
-        attacks: F,
-    ) -> impl Iterator<Item = Move> {
+    fn moves_for_piece<P, F>(&self, piece_type: PieceType, attacks: F) -> impl Iterator<Item = Move>
+    where
+        P: PlayerType,
+        F: Fn(Square) -> Bitboard,
+    {
         let piece = Piece::new(P::PLAYER, piece_type);
         let positions = *self.bitboard_piece(piece);
 
