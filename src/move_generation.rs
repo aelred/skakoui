@@ -82,7 +82,9 @@ impl Board {
 
             attacks &= !occupancy_player;
 
-            attacks.squares().map(move |target| Move::new(piece, source, target))
+            attacks
+                .squares()
+                .map(move |target| Move::new(piece, source, target))
         })
     }
 }
@@ -360,14 +362,17 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [
-            Move::new(Piece::WK, Square::B3, Square::A2),
-            Move::new(Piece::WK, Square::B3, Square::B2),
-            Move::new(Piece::WK, Square::B3, Square::A3),
-            Move::new(Piece::WK, Square::B3, Square::C3),
-            Move::new(Piece::WK, Square::B3, Square::A4),
-            Move::new(Piece::WK, Square::B3, Square::B4),
-            Move::new(Piece::WK, Square::B3, Square::C4),
-        ]);
+        assert_moves!(
+            board,
+            [
+                Move::new(Piece::WK, Square::B3, Square::A2),
+                Move::new(Piece::WK, Square::B3, Square::B2),
+                Move::new(Piece::WK, Square::B3, Square::A3),
+                Move::new(Piece::WK, Square::B3, Square::C3),
+                Move::new(Piece::WK, Square::B3, Square::A4),
+                Move::new(Piece::WK, Square::B3, Square::B4),
+                Move::new(Piece::WK, Square::B3, Square::C4),
+            ]
+        );
     }
 }
