@@ -9,6 +9,7 @@ mod moves;
 mod piece;
 mod rank;
 mod square;
+mod move_generation;
 
 use enum_map::Enum;
 
