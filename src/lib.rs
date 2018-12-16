@@ -7,6 +7,8 @@ mod board;
 mod moves;
 mod piece;
 mod square;
+mod file;
+mod rank;
 
 use enum_map::Enum;
 
@@ -15,7 +17,9 @@ pub use crate::{
     board::Board,
     moves::Move,
     piece::{Piece, PieceType},
-    square::{File, Rank, Square, SquareColor},
+    square::{Square, SquareColor},
+    file::File,
+    rank::Rank,
 };
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]

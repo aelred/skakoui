@@ -1,7 +1,6 @@
-use enum_map::Enum;
 use std::fmt;
-use std::ops::Add;
-use std::ops::Sub;
+use crate::file::File;
+use crate::Rank;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Square {
@@ -327,122 +326,10 @@ pub enum SquareColor {
     White,
 }
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
-pub enum File {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-}
-
-impl File {
-    pub const VALUES: [File; 8] = [
-        File::A,
-        File::B,
-        File::C,
-        File::D,
-        File::E,
-        File::F,
-        File::G,
-        File::H,
-    ];
-
-    pub fn from_index(index: usize) -> File {
-        Enum::<usize>::from_usize(index)
-    }
-
-    pub fn to_index(self) -> usize {
-        Enum::<usize>::to_usize(self)
-    }
-}
-
-impl Add<isize> for File {
-    type Output = File;
-
-    fn add(self, offset: isize) -> File {
-        Self::VALUES[(self.to_index() as isize + offset) as usize]
-    }
-}
-
-impl fmt::Display for File {
-    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        let s = match self {
-            File::A => "a",
-            File::B => "b",
-            File::C => "c",
-            File::D => "d",
-            File::E => "e",
-            File::F => "f",
-            File::G => "g",
-            File::H => "h",
-        };
-        f.write_str(s)
-    }
-}
-
-#[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
-pub enum Rank {
-    _1,
-    _2,
-    _3,
-    _4,
-    _5,
-    _6,
-    _7,
-    _8,
-}
-
-impl Rank {
-    pub const VALUES: [Rank; 8] = [
-        Rank::_1,
-        Rank::_2,
-        Rank::_3,
-        Rank::_4,
-        Rank::_5,
-        Rank::_6,
-        Rank::_7,
-        Rank::_8,
-    ];
-
-    pub fn from_index(index: usize) -> Rank {
-        Enum::<usize>::from_usize(index)
-    }
-
-    pub fn to_index(self) -> usize {
-        Enum::<usize>::to_usize(self)
-    }
-}
-
-impl Add<isize> for Rank {
-    type Output = Rank;
-
-    fn add(self, offset: isize) -> Rank {
-        Self::VALUES[(self.to_index() as isize + offset) as usize]
-    }
-}
-
-impl Sub<isize> for Rank {
-    type Output = Rank;
-
-    fn sub(self, offset: isize) -> Rank {
-        self + (-offset)
-    }
-}
-
-impl fmt::Display for Rank {
-    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("{}", self.to_index() + 1))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::File::*;
-    use super::Rank::*;
+    use crate::File::*;
+    use crate::Rank::*;
     use super::*;
 
     #[test]
