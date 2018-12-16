@@ -1,4 +1,5 @@
 use crate::bitboards;
+use crate::Bitboard;
 use crate::BlackPlayer;
 use crate::Board;
 use crate::Move;
@@ -17,7 +18,10 @@ impl Board {
     }
 
     fn moves_for_player<P: PlayerType + 'static>(&self) -> Box<dyn Iterator<Item = Move>> {
-        let iter = self.pawn_moves::<P>().chain(self.king_moves::<P>());
+        let iter = self
+            .pawn_moves::<P>()
+            .chain(self.king_moves::<P>())
+            .chain(self.knight_moves::<P>());
 
         Box::new(iter)
     }
@@ -87,6 +91,32 @@ impl Board {
                 .map(move |target| Move::new(piece, source, target))
         })
     }
+
+    fn knight_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        let piece = Piece::new(P::PLAYER, PieceType::Knight);
+        let knights = *self.bitboard_piece(piece);
+        let occupancy_player = self.occupancy_player(P::PLAYER);
+
+        knights.squares().flat_map(move |source| {
+            let attacks = Bitboard::from(source).knight_moves() & !occupancy_player;
+
+            attacks
+                .squares()
+                .map(move |target| Move::new(piece, source, target))
+        })
+    }
+}
+
+impl Bitboard {
+    fn knight_moves(self) -> Bitboard {
+        let ranks = self.shift_rank(2) | self.shift_rank_neg(2);
+        let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
+
+        let files = self.shift_file(2) | self.shift_file_neg(2);
+        let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
+
+        rank_attacks | file_attacks
+    }
 }
 
 #[cfg(test)]
@@ -126,7 +156,6 @@ mod tests {
     fn can_generate_all_possible_starting_moves_for_white() {
         let board = Board::default();
 
-        // TODO: fill with all moves
         assert_moves!(
             board,
             [
@@ -145,7 +174,11 @@ mod tests {
                 Move::new(Piece::WP, Square::E2, Square::E4),
                 Move::new(Piece::WP, Square::F2, Square::F4),
                 Move::new(Piece::WP, Square::G2, Square::G4),
-                Move::new(Piece::WP, Square::H2, Square::H4)
+                Move::new(Piece::WP, Square::H2, Square::H4),
+                Move::new(Piece::WN, Square::B1, Square::A3),
+                Move::new(Piece::WN, Square::B1, Square::C3),
+                Move::new(Piece::WN, Square::G1, Square::H3),
+                Move::new(Piece::WN, Square::G1, Square::F3)
             ]
         );
     }
@@ -155,7 +188,6 @@ mod tests {
         let mut board = Board::default();
         board.make_move(Move::new(Piece::WP, Square::A2, Square::A3));
 
-        // TODO: fill with all moves
         assert_moves!(
             board,
             [
@@ -174,7 +206,11 @@ mod tests {
                 Move::new(Piece::BP, Square::E7, Square::E5),
                 Move::new(Piece::BP, Square::F7, Square::F5),
                 Move::new(Piece::BP, Square::G7, Square::G5),
-                Move::new(Piece::BP, Square::H7, Square::H5)
+                Move::new(Piece::BP, Square::H7, Square::H5),
+                Move::new(Piece::BN, Square::B8, Square::A6),
+                Move::new(Piece::BN, Square::B8, Square::C6),
+                Move::new(Piece::BN, Square::G8, Square::H6),
+                Move::new(Piece::BN, Square::G8, Square::F6)
             ]
         );
     }
@@ -251,8 +287,8 @@ mod tests {
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, WP, BN, __, __, __],
+                [__, __, __, __, WP, __, __, __],
+                [__, __, __, WP, BP, __, __, __],
                 [__, __, __, BP, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -372,6 +408,34 @@ mod tests {
                 Move::new(Piece::WK, Square::B3, Square::A4),
                 Move::new(Piece::WK, Square::B3, Square::B4),
                 Move::new(Piece::WK, Square::B3, Square::C4),
+            ]
+        );
+    }
+
+    #[test]
+    fn knight_can_move_and_capture_in_its_weird_way() {
+        let board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, WN, __, __, __, __, __, __],
+                [__, __, __, BP, __, __, __, __],
+                [__, __, WP, __, __, __, __, __],
+                [__, __, BP, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(
+            board,
+            [
+                Move::new(Piece::WN, Square::B3, Square::A1),
+                Move::new(Piece::WN, Square::B3, Square::C1),
+                Move::new(Piece::WN, Square::B3, Square::D2),
+                Move::new(Piece::WN, Square::B3, Square::D4),
+                Move::new(Piece::WN, Square::B3, Square::A5),
             ]
         );
     }
