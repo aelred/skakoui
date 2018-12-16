@@ -347,7 +347,7 @@ mod tests {
             Player::White,
         );
 
-        let mov = Move::new_promoting(Piece::WP, Square::G7, Square::G8, Piece::WQ);
+        let mov = Move::new_promoting(Piece::WP, Square::G7, Square::G8, PieceType::Queen);
 
         board.make_move(mov);
 

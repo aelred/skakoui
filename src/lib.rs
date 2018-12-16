@@ -18,7 +18,7 @@ pub use crate::{
     square::{File, Rank, Square, SquareColor},
 };
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Enum)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
 pub enum Player {
     White,
     Black,

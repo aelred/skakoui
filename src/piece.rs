@@ -3,23 +3,13 @@ use enum_map::Enum;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Enum, Hash, Ord, PartialOrd)]
-pub enum Piece {
-    WK,
-    WQ,
-    WR,
-    WB,
-    WN,
-    WP,
-    BK,
-    BQ,
-    BR,
-    BB,
-    BN,
-    BP,
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, Ord, PartialOrd)]
+pub struct Piece {
+    player: Player,
+    piece_type: PieceType,
 }
 
-#[derive(Debug, Eq, PartialEq, Enum, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Enum, Copy, Clone, Ord, PartialOrd, Hash)]
 pub enum PieceType {
     King,
     Queen,
@@ -30,59 +20,29 @@ pub enum PieceType {
 }
 
 impl Piece {
+    pub const WK: Piece = Piece { player: Player::White, piece_type: PieceType::King };
+    pub const WQ: Piece = Piece { player: Player::White, piece_type: PieceType::Queen };
+    pub const WR: Piece = Piece { player: Player::White, piece_type: PieceType::Rook };
+    pub const WB: Piece = Piece { player: Player::White, piece_type: PieceType::Bishop };
+    pub const WN: Piece = Piece { player: Player::White, piece_type: PieceType::Knight };
+    pub const WP: Piece = Piece { player: Player::White, piece_type: PieceType::Pawn };
+    pub const BK: Piece = Piece { player: Player::Black, piece_type: PieceType::King };
+    pub const BQ: Piece = Piece { player: Player::Black, piece_type: PieceType::Queen };
+    pub const BR: Piece = Piece { player: Player::Black, piece_type: PieceType::Rook };
+    pub const BB: Piece = Piece { player: Player::Black, piece_type: PieceType::Bishop };
+    pub const BN: Piece = Piece { player: Player::Black, piece_type: PieceType::Knight };
+    pub const BP: Piece = Piece { player: Player::Black, piece_type: PieceType::Pawn };
+
     pub fn new(player: Player, piece_type: PieceType) -> Self {
-        match player {
-            Player::White => match piece_type {
-                PieceType::King => Piece::WK,
-                PieceType::Queen => Piece::WQ,
-                PieceType::Rook => Piece::WR,
-                PieceType::Bishop => Piece::WB,
-                PieceType::Knight => Piece::WN,
-                PieceType::Pawn => Piece::WP,
-            },
-            Player::Black => match piece_type {
-                PieceType::King => Piece::BK,
-                PieceType::Queen => Piece::BQ,
-                PieceType::Rook => Piece::BR,
-                PieceType::Bishop => Piece::BB,
-                PieceType::Knight => Piece::BN,
-                PieceType::Pawn => Piece::BP,
-            },
-        }
+        Piece { player, piece_type }
     }
 
     pub fn player(self) -> Player {
-        match self {
-            Piece::WK => Player::White,
-            Piece::WQ => Player::White,
-            Piece::WR => Player::White,
-            Piece::WB => Player::White,
-            Piece::WN => Player::White,
-            Piece::WP => Player::White,
-            Piece::BK => Player::Black,
-            Piece::BQ => Player::Black,
-            Piece::BR => Player::Black,
-            Piece::BB => Player::Black,
-            Piece::BN => Player::Black,
-            Piece::BP => Player::Black,
-        }
+        self.player
     }
 
     pub fn piece_type(self) -> PieceType {
-        match self {
-            Piece::WK => PieceType::King,
-            Piece::WQ => PieceType::Queen,
-            Piece::WR => PieceType::Rook,
-            Piece::WB => PieceType::Bishop,
-            Piece::WN => PieceType::Knight,
-            Piece::WP => PieceType::Pawn,
-            Piece::BK => PieceType::King,
-            Piece::BQ => PieceType::Queen,
-            Piece::BR => PieceType::Rook,
-            Piece::BB => PieceType::Bishop,
-            Piece::BN => PieceType::Knight,
-            Piece::BP => PieceType::Pawn,
-        }
+        self.piece_type
     }
 }
 
@@ -112,19 +72,27 @@ impl FromStr for Piece {
 
 impl fmt::Display for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        let symbol = match self {
-            Piece::WK => "♔",
-            Piece::WQ => "♕",
-            Piece::WR => "♖",
-            Piece::WB => "♗",
-            Piece::WN => "♘",
-            Piece::WP => "♙",
-            Piece::BK => "♚",
-            Piece::BQ => "♛",
-            Piece::BR => "♜",
-            Piece::BB => "♝",
-            Piece::BN => "♞",
-            Piece::BP => "♟",
+        let symbol = match self.player {
+            Player::White => {
+                match self.piece_type {
+                    PieceType::King => "♔",
+                    PieceType::Queen => "♕",
+                    PieceType::Rook => "♖",
+                    PieceType::Bishop => "♗",
+                    PieceType::Knight => "♘",
+                    PieceType::Pawn => "♙",
+                }
+            }
+            Player::Black => {
+                match self.piece_type {
+                    PieceType::King => "♚",
+                    PieceType::Queen => "♛",
+                    PieceType::Rook => "♜",
+                    PieceType::Bishop => "♝",
+                    PieceType::Knight => "♞",
+                    PieceType::Pawn => "♟",
+                }
+            }
         };
 
         f.write_str(symbol)

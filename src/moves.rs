@@ -1,12 +1,13 @@
 use crate::Piece;
 use crate::Square;
+use crate::PieceType;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Move {
     piece: Piece,
     from: Square,
     to: Square,
-    promoting: Option<Piece>,
+    promoting: Option<PieceType>,
 }
 
 impl Move {
@@ -19,7 +20,7 @@ impl Move {
         }
     }
 
-    pub fn new_promoting(piece: Piece, from: Square, to: Square, promoting: Piece) -> Self {
+    pub fn new_promoting(piece: Piece, from: Square, to: Square, promoting: PieceType) -> Self {
         Move {
             piece,
             from,
@@ -41,7 +42,7 @@ impl Move {
     }
 
     pub fn promoting(self) -> Option<Piece> {
-        self.promoting
+        self.promoting.map(|promoting| Piece::new(self.piece.player(), promoting))
     }
 }
 
@@ -60,7 +61,7 @@ mod tests {
 
     #[test]
     fn can_create_a_promoting_move() {
-        let mov = Move::new_promoting(Piece::WP, Square::A2, Square::A3, Piece::WN);
+        let mov = Move::new_promoting(Piece::WP, Square::A2, Square::A3, PieceType::Knight);
         assert_eq!(mov.piece(), Piece::WP);
         assert_eq!(mov.from(), Square::A2);
         assert_eq!(mov.to(), Square::A3);
