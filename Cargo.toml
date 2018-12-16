@@ -1,0 +1,13 @@
+[package]
+name = "chess"
+version = "0.1.0"
+authors = ["Felix Chapman <aelred717@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+enum-map = "0.4.1"
+lazy_static = "1.2.0"
+rand = "0.6.1"
+
+[dev-dependencies]
+pretty_assertions = "0.5.1"
