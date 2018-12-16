@@ -1,9 +1,12 @@
+use crate::File;
+use crate::Rank;
 use crate::Square;
 use std::fmt;
 use std::ops::BitAnd;
 use std::ops::BitAndAssign;
 use std::ops::BitOr;
 use std::ops::BitOrAssign;
+use std::ops::BitXor;
 use std::ops::BitXorAssign;
 use std::ops::Not;
 
@@ -61,7 +64,8 @@ impl Bitboard {
         Bitboard((self & mask).0 >> offset)
     }
 
-    pub fn squares(self) -> impl Iterator<Item = Square> {
+    /// Returns set squares in order from a1 to g8.
+    pub fn squares(self) -> impl DoubleEndedIterator<Item = Square> {
         SquareIterator(self)
     }
 
@@ -69,7 +73,11 @@ impl Bitboard {
         self.0.trailing_zeros()
     }
 
-    fn unset_lsb(&mut self) {
+    fn index_of_msb_set(self) -> u32 {
+        63 - self.0.leading_zeros()
+    }
+
+    fn reset_lsb(&mut self) {
         self.0 &= self.0 - 1;
     }
 }
@@ -86,9 +94,25 @@ impl Iterator for SquareIterator {
 
         let lsb_set = self.0.index_of_lsb_set();
 
-        self.0.unset_lsb();
+        self.0.reset_lsb();
 
         let square = Square::from_index(lsb_set);
+
+        Some(square)
+    }
+}
+
+impl DoubleEndedIterator for SquareIterator {
+    fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
+        if self.0 == bitboards::EMPTY {
+            return None;
+        }
+
+        let msb_set = self.0.index_of_msb_set();
+
+        let square = Square::from_index(msb_set);
+
+        self.0.reset(square);
 
         Some(square)
     }
@@ -146,6 +170,14 @@ impl BitOrAssign for Bitboard {
     }
 }
 
+impl BitXor for Bitboard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self {
+        Bitboard(self.0 ^ rhs.0)
+    }
+}
+
 impl BitXorAssign for Bitboard {
     fn bitxor_assign(&mut self, rhs: Self) {
         self.0 ^= rhs.0;
@@ -155,6 +187,25 @@ impl BitXorAssign for Bitboard {
 impl fmt::Debug for Bitboard {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         f.write_fmt(format_args!("Bitboard({:b})", self.0))
+    }
+}
+
+impl fmt::Display for Bitboard {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        let files_str: String = File::VALUES.iter().map(File::to_string).collect();
+        f.write_fmt(format_args!("  {}\n", files_str))?;
+
+        for rank in Rank::VALUES.iter().rev() {
+            f.write_fmt(format_args!("{} ", rank))?;
+            for file in &File::VALUES {
+                let square = Square::new(*file, *rank);
+
+                f.write_str(if self.get(square) { "█" } else { " " })?;
+            }
+            f.write_fmt(format_args!(" {}\n", rank))?;
+        }
+
+        f.write_fmt(format_args!("  {}", files_str))
     }
 }
 
@@ -233,6 +284,20 @@ pub mod bitboards {
             let fill_6 = fill_5 | FILES[File::F];
             let fill_7 = fill_6 | FILES[File::G];
             let fill_8 = fill_7 | FILES[File::H];
+            [
+                fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
+            ]
+        };
+        pub static ref RANKS_FILLED: [Bitboard; 9] = {
+            let fill_0 = EMPTY;
+            let fill_1 = fill_0 | RANKS[Rank::_1];
+            let fill_2 = fill_1 | RANKS[Rank::_2];
+            let fill_3 = fill_2 | RANKS[Rank::_3];
+            let fill_4 = fill_3 | RANKS[Rank::_4];
+            let fill_5 = fill_4 | RANKS[Rank::_5];
+            let fill_6 = fill_5 | RANKS[Rank::_6];
+            let fill_7 = fill_6 | RANKS[Rank::_7];
+            let fill_8 = fill_7 | RANKS[Rank::_8];
             [
                 fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
             ]

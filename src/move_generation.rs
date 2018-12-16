@@ -7,6 +7,7 @@ use crate::Piece;
 use crate::PieceType;
 use crate::Player;
 use crate::PlayerType;
+use crate::Square;
 use crate::WhitePlayer;
 
 impl Board {
@@ -21,7 +22,8 @@ impl Board {
         let iter = self
             .pawn_moves::<P>()
             .chain(self.king_moves::<P>())
-            .chain(self.knight_moves::<P>());
+            .chain(self.knight_moves::<P>())
+            .chain(self.rook_moves::<P>());
 
         Box::new(iter)
     }
@@ -105,6 +107,68 @@ impl Board {
                 .map(move |target| Move::new(piece, source, target))
         })
     }
+
+    fn rook_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        let piece = Piece::new(P::PLAYER, PieceType::Rook);
+        let rooks = *self.bitboard_piece(piece);
+
+        let occupancy = self.occupancy();
+        let occupancy_player = self.occupancy_player(P::PLAYER);
+
+        rooks.squares().flat_map(move |source| {
+            let north_movement = source.north_bitboard();
+            let mut north_blockers = north_movement & occupancy;
+            // Set MSB so there is always a blocking square (no need to branch)
+            north_blockers.set(Square::H8);
+            let blocking_square = north_blockers.squares().next().unwrap();
+            let north = north_movement ^ blocking_square.north_bitboard();
+
+            let south_movement = source.south_bitboard();
+            let mut south_blockers = south_movement & occupancy;
+            // Set LSB so there is always a blocking square (no need to branch)
+            south_blockers.set(Square::A1);
+            let blocking_square = south_blockers.squares().rev().next().unwrap();
+            let south = south_movement ^ blocking_square.south_bitboard();
+
+            let east_movement = source.east_bitboard();
+            let mut east_blockers = east_movement & occupancy;
+            // Set MSB so there is always a blocking square (no need to branch)
+            east_blockers.set(Square::H8);
+            let blocking_square = east_blockers.squares().next().unwrap();
+            let east = east_movement ^ blocking_square.east_bitboard();
+
+            let west_movement = source.west_bitboard();
+            let mut west_blockers = west_movement & occupancy;
+            // Set MSB so there is always a blocking square (no need to branch)
+            west_blockers.set(Square::A1);
+            let blocking_square = west_blockers.squares().rev().next().unwrap();
+            let west = west_movement ^ blocking_square.west_bitboard();
+
+            let attacks = (north | south | east | west) & !occupancy_player;
+
+            attacks
+                .squares()
+                .map(move |target| Move::new(piece, source, target))
+        })
+    }
+}
+
+impl Square {
+    fn north_bitboard(self) -> Bitboard {
+        bitboards::FILES[self.file()] & !bitboards::RANKS_FILLED[self.rank().to_index() + 1]
+    }
+
+    fn south_bitboard(self) -> Bitboard {
+        bitboards::FILES[self.file()] & bitboards::RANKS_FILLED[self.rank().to_index()]
+    }
+
+    fn east_bitboard(self) -> Bitboard {
+        bitboards::RANKS[self.rank()] & !bitboards::FILES_FILLED[self.file().to_index() + 1]
+    }
+
+    fn west_bitboard(self) -> Bitboard {
+        bitboards::RANKS[self.rank()] & bitboards::FILES_FILLED[self.file().to_index()]
+    }
 }
 
 impl Bitboard {
@@ -148,7 +212,7 @@ mod tests {
             ].iter().cloned().collect();
             expected_moves.sort();
 
-            assert_eq!(moves, expected_moves);
+            assert_eq!(moves, expected_moves, "\n{}", $board);
         };
     }
 
@@ -436,6 +500,34 @@ mod tests {
                 Move::new(Piece::WN, Square::B3, Square::D2),
                 Move::new(Piece::WN, Square::B3, Square::D4),
                 Move::new(Piece::WN, Square::B3, Square::A5),
+            ]
+        );
+    }
+
+    #[test]
+    fn rook_can_move_and_capture_along_rank_and_file() {
+        let board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, WR, BQ, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, WP, __, __, __, __, __, __],
+                [__, BP, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(
+            board,
+            [
+                Move::new(Piece::WR, Square::B3, Square::B1),
+                Move::new(Piece::WR, Square::B3, Square::B2),
+                Move::new(Piece::WR, Square::B3, Square::A3),
+                Move::new(Piece::WR, Square::B3, Square::C3),
+                Move::new(Piece::WR, Square::B3, Square::B4),
             ]
         );
     }
