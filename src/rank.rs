@@ -1,7 +1,7 @@
+use enum_map::Enum;
+use std::fmt;
 use std::ops::Add;
 use std::ops::Sub;
-use std::fmt;
-use enum_map::Enum;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
 pub enum Rank {
@@ -16,7 +16,7 @@ pub enum Rank {
 }
 
 impl Rank {
-    pub const VALUES: [Rank; 8] = [
+    pub const VALUES: [Self; 8] = [
         Rank::_1,
         Rank::_2,
         Rank::_3,
@@ -27,7 +27,7 @@ impl Rank {
         Rank::_8,
     ];
 
-    pub fn from_index(index: usize) -> Rank {
+    pub fn from_index(index: usize) -> Self {
         Enum::<usize>::from_usize(index)
     }
 
@@ -37,17 +37,17 @@ impl Rank {
 }
 
 impl Add<isize> for Rank {
-    type Output = Rank;
+    type Output = Self;
 
-    fn add(self, offset: isize) -> Rank {
+    fn add(self, offset: isize) -> Self {
         Self::VALUES[(self.to_index() as isize + offset) as usize]
     }
 }
 
 impl Sub<isize> for Rank {
-    type Output = Rank;
+    type Output = Self;
 
-    fn sub(self, offset: isize) -> Rank {
+    fn sub(self, offset: isize) -> Self {
         self + (-offset)
     }
 }

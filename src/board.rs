@@ -41,14 +41,11 @@ impl Board {
 
         let bitboard = self.bitboard_piece_mut(mov.piece());
 
-        match mov.promoting() {
-            Some(promotion) => {
-                bitboard.reset(mov.from());
-                self.bitboard_piece_mut(promotion).set(mov.to());
-            }
-            None => {
-                bitboard.move_bit(mov.from(), mov.to());
-            }
+        if let Some(promotion) = mov.promoting() {
+            bitboard.reset(mov.from());
+            self.bitboard_piece_mut(promotion).set(mov.to());
+        } else {
+            bitboard.move_bit(mov.from(), mov.to());
         }
 
         self.player = self.player.opponent();
@@ -134,7 +131,7 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Board {
+        Self {
             bitboards: *bitboards::START_POSITIONS,
             player: Player::White,
         }
@@ -148,17 +145,17 @@ impl fmt::Display for Board {
 
         for rank in Rank::VALUES.iter().rev() {
             f.write_fmt(format_args!("{} ", rank))?;
-            for file in File::VALUES.iter() {
+            for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
-                let s = match self.get(square) {
-                    Some(piece) => piece.to_string(),
-                    None => {
-                        let col = match square.color() {
-                            SquareColor::White => " ",
-                            SquareColor::Black => "█",
-                        };
-                        col.to_string()
-                    }
+
+                let s = if let Some(piece) = self.get(square) {
+                    piece.to_string()
+                } else {
+                    let col = match square.color() {
+                        SquareColor::White => " ",
+                        SquareColor::Black => "█",
+                    };
+                    col.to_string()
                 };
                 f.write_str(&s)?;
             }

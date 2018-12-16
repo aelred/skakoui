@@ -16,15 +16,15 @@ impl Bitboard {
     }
 
     pub fn get(self, square: Square) -> bool {
-        Bitboard::from(square) & self != bitboards::EMPTY
+        Self::from(square) & self != bitboards::EMPTY
     }
 
     pub fn set(&mut self, square: Square) {
-        *self |= Bitboard::from(square);
+        *self |= Self::from(square);
     }
 
     pub fn reset(&mut self, square: Square) {
-        *self &= !Bitboard::from(square);
+        *self &= !Self::from(square);
     }
 
     /// Resets the bit at `from` and sets the bit at `to`.
@@ -35,7 +35,7 @@ impl Bitboard {
         debug_assert!(self.get(from));
         debug_assert!(!self.get(to));
 
-        let move_board = Bitboard::from(from) | Bitboard::from(to);
+        let move_board = Self::from(from) | Self::from(to);
         *self ^= move_board;
     }
 

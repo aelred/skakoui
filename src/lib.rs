@@ -4,22 +4,22 @@ extern crate pretty_assertions;
 
 mod bitboard;
 mod board;
+mod file;
 mod moves;
 mod piece;
-mod square;
-mod file;
 mod rank;
+mod square;
 
 use enum_map::Enum;
 
 pub use crate::{
     bitboard::{bitboards, Bitboard},
     board::Board,
+    file::File,
     moves::Move,
     piece::{Piece, PieceType},
-    square::{Square, SquareColor},
-    file::File,
     rank::Rank,
+    square::{Square, SquareColor},
 };
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
@@ -29,7 +29,7 @@ pub enum Player {
 }
 
 impl Player {
-    fn opponent(self) -> Player {
+    fn opponent(self) -> Self {
         match self {
             Player::White => Player::Black,
             Player::Black => Player::White,

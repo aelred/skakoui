@@ -1,6 +1,6 @@
 use crate::Piece;
-use crate::Square;
 use crate::PieceType;
+use crate::Square;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Move {
@@ -12,7 +12,7 @@ pub struct Move {
 
 impl Move {
     pub fn new(piece: Piece, from: Square, to: Square) -> Self {
-        Move {
+        Self {
             piece,
             from,
             to,
@@ -21,7 +21,7 @@ impl Move {
     }
 
     pub fn new_promoting(piece: Piece, from: Square, to: Square, promoting: PieceType) -> Self {
-        Move {
+        Self {
             piece,
             from,
             to,
@@ -42,7 +42,8 @@ impl Move {
     }
 
     pub fn promoting(self) -> Option<Piece> {
-        self.promoting.map(|promoting| Piece::new(self.piece.player(), promoting))
+        self.promoting
+            .map(|promoting| Piece::new(self.piece.player(), promoting))
     }
 }
 

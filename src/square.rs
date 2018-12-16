@@ -1,6 +1,6 @@
-use std::fmt;
 use crate::file::File;
 use crate::Rank;
+use std::fmt;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Square {
@@ -9,272 +9,272 @@ pub struct Square {
 }
 
 impl Square {
-    pub const A1: Self = Square {
+    pub const A1: Self = Self {
         file: File::A,
         rank: Rank::_1,
     };
-    pub const A2: Self = Square {
+    pub const A2: Self = Self {
         file: File::A,
         rank: Rank::_2,
     };
-    pub const A3: Self = Square {
+    pub const A3: Self = Self {
         file: File::A,
         rank: Rank::_3,
     };
-    pub const A4: Self = Square {
+    pub const A4: Self = Self {
         file: File::A,
         rank: Rank::_4,
     };
-    pub const A5: Self = Square {
+    pub const A5: Self = Self {
         file: File::A,
         rank: Rank::_5,
     };
-    pub const A6: Self = Square {
+    pub const A6: Self = Self {
         file: File::A,
         rank: Rank::_6,
     };
-    pub const A7: Self = Square {
+    pub const A7: Self = Self {
         file: File::A,
         rank: Rank::_7,
     };
-    pub const A8: Self = Square {
+    pub const A8: Self = Self {
         file: File::A,
         rank: Rank::_8,
     };
-    pub const B1: Self = Square {
+    pub const B1: Self = Self {
         file: File::B,
         rank: Rank::_1,
     };
-    pub const B2: Self = Square {
+    pub const B2: Self = Self {
         file: File::B,
         rank: Rank::_2,
     };
-    pub const B3: Self = Square {
+    pub const B3: Self = Self {
         file: File::B,
         rank: Rank::_3,
     };
-    pub const B4: Self = Square {
+    pub const B4: Self = Self {
         file: File::B,
         rank: Rank::_4,
     };
-    pub const B5: Self = Square {
+    pub const B5: Self = Self {
         file: File::B,
         rank: Rank::_5,
     };
-    pub const B6: Self = Square {
+    pub const B6: Self = Self {
         file: File::B,
         rank: Rank::_6,
     };
-    pub const B7: Self = Square {
+    pub const B7: Self = Self {
         file: File::B,
         rank: Rank::_7,
     };
-    pub const B8: Self = Square {
+    pub const B8: Self = Self {
         file: File::B,
         rank: Rank::_8,
     };
-    pub const C1: Self = Square {
+    pub const C1: Self = Self {
         file: File::C,
         rank: Rank::_1,
     };
-    pub const C2: Self = Square {
+    pub const C2: Self = Self {
         file: File::C,
         rank: Rank::_2,
     };
-    pub const C3: Self = Square {
+    pub const C3: Self = Self {
         file: File::C,
         rank: Rank::_3,
     };
-    pub const C4: Self = Square {
+    pub const C4: Self = Self {
         file: File::C,
         rank: Rank::_4,
     };
-    pub const C5: Self = Square {
+    pub const C5: Self = Self {
         file: File::C,
         rank: Rank::_5,
     };
-    pub const C6: Self = Square {
+    pub const C6: Self = Self {
         file: File::C,
         rank: Rank::_6,
     };
-    pub const C7: Self = Square {
+    pub const C7: Self = Self {
         file: File::C,
         rank: Rank::_7,
     };
-    pub const C8: Self = Square {
+    pub const C8: Self = Self {
         file: File::C,
         rank: Rank::_8,
     };
-    pub const D1: Self = Square {
+    pub const D1: Self = Self {
         file: File::D,
         rank: Rank::_1,
     };
-    pub const D2: Self = Square {
+    pub const D2: Self = Self {
         file: File::D,
         rank: Rank::_2,
     };
-    pub const D3: Self = Square {
+    pub const D3: Self = Self {
         file: File::D,
         rank: Rank::_3,
     };
-    pub const D4: Self = Square {
+    pub const D4: Self = Self {
         file: File::D,
         rank: Rank::_4,
     };
-    pub const D5: Self = Square {
+    pub const D5: Self = Self {
         file: File::D,
         rank: Rank::_5,
     };
-    pub const D6: Self = Square {
+    pub const D6: Self = Self {
         file: File::D,
         rank: Rank::_6,
     };
-    pub const D7: Self = Square {
+    pub const D7: Self = Self {
         file: File::D,
         rank: Rank::_7,
     };
-    pub const D8: Self = Square {
+    pub const D8: Self = Self {
         file: File::D,
         rank: Rank::_8,
     };
-    pub const E1: Self = Square {
+    pub const E1: Self = Self {
         file: File::E,
         rank: Rank::_1,
     };
-    pub const E2: Self = Square {
+    pub const E2: Self = Self {
         file: File::E,
         rank: Rank::_2,
     };
-    pub const E3: Self = Square {
+    pub const E3: Self = Self {
         file: File::E,
         rank: Rank::_3,
     };
-    pub const E4: Self = Square {
+    pub const E4: Self = Self {
         file: File::E,
         rank: Rank::_4,
     };
-    pub const E5: Self = Square {
+    pub const E5: Self = Self {
         file: File::E,
         rank: Rank::_5,
     };
-    pub const E6: Self = Square {
+    pub const E6: Self = Self {
         file: File::E,
         rank: Rank::_6,
     };
-    pub const E7: Self = Square {
+    pub const E7: Self = Self {
         file: File::E,
         rank: Rank::_7,
     };
-    pub const E8: Self = Square {
+    pub const E8: Self = Self {
         file: File::E,
         rank: Rank::_8,
     };
-    pub const F1: Self = Square {
+    pub const F1: Self = Self {
         file: File::F,
         rank: Rank::_1,
     };
-    pub const F2: Self = Square {
+    pub const F2: Self = Self {
         file: File::F,
         rank: Rank::_2,
     };
-    pub const F3: Self = Square {
+    pub const F3: Self = Self {
         file: File::F,
         rank: Rank::_3,
     };
-    pub const F4: Self = Square {
+    pub const F4: Self = Self {
         file: File::F,
         rank: Rank::_4,
     };
-    pub const F5: Self = Square {
+    pub const F5: Self = Self {
         file: File::F,
         rank: Rank::_5,
     };
-    pub const F6: Self = Square {
+    pub const F6: Self = Self {
         file: File::F,
         rank: Rank::_6,
     };
-    pub const F7: Self = Square {
+    pub const F7: Self = Self {
         file: File::F,
         rank: Rank::_7,
     };
-    pub const F8: Self = Square {
+    pub const F8: Self = Self {
         file: File::F,
         rank: Rank::_8,
     };
-    pub const G1: Self = Square {
+    pub const G1: Self = Self {
         file: File::G,
         rank: Rank::_1,
     };
-    pub const G2: Self = Square {
+    pub const G2: Self = Self {
         file: File::G,
         rank: Rank::_2,
     };
-    pub const G3: Self = Square {
+    pub const G3: Self = Self {
         file: File::G,
         rank: Rank::_3,
     };
-    pub const G4: Self = Square {
+    pub const G4: Self = Self {
         file: File::G,
         rank: Rank::_4,
     };
-    pub const G5: Self = Square {
+    pub const G5: Self = Self {
         file: File::G,
         rank: Rank::_5,
     };
-    pub const G6: Self = Square {
+    pub const G6: Self = Self {
         file: File::G,
         rank: Rank::_6,
     };
-    pub const G7: Self = Square {
+    pub const G7: Self = Self {
         file: File::G,
         rank: Rank::_7,
     };
-    pub const G8: Self = Square {
+    pub const G8: Self = Self {
         file: File::G,
         rank: Rank::_8,
     };
-    pub const H1: Self = Square {
+    pub const H1: Self = Self {
         file: File::H,
         rank: Rank::_1,
     };
-    pub const H2: Self = Square {
+    pub const H2: Self = Self {
         file: File::H,
         rank: Rank::_2,
     };
-    pub const H3: Self = Square {
+    pub const H3: Self = Self {
         file: File::H,
         rank: Rank::_3,
     };
-    pub const H4: Self = Square {
+    pub const H4: Self = Self {
         file: File::H,
         rank: Rank::_4,
     };
-    pub const H5: Self = Square {
+    pub const H5: Self = Self {
         file: File::H,
         rank: Rank::_5,
     };
-    pub const H6: Self = Square {
+    pub const H6: Self = Self {
         file: File::H,
         rank: Rank::_6,
     };
-    pub const H7: Self = Square {
+    pub const H7: Self = Self {
         file: File::H,
         rank: Rank::_7,
     };
-    pub const H8: Self = Square {
+    pub const H8: Self = Self {
         file: File::H,
         rank: Rank::_8,
     };
 
     pub fn new(file: File, rank: Rank) -> Self {
-        Square { file, rank }
+        Self { file, rank }
     }
 
     pub fn from_index(index: u32) -> Self {
         let index = index as usize;
         let quot = index / 8;
         let rem = index % 8;
-        Square::new(File::from_index(rem), Rank::from_index(quot))
+        Self::new(File::from_index(rem), Rank::from_index(quot))
     }
 
     pub fn file(self) -> File {
@@ -285,25 +285,25 @@ impl Square {
         self.rank
     }
 
-    pub fn shift_rank(self, offset: isize) -> Square {
-        Square {
+    pub fn shift_rank(self, offset: isize) -> Self {
+        Self {
             rank: self.rank + offset,
             file: self.file,
         }
     }
 
-    pub fn shift_file(self, offset: isize) -> Square {
-        Square {
+    pub fn shift_file(self, offset: isize) -> Self {
+        Self {
             rank: self.rank,
             file: self.file + offset,
         }
     }
 
     pub fn color(self) -> SquareColor {
-        if (self.file.to_index() + self.rank.to_index()) % 2 != 0 {
-            SquareColor::White
-        } else {
+        if (self.file.to_index() + self.rank.to_index()) % 2 == 0 {
             SquareColor::Black
+        } else {
+            SquareColor::White
         }
     }
 }
@@ -328,9 +328,9 @@ pub enum SquareColor {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::File::*;
     use crate::Rank::*;
-    use super::*;
 
     #[test]
     fn files_are_ordered_letters() {

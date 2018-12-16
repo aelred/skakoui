@@ -1,6 +1,6 @@
-use std::ops::Add;
-use std::fmt;
 use enum_map::Enum;
+use std::fmt;
+use std::ops::Add;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
 pub enum File {
@@ -15,7 +15,7 @@ pub enum File {
 }
 
 impl File {
-    pub const VALUES: [File; 8] = [
+    pub const VALUES: [Self; 8] = [
         File::A,
         File::B,
         File::C,
@@ -26,7 +26,7 @@ impl File {
         File::H,
     ];
 
-    pub fn from_index(index: usize) -> File {
+    pub fn from_index(index: usize) -> Self {
         Enum::<usize>::from_usize(index)
     }
 
@@ -36,9 +36,9 @@ impl File {
 }
 
 impl Add<isize> for File {
-    type Output = File;
+    type Output = Self;
 
-    fn add(self, offset: isize) -> File {
+    fn add(self, offset: isize) -> Self {
         Self::VALUES[(self.to_index() as isize + offset) as usize]
     }
 }
