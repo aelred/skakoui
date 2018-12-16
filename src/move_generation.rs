@@ -116,33 +116,10 @@ impl Board {
         let occupancy_player = self.occupancy_player(P::PLAYER);
 
         rooks.squares().flat_map(move |source| {
-            let north_movement = source.north_bitboard();
-            let mut north_blockers = north_movement & occupancy;
-            // Set MSB so there is always a blocking square (no need to branch)
-            north_blockers.set(Square::H8);
-            let blocking_square = north_blockers.squares().next().unwrap();
-            let north = north_movement ^ blocking_square.north_bitboard();
-
-            let south_movement = source.south_bitboard();
-            let mut south_blockers = south_movement & occupancy;
-            // Set LSB so there is always a blocking square (no need to branch)
-            south_blockers.set(Square::A1);
-            let blocking_square = south_blockers.squares().rev().next().unwrap();
-            let south = south_movement ^ blocking_square.south_bitboard();
-
-            let east_movement = source.east_bitboard();
-            let mut east_blockers = east_movement & occupancy;
-            // Set MSB so there is always a blocking square (no need to branch)
-            east_blockers.set(Square::H8);
-            let blocking_square = east_blockers.squares().next().unwrap();
-            let east = east_movement ^ blocking_square.east_bitboard();
-
-            let west_movement = source.west_bitboard();
-            let mut west_blockers = west_movement & occupancy;
-            // Set MSB so there is always a blocking square (no need to branch)
-            west_blockers.set(Square::A1);
-            let blocking_square = west_blockers.squares().rev().next().unwrap();
-            let west = west_movement ^ blocking_square.west_bitboard();
+            let north = slide::<North>(source, occupancy);
+            let south = slide::<South>(source, occupancy);
+            let east = slide::<East>(source, occupancy);
+            let west = slide::<West>(source, occupancy);
 
             let attacks = (north | south | east | west) & !occupancy_player;
 
@@ -153,21 +130,76 @@ impl Board {
     }
 }
 
-impl Square {
-    fn north_bitboard(self) -> Bitboard {
-        bitboards::FILES[self.file()] & !bitboards::RANKS_FILLED[self.rank().to_index() + 1]
-    }
+fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
+    let movement = Dir::bitboard(source);
+    let mut blockers = movement & occupancy;
+    // Set the last square so there is always a blocking square (no need to branch)
+    blockers.set(Dir::Type::LAST_SQUARE);
+    let blocking_square = Dir::Type::first_square(blockers.squares()).unwrap();
+    movement ^ Dir::bitboard(blocking_square)
+}
 
-    fn south_bitboard(self) -> Bitboard {
-        bitboards::FILES[self.file()] & bitboards::RANKS_FILLED[self.rank().to_index()]
-    }
+trait SlideDirection {
+    type Type: SlideDirectionType;
+    fn bitboard(source: Square) -> Bitboard;
+}
 
-    fn east_bitboard(self) -> Bitboard {
-        bitboards::RANKS[self.rank()] & !bitboards::FILES_FILLED[self.file().to_index() + 1]
-    }
+struct North;
+impl SlideDirection for North {
+    type Type = Positive;
 
-    fn west_bitboard(self) -> Bitboard {
-        bitboards::RANKS[self.rank()] & bitboards::FILES_FILLED[self.file().to_index()]
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::FILES[source.file()] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
+    }
+}
+
+struct South;
+impl SlideDirection for South {
+    type Type = Negative;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index()]
+    }
+}
+
+struct East;
+impl SlideDirection for East {
+    type Type = Positive;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::RANKS[source.rank()] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
+    }
+}
+
+struct West;
+impl SlideDirection for West {
+    type Type = Negative;
+
+    fn bitboard(source: Square) -> Bitboard {
+        bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index()]
+    }
+}
+
+trait SlideDirectionType {
+    const LAST_SQUARE: Square;
+    fn first_square(squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square>;
+}
+
+struct Positive;
+impl SlideDirectionType for Positive {
+    const LAST_SQUARE: Square = Square::H8;
+
+    fn first_square(mut squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
+        squares.next()
+    }
+}
+
+struct Negative;
+impl SlideDirectionType for Negative {
+    const LAST_SQUARE: Square = Square::A1;
+
+    fn first_square(mut squares: impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
+        squares.rev().next()
     }
 }
 
