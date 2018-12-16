@@ -36,6 +36,13 @@ impl Player {
             Player::Black => Player::White,
         }
     }
+
+    fn as_char(self) -> char {
+        match self {
+            Player::White => 'W',
+            Player::Black => 'B',
+        }
+    }
 }
 
 pub trait PlayerType {

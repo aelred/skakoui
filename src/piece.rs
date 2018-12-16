@@ -3,7 +3,7 @@ use enum_map::Enum;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash, Ord, PartialOrd)]
+#[derive(PartialEq, Eq, Copy, Clone, Hash, Ord, PartialOrd)]
 pub struct Piece {
     player: Player,
     piece_type: PieceType,
@@ -106,6 +106,14 @@ impl FromStr for Piece {
     }
 }
 
+impl fmt::Debug for Piece {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        let player_char = self.player.as_char();
+        let piece_char = self.piece_type.as_char();
+        f.write_fmt(format_args!("Piece::{}{}", player_char, piece_char))
+    }
+}
+
 impl fmt::Display for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let symbol = match self.player {
@@ -128,6 +136,19 @@ impl fmt::Display for Piece {
         };
 
         f.write_str(symbol)
+    }
+}
+
+impl PieceType {
+    fn as_char(self) -> char {
+        match self {
+            PieceType::King => 'K',
+            PieceType::Queen => 'Q',
+            PieceType::Rook => 'R',
+            PieceType::Bishop => 'B',
+            PieceType::Knight => 'N',
+            PieceType::Pawn => 'P',
+        }
     }
 }
 
