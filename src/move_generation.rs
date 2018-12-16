@@ -24,7 +24,8 @@ impl Board {
             .chain(self.king_moves::<P>())
             .chain(self.knight_moves::<P>())
             .chain(self.rook_moves::<P>())
-            .chain(self.bishop_moves::<P>());
+            .chain(self.bishop_moves::<P>())
+            .chain(self.queen_moves::<P>());
 
         Box::new(iter)
     }
@@ -110,6 +111,22 @@ impl Board {
             let ne = slide::<NorthEast>(source, occupancy);
             let sw = slide::<SouthWest>(source, occupancy);
             (nw | se | ne | sw)
+        })
+    }
+
+    fn queen_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        let occupancy = self.occupancy();
+
+        self.moves_for_piece::<P, _>(PieceType::Queen, move |source| {
+            let north = slide::<North>(source, occupancy);
+            let south = slide::<South>(source, occupancy);
+            let east = slide::<East>(source, occupancy);
+            let west = slide::<West>(source, occupancy);
+            let nw = slide::<NorthWest>(source, occupancy);
+            let se = slide::<SouthEast>(source, occupancy);
+            let ne = slide::<NorthEast>(source, occupancy);
+            let sw = slide::<SouthWest>(source, occupancy);
+            (north | south | east | west | nw | se | ne | sw)
         })
     }
 
@@ -631,6 +648,39 @@ mod tests {
                 Move::new(Piece::WB, Square::B3, Square::A2),
                 Move::new(Piece::WB, Square::B3, Square::C2),
                 Move::new(Piece::WB, Square::B3, Square::A4),
+            ]
+        );
+    }
+
+    #[test]
+    fn queen_can_move_and_capture_in_all_directions() {
+        let board = Board::new(
+            [
+                [__, __, __, BB, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, WQ, WP, __, __, __, __, __],
+                [__, __, WP, __, __, __, __, __],
+                [__, __, BP, __, __, __, __, __],
+                [__, BP, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(
+            board,
+            [
+                Move::new(Piece::WQ, Square::B3, Square::D1),
+                Move::new(Piece::WQ, Square::B3, Square::A2),
+                Move::new(Piece::WQ, Square::B3, Square::C2),
+                Move::new(Piece::WQ, Square::B3, Square::A4),
+                Move::new(Piece::WQ, Square::B3, Square::A3),
+                Move::new(Piece::WQ, Square::B3, Square::B1),
+                Move::new(Piece::WQ, Square::B3, Square::B2),
+                Move::new(Piece::WQ, Square::B3, Square::B4),
+                Move::new(Piece::WQ, Square::B3, Square::B5),
+                Move::new(Piece::WQ, Square::B3, Square::B6),
             ]
         );
     }
