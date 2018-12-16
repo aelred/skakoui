@@ -5,11 +5,11 @@ extern crate pretty_assertions;
 mod bitboard;
 mod board;
 mod file;
+mod move_generation;
 mod moves;
 mod piece;
 mod rank;
 mod square;
-mod move_generation;
 
 use enum_map::Enum;
 

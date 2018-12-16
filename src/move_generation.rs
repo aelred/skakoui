@@ -1,12 +1,12 @@
+use crate::bitboards;
+use crate::BlackPlayer;
 use crate::Board;
 use crate::Move;
-use crate::Player;
-use crate::WhitePlayer;
-use crate::BlackPlayer;
-use crate::PlayerType;
 use crate::Piece;
 use crate::PieceType;
-use crate::bitboards;
+use crate::Player;
+use crate::PlayerType;
+use crate::WhitePlayer;
 
 impl Board {
     pub fn moves(&self) -> impl Iterator<Item = Move> {
@@ -17,7 +17,9 @@ impl Board {
     }
 
     fn moves_for_player<P: PlayerType + 'static>(&self) -> Box<dyn Iterator<Item = Move>> {
-        Box::new(self.pawn_moves::<P>())
+        let iter = self.pawn_moves::<P>().chain(self.king_moves::<P>());
+
+        Box::new(iter)
     }
 
     fn pawn_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
@@ -63,6 +65,25 @@ impl Board {
             .chain(double_pushes_iter)
             .chain(captures_east_iter)
             .chain(captures_west_iter)
+    }
+
+    fn king_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        let piece = Piece::new(P::PLAYER, PieceType::King);
+        let bitboard = *self.bitboard_piece(piece);
+        let occupancy_player = self.occupancy_player(P::PLAYER);
+
+        // Iterate over all kings on the board, although there is only one in a valid game.
+        // This means we can handle games with zero or many kings - good for test cases.
+        bitboard.squares().flat_map(move |source| {
+            let mut attacks = bitboard.shift_rank(1) | bitboard.shift_rank_neg(1);
+            let ranks = bitboard | attacks;
+
+            attacks |= ranks.shift_file(1) | ranks.shift_file_neg(1);
+
+            attacks &= !occupancy_player;
+
+            attacks.squares().map(move |target| Move::new(piece, source, target))
+        })
     }
 }
 
@@ -321,5 +342,32 @@ mod tests {
         board.make_move(Move::new(Piece::WP, Square::A3, Square::A4));
 
         assert_moves!(board, []);
+    }
+
+    #[test]
+    fn king_can_move_and_capture_one_square_in_any_direction() {
+        let board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [__, __, WP, __, __, __, __, __],
+                [__, WK, BP, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(board, [
+            Move::new(Piece::WK, Square::B3, Square::A2),
+            Move::new(Piece::WK, Square::B3, Square::B2),
+            Move::new(Piece::WK, Square::B3, Square::A3),
+            Move::new(Piece::WK, Square::B3, Square::C3),
+            Move::new(Piece::WK, Square::B3, Square::A4),
+            Move::new(Piece::WK, Square::B3, Square::B4),
+            Move::new(Piece::WK, Square::B3, Square::C4),
+        ]);
     }
 }
