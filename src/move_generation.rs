@@ -266,13 +266,19 @@ mod tests {
     const BB: Option<Piece> = Some(Piece::BB);
     const BP: Option<Piece> = Some(Piece::BP);
 
+    macro_rules! mov {
+        ($mov:expr) => {
+            stringify!($mov).parse::<Move>().unwrap()
+        };
+    }
+
     macro_rules! assert_moves {
         ($board:expr, [$($moves:expr),* $(,)*]) => {
             let mut moves: Vec<Move> = $board.moves().collect();
             moves.sort();
 
             let mut expected_moves: Vec<Move> = [
-                $($moves),*
+                $(mov!($moves)),*
             ].iter().cloned().collect();
             expected_moves.sort();
 
@@ -287,26 +293,8 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(PieceType::Pawn, Square::A2, Square::A3),
-                Move::new(PieceType::Pawn, Square::B2, Square::B3),
-                Move::new(PieceType::Pawn, Square::C2, Square::C3),
-                Move::new(PieceType::Pawn, Square::D2, Square::D3),
-                Move::new(PieceType::Pawn, Square::E2, Square::E3),
-                Move::new(PieceType::Pawn, Square::F2, Square::F3),
-                Move::new(PieceType::Pawn, Square::G2, Square::G3),
-                Move::new(PieceType::Pawn, Square::H2, Square::H3),
-                Move::new(PieceType::Pawn, Square::A2, Square::A4),
-                Move::new(PieceType::Pawn, Square::B2, Square::B4),
-                Move::new(PieceType::Pawn, Square::C2, Square::C4),
-                Move::new(PieceType::Pawn, Square::D2, Square::D4),
-                Move::new(PieceType::Pawn, Square::E2, Square::E4),
-                Move::new(PieceType::Pawn, Square::F2, Square::F4),
-                Move::new(PieceType::Pawn, Square::G2, Square::G4),
-                Move::new(PieceType::Pawn, Square::H2, Square::H4),
-                Move::new(PieceType::Knight, Square::B1, Square::A3),
-                Move::new(PieceType::Knight, Square::B1, Square::C3),
-                Move::new(PieceType::Knight, Square::G1, Square::H3),
-                Move::new(PieceType::Knight, Square::G1, Square::F3)
+                Pa2a3, Pb2b3, Pc2c3, Pd2d3, Pe2e3, Pf2f3, Pg2g3, Ph2h3, Pa2a4, Pb2b4, Pc2c4, Pd2d4,
+                Pe2e4, Pf2f4, Pg2g4, Ph2h4, Nb1a3, Nb1c3, Ng1h3, Ng1f3
             ]
         );
     }
@@ -314,31 +302,13 @@ mod tests {
     #[test]
     fn can_generate_all_possible_starting_moves_for_black() {
         let mut board = Board::default();
-        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A3));
+        board.make_move(mov!(Pa2a3));
 
         assert_moves!(
             board,
             [
-                Move::new(PieceType::Pawn, Square::A7, Square::A6),
-                Move::new(PieceType::Pawn, Square::B7, Square::B6),
-                Move::new(PieceType::Pawn, Square::C7, Square::C6),
-                Move::new(PieceType::Pawn, Square::D7, Square::D6),
-                Move::new(PieceType::Pawn, Square::E7, Square::E6),
-                Move::new(PieceType::Pawn, Square::F7, Square::F6),
-                Move::new(PieceType::Pawn, Square::G7, Square::G6),
-                Move::new(PieceType::Pawn, Square::H7, Square::H6),
-                Move::new(PieceType::Pawn, Square::A7, Square::A5),
-                Move::new(PieceType::Pawn, Square::B7, Square::B5),
-                Move::new(PieceType::Pawn, Square::C7, Square::C5),
-                Move::new(PieceType::Pawn, Square::D7, Square::D5),
-                Move::new(PieceType::Pawn, Square::E7, Square::E5),
-                Move::new(PieceType::Pawn, Square::F7, Square::F5),
-                Move::new(PieceType::Pawn, Square::G7, Square::G5),
-                Move::new(PieceType::Pawn, Square::H7, Square::H5),
-                Move::new(PieceType::Knight, Square::B8, Square::A6),
-                Move::new(PieceType::Knight, Square::B8, Square::C6),
-                Move::new(PieceType::Knight, Square::G8, Square::H6),
-                Move::new(PieceType::Knight, Square::G8, Square::F6)
+                Pa7a6, Pb7b6, Pc7c6, Pd7d6, Pe7e6, Pf7f6, Pg7g6, Ph7h6, Pa7a5, Pb7b5, Pc7c5, Pd7d5,
+                Pe7e5, Pf7f5, Pg7g5, Ph7h5, Nb8a6, Nb8c6, Ng8h6, Ng8f6
             ]
         );
     }
@@ -400,13 +370,7 @@ mod tests {
             Player::Black,
         );
 
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::Pawn, Square::D5, Square::C4),
-                Move::new(PieceType::Pawn, Square::D5, Square::E4)
-            ]
-        );
+        assert_moves!(board, [Pd5c4, Pd5e4]);
     }
 
     #[test]
@@ -463,7 +427,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Move::new(PieceType::Pawn, Square::A3, Square::A4)]);
+        assert_moves!(board, [Pa3a4]);
     }
 
     #[ignore]
@@ -483,9 +447,9 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A4));
+        board.make_move(mov!(Pa2a4));
 
-        assert_moves!(board, [Move::new(PieceType::Pawn, Square::B4, Square::A3)]);
+        assert_moves!(board, [Pb4a3]);
     }
 
     #[ignore]
@@ -505,7 +469,7 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(PieceType::Pawn, Square::A3, Square::A4));
+        board.make_move(mov!(Pa3a4));
 
         assert_moves!(board, []);
     }
@@ -527,17 +491,7 @@ mod tests {
         );
 
         // Kb3b2 is missing because it puts the king in check
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::King, Square::B3, Square::A2),
-                Move::new(PieceType::King, Square::B3, Square::A3),
-                Move::new(PieceType::King, Square::B3, Square::C3),
-                Move::new(PieceType::King, Square::B3, Square::A4),
-                Move::new(PieceType::King, Square::B3, Square::B4),
-                Move::new(PieceType::King, Square::B3, Square::C4),
-            ]
-        );
+        assert_moves!(board, [Kb3a2, Kb3a3, Kb3c3, Kb3a4, Kb3b4, Kb3c4,]);
     }
 
     #[test]
@@ -556,16 +510,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::Knight, Square::B3, Square::A1),
-                Move::new(PieceType::Knight, Square::B3, Square::C1),
-                Move::new(PieceType::Knight, Square::B3, Square::D2),
-                Move::new(PieceType::Knight, Square::B3, Square::D4),
-                Move::new(PieceType::Knight, Square::B3, Square::A5),
-            ]
-        );
+        assert_moves!(board, [Nb3a1, Nb3c1, Nb3d2, Nb3d4, Nb3a5,]);
     }
 
     #[test]
@@ -584,16 +529,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::Rook, Square::B3, Square::B1),
-                Move::new(PieceType::Rook, Square::B3, Square::B2),
-                Move::new(PieceType::Rook, Square::B3, Square::A3),
-                Move::new(PieceType::Rook, Square::B3, Square::C3),
-                Move::new(PieceType::Rook, Square::B3, Square::B4),
-            ]
-        );
+        assert_moves!(board, [Rb3b1, Rb3b2, Rb3a3, Rb3c3, Rb3b4,]);
     }
 
     #[test]
@@ -612,15 +548,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::Bishop, Square::B3, Square::D1),
-                Move::new(PieceType::Bishop, Square::B3, Square::A2),
-                Move::new(PieceType::Bishop, Square::B3, Square::C2),
-                Move::new(PieceType::Bishop, Square::B3, Square::A4),
-            ]
-        );
+        assert_moves!(board, [Bb3d1, Bb3a2, Bb3c2, Bb3a4,]);
     }
 
     #[test]
@@ -641,18 +569,7 @@ mod tests {
 
         assert_moves!(
             board,
-            [
-                Move::new(PieceType::Queen, Square::B3, Square::D1),
-                Move::new(PieceType::Queen, Square::B3, Square::A2),
-                Move::new(PieceType::Queen, Square::B3, Square::C2),
-                Move::new(PieceType::Queen, Square::B3, Square::A4),
-                Move::new(PieceType::Queen, Square::B3, Square::A3),
-                Move::new(PieceType::Queen, Square::B3, Square::B1),
-                Move::new(PieceType::Queen, Square::B3, Square::B2),
-                Move::new(PieceType::Queen, Square::B3, Square::B4),
-                Move::new(PieceType::Queen, Square::B3, Square::B5),
-                Move::new(PieceType::Queen, Square::B3, Square::B6),
-            ]
+            [Qb3d1, Qb3a2, Qb3c2, Qb3a4, Qb3a3, Qb3b1, Qb3b2, Qb3b4, Qb3b5, Qb3b6,]
         );
     }
 
@@ -673,14 +590,6 @@ mod tests {
         );
 
         // Note that the pawn is not allowed to move
-        assert_moves!(
-            board,
-            [
-                Move::new(PieceType::King, Square::A2, Square::A1),
-                Move::new(PieceType::King, Square::A2, Square::B1),
-                Move::new(PieceType::King, Square::A2, Square::A3),
-                Move::new(PieceType::King, Square::A2, Square::B3),
-            ]
-        );
+        assert_moves!(board, [Ka2a1, Ka2b1, Ka2a3, Ka2b3,]);
     }
 }
