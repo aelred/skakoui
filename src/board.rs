@@ -57,9 +57,12 @@ impl Board {
             self.bitboard_piece_mut(captured_piece).reset(mov.to());
         }
 
-        let bitboard = self.bitboard_piece_mut(mov.piece());
+        let player = self.player();
+        let piece = Piece::new(player, mov.piece_type());
+        let bitboard = self.bitboard_piece_mut(piece);
 
-        if let Some(promotion) = mov.promoting() {
+        if let Some(promotion_type) = mov.promoting() {
+            let promotion = Piece::new(player, promotion_type);
             bitboard.reset(mov.from());
             self.bitboard_piece_mut(promotion).set(mov.to());
         } else {
@@ -213,7 +216,7 @@ mod tests {
     fn can_make_a_move_on_board() {
         let mut board = Board::default();
 
-        let mov = Move::new(Piece::WN, Square::B1, Square::C3);
+        let mov = Move::new(PieceType::Knight, Square::B1, Square::C3);
 
         board.make_move(mov);
 
@@ -250,7 +253,7 @@ mod tests {
             Player::White,
         );
 
-        let mov = Move::new(Piece::WB, Square::B5, Square::D7);
+        let mov = Move::new(PieceType::Bishop, Square::B5, Square::D7);
 
         board.make_move(mov);
 
@@ -287,7 +290,7 @@ mod tests {
             Player::White,
         );
 
-        let mov = Move::new_promoting(Piece::WP, Square::G7, Square::G8, PieceType::Queen);
+        let mov = Move::new_promoting(PieceType::Pawn, Square::G7, Square::G8, PieceType::Queen);
 
         board.make_move(mov);
 
@@ -325,9 +328,9 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(Piece::WP, Square::A2, Square::A4));
+        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A4));
 
-        let en_passant = Move::new(Piece::BP, Square::B4, Square::A3);
+        let en_passant = Move::new(PieceType::Pawn, Square::B4, Square::A3);
         board.make_move(en_passant);
 
         let expected_board = Board::new(

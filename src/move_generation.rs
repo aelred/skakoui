@@ -42,7 +42,7 @@ impl Board {
 
         let pushes_iter = pushes.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION);
-            Move::new(piece, source, target)
+            Move::new(PieceType::Pawn, source, target)
         });
 
         let double_mask = bitboards::RANKS[P::PAWN_RANK + P::DIRECTION];
@@ -50,7 +50,7 @@ impl Board {
 
         let double_pushes_iter = double_pushes.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION * 2);
-            Move::new(piece, source, target)
+            Move::new(PieceType::Pawn, source, target)
         });
 
         let opponent_pieces = self.occupancy_player(P::PLAYER.opponent());
@@ -59,14 +59,14 @@ impl Board {
 
         let captures_east_iter = captures_east.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION).shift_file(1);
-            Move::new(piece, source, target)
+            Move::new(PieceType::Pawn, source, target)
         });
 
         let captures_west = pawns_forward.shift_file(1) & opponent_pieces;
 
         let captures_west_iter = captures_west.squares().map(move |target| {
             let source = target.shift_rank(-P::DIRECTION).shift_file(-1);
-            Move::new(piece, source, target)
+            Move::new(PieceType::Pawn, source, target)
         });
 
         captures_west_iter
@@ -145,7 +145,7 @@ impl Board {
 
             attacks
                 .squares()
-                .map(move |target| Move::new(piece, source, target))
+                .map(move |target| Move::new(piece_type, source, target))
         })
     }
 }
@@ -315,26 +315,26 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WP, Square::A2, Square::A3),
-                Move::new(Piece::WP, Square::B2, Square::B3),
-                Move::new(Piece::WP, Square::C2, Square::C3),
-                Move::new(Piece::WP, Square::D2, Square::D3),
-                Move::new(Piece::WP, Square::E2, Square::E3),
-                Move::new(Piece::WP, Square::F2, Square::F3),
-                Move::new(Piece::WP, Square::G2, Square::G3),
-                Move::new(Piece::WP, Square::H2, Square::H3),
-                Move::new(Piece::WP, Square::A2, Square::A4),
-                Move::new(Piece::WP, Square::B2, Square::B4),
-                Move::new(Piece::WP, Square::C2, Square::C4),
-                Move::new(Piece::WP, Square::D2, Square::D4),
-                Move::new(Piece::WP, Square::E2, Square::E4),
-                Move::new(Piece::WP, Square::F2, Square::F4),
-                Move::new(Piece::WP, Square::G2, Square::G4),
-                Move::new(Piece::WP, Square::H2, Square::H4),
-                Move::new(Piece::WN, Square::B1, Square::A3),
-                Move::new(Piece::WN, Square::B1, Square::C3),
-                Move::new(Piece::WN, Square::G1, Square::H3),
-                Move::new(Piece::WN, Square::G1, Square::F3)
+                Move::new(PieceType::Pawn, Square::A2, Square::A3),
+                Move::new(PieceType::Pawn, Square::B2, Square::B3),
+                Move::new(PieceType::Pawn, Square::C2, Square::C3),
+                Move::new(PieceType::Pawn, Square::D2, Square::D3),
+                Move::new(PieceType::Pawn, Square::E2, Square::E3),
+                Move::new(PieceType::Pawn, Square::F2, Square::F3),
+                Move::new(PieceType::Pawn, Square::G2, Square::G3),
+                Move::new(PieceType::Pawn, Square::H2, Square::H3),
+                Move::new(PieceType::Pawn, Square::A2, Square::A4),
+                Move::new(PieceType::Pawn, Square::B2, Square::B4),
+                Move::new(PieceType::Pawn, Square::C2, Square::C4),
+                Move::new(PieceType::Pawn, Square::D2, Square::D4),
+                Move::new(PieceType::Pawn, Square::E2, Square::E4),
+                Move::new(PieceType::Pawn, Square::F2, Square::F4),
+                Move::new(PieceType::Pawn, Square::G2, Square::G4),
+                Move::new(PieceType::Pawn, Square::H2, Square::H4),
+                Move::new(PieceType::Knight, Square::B1, Square::A3),
+                Move::new(PieceType::Knight, Square::B1, Square::C3),
+                Move::new(PieceType::Knight, Square::G1, Square::H3),
+                Move::new(PieceType::Knight, Square::G1, Square::F3)
             ]
         );
     }
@@ -342,31 +342,31 @@ mod tests {
     #[test]
     fn can_generate_all_possible_starting_moves_for_black() {
         let mut board = Board::default();
-        board.make_move(Move::new(Piece::WP, Square::A2, Square::A3));
+        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A3));
 
         assert_moves!(
             board,
             [
-                Move::new(Piece::BP, Square::A7, Square::A6),
-                Move::new(Piece::BP, Square::B7, Square::B6),
-                Move::new(Piece::BP, Square::C7, Square::C6),
-                Move::new(Piece::BP, Square::D7, Square::D6),
-                Move::new(Piece::BP, Square::E7, Square::E6),
-                Move::new(Piece::BP, Square::F7, Square::F6),
-                Move::new(Piece::BP, Square::G7, Square::G6),
-                Move::new(Piece::BP, Square::H7, Square::H6),
-                Move::new(Piece::BP, Square::A7, Square::A5),
-                Move::new(Piece::BP, Square::B7, Square::B5),
-                Move::new(Piece::BP, Square::C7, Square::C5),
-                Move::new(Piece::BP, Square::D7, Square::D5),
-                Move::new(Piece::BP, Square::E7, Square::E5),
-                Move::new(Piece::BP, Square::F7, Square::F5),
-                Move::new(Piece::BP, Square::G7, Square::G5),
-                Move::new(Piece::BP, Square::H7, Square::H5),
-                Move::new(Piece::BN, Square::B8, Square::A6),
-                Move::new(Piece::BN, Square::B8, Square::C6),
-                Move::new(Piece::BN, Square::G8, Square::H6),
-                Move::new(Piece::BN, Square::G8, Square::F6)
+                Move::new(PieceType::Pawn, Square::A7, Square::A6),
+                Move::new(PieceType::Pawn, Square::B7, Square::B6),
+                Move::new(PieceType::Pawn, Square::C7, Square::C6),
+                Move::new(PieceType::Pawn, Square::D7, Square::D6),
+                Move::new(PieceType::Pawn, Square::E7, Square::E6),
+                Move::new(PieceType::Pawn, Square::F7, Square::F6),
+                Move::new(PieceType::Pawn, Square::G7, Square::G6),
+                Move::new(PieceType::Pawn, Square::H7, Square::H6),
+                Move::new(PieceType::Pawn, Square::A7, Square::A5),
+                Move::new(PieceType::Pawn, Square::B7, Square::B5),
+                Move::new(PieceType::Pawn, Square::C7, Square::C5),
+                Move::new(PieceType::Pawn, Square::D7, Square::D5),
+                Move::new(PieceType::Pawn, Square::E7, Square::E5),
+                Move::new(PieceType::Pawn, Square::F7, Square::F5),
+                Move::new(PieceType::Pawn, Square::G7, Square::G5),
+                Move::new(PieceType::Pawn, Square::H7, Square::H5),
+                Move::new(PieceType::Knight, Square::B8, Square::A6),
+                Move::new(PieceType::Knight, Square::B8, Square::C6),
+                Move::new(PieceType::Knight, Square::G8, Square::H6),
+                Move::new(PieceType::Knight, Square::G8, Square::F6)
             ]
         );
     }
@@ -431,8 +431,8 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::BP, Square::D5, Square::C4),
-                Move::new(Piece::BP, Square::D5, Square::E4)
+                Move::new(PieceType::Pawn, Square::D5, Square::C4),
+                Move::new(PieceType::Pawn, Square::D5, Square::E4)
             ]
         );
     }
@@ -491,7 +491,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Move::new(Piece::WP, Square::A3, Square::A4)]);
+        assert_moves!(board, [Move::new(PieceType::Pawn, Square::A3, Square::A4)]);
     }
 
     #[ignore]
@@ -511,9 +511,9 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(Piece::WP, Square::A2, Square::A4));
+        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A4));
 
-        assert_moves!(board, [Move::new(Piece::BP, Square::B4, Square::A3)]);
+        assert_moves!(board, [Move::new(PieceType::Pawn, Square::B4, Square::A3)]);
     }
 
     #[ignore]
@@ -533,7 +533,7 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(Piece::WP, Square::A3, Square::A4));
+        board.make_move(Move::new(PieceType::Pawn, Square::A3, Square::A4));
 
         assert_moves!(board, []);
     }
@@ -557,13 +557,13 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WK, Square::B3, Square::A2),
-                Move::new(Piece::WK, Square::B3, Square::B2),
-                Move::new(Piece::WK, Square::B3, Square::A3),
-                Move::new(Piece::WK, Square::B3, Square::C3),
-                Move::new(Piece::WK, Square::B3, Square::A4),
-                Move::new(Piece::WK, Square::B3, Square::B4),
-                Move::new(Piece::WK, Square::B3, Square::C4),
+                Move::new(PieceType::King, Square::B3, Square::A2),
+                Move::new(PieceType::King, Square::B3, Square::B2),
+                Move::new(PieceType::King, Square::B3, Square::A3),
+                Move::new(PieceType::King, Square::B3, Square::C3),
+                Move::new(PieceType::King, Square::B3, Square::A4),
+                Move::new(PieceType::King, Square::B3, Square::B4),
+                Move::new(PieceType::King, Square::B3, Square::C4),
             ]
         );
     }
@@ -587,11 +587,11 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WN, Square::B3, Square::A1),
-                Move::new(Piece::WN, Square::B3, Square::C1),
-                Move::new(Piece::WN, Square::B3, Square::D2),
-                Move::new(Piece::WN, Square::B3, Square::D4),
-                Move::new(Piece::WN, Square::B3, Square::A5),
+                Move::new(PieceType::Knight, Square::B3, Square::A1),
+                Move::new(PieceType::Knight, Square::B3, Square::C1),
+                Move::new(PieceType::Knight, Square::B3, Square::D2),
+                Move::new(PieceType::Knight, Square::B3, Square::D4),
+                Move::new(PieceType::Knight, Square::B3, Square::A5),
             ]
         );
     }
@@ -615,11 +615,11 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WR, Square::B3, Square::B1),
-                Move::new(Piece::WR, Square::B3, Square::B2),
-                Move::new(Piece::WR, Square::B3, Square::A3),
-                Move::new(Piece::WR, Square::B3, Square::C3),
-                Move::new(Piece::WR, Square::B3, Square::B4),
+                Move::new(PieceType::Rook, Square::B3, Square::B1),
+                Move::new(PieceType::Rook, Square::B3, Square::B2),
+                Move::new(PieceType::Rook, Square::B3, Square::A3),
+                Move::new(PieceType::Rook, Square::B3, Square::C3),
+                Move::new(PieceType::Rook, Square::B3, Square::B4),
             ]
         );
     }
@@ -643,10 +643,10 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WB, Square::B3, Square::D1),
-                Move::new(Piece::WB, Square::B3, Square::A2),
-                Move::new(Piece::WB, Square::B3, Square::C2),
-                Move::new(Piece::WB, Square::B3, Square::A4),
+                Move::new(PieceType::Bishop, Square::B3, Square::D1),
+                Move::new(PieceType::Bishop, Square::B3, Square::A2),
+                Move::new(PieceType::Bishop, Square::B3, Square::C2),
+                Move::new(PieceType::Bishop, Square::B3, Square::A4),
             ]
         );
     }
@@ -670,16 +670,16 @@ mod tests {
         assert_moves!(
             board,
             [
-                Move::new(Piece::WQ, Square::B3, Square::D1),
-                Move::new(Piece::WQ, Square::B3, Square::A2),
-                Move::new(Piece::WQ, Square::B3, Square::C2),
-                Move::new(Piece::WQ, Square::B3, Square::A4),
-                Move::new(Piece::WQ, Square::B3, Square::A3),
-                Move::new(Piece::WQ, Square::B3, Square::B1),
-                Move::new(Piece::WQ, Square::B3, Square::B2),
-                Move::new(Piece::WQ, Square::B3, Square::B4),
-                Move::new(Piece::WQ, Square::B3, Square::B5),
-                Move::new(Piece::WQ, Square::B3, Square::B6),
+                Move::new(PieceType::Queen, Square::B3, Square::D1),
+                Move::new(PieceType::Queen, Square::B3, Square::A2),
+                Move::new(PieceType::Queen, Square::B3, Square::C2),
+                Move::new(PieceType::Queen, Square::B3, Square::A4),
+                Move::new(PieceType::Queen, Square::B3, Square::A3),
+                Move::new(PieceType::Queen, Square::B3, Square::B1),
+                Move::new(PieceType::Queen, Square::B3, Square::B2),
+                Move::new(PieceType::Queen, Square::B3, Square::B4),
+                Move::new(PieceType::Queen, Square::B3, Square::B5),
+                Move::new(PieceType::Queen, Square::B3, Square::B6),
             ]
         );
     }

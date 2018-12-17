@@ -4,33 +4,33 @@ use crate::Square;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Move {
-    piece: Piece,
+    piece_type: PieceType,
     from: Square,
     to: Square,
     promoting: Option<PieceType>,
 }
 
 impl Move {
-    pub fn new(piece: Piece, from: Square, to: Square) -> Self {
+    pub fn new(piece_type: PieceType, from: Square, to: Square) -> Self {
         Self {
-            piece,
+            piece_type,
             from,
             to,
             promoting: None,
         }
     }
 
-    pub fn new_promoting(piece: Piece, from: Square, to: Square, promoting: PieceType) -> Self {
+    pub fn new_promoting(piece_type: PieceType, from: Square, to: Square, promoting: PieceType) -> Self {
         Self {
-            piece,
+            piece_type,
             from,
             to,
             promoting: Some(promoting),
         }
     }
 
-    pub fn piece(self) -> Piece {
-        self.piece
+    pub fn piece_type(self) -> PieceType {
+        self.piece_type
     }
 
     pub fn from(self) -> Square {
@@ -41,9 +41,8 @@ impl Move {
         self.to
     }
 
-    pub fn promoting(self) -> Option<Piece> {
+    pub fn promoting(self) -> Option<PieceType> {
         self.promoting
-            .map(|promoting| Piece::new(self.piece.player(), promoting))
     }
 }
 
@@ -53,8 +52,8 @@ mod tests {
 
     #[test]
     fn can_create_a_move_from_piece_and_two_squares() {
-        let mov = Move::new(Piece::WP, Square::A2, Square::A3);
-        assert_eq!(mov.piece(), Piece::WP);
+        let mov = Move::new(PieceType::Pawn, Square::A2, Square::A3);
+        assert_eq!(mov.piece_type(), PieceType::Pawn);
         assert_eq!(mov.from(), Square::A2);
         assert_eq!(mov.to(), Square::A3);
         assert_eq!(mov.promoting(), None);
@@ -62,10 +61,10 @@ mod tests {
 
     #[test]
     fn can_create_a_promoting_move() {
-        let mov = Move::new_promoting(Piece::WP, Square::A2, Square::A3, PieceType::Knight);
-        assert_eq!(mov.piece(), Piece::WP);
+        let mov = Move::new_promoting(PieceType::Pawn, Square::A2, Square::A3, PieceType::Knight);
+        assert_eq!(mov.piece_type(), PieceType::Pawn);
         assert_eq!(mov.from(), Square::A2);
         assert_eq!(mov.to(), Square::A3);
-        assert_eq!(mov.promoting(), Some(Piece::WN));
+        assert_eq!(mov.promoting(), Some(PieceType::Knight));
     }
 }
