@@ -20,12 +20,12 @@ impl Board {
 
     fn moves_for_player<P: PlayerType + 'static>(&self) -> Box<dyn Iterator<Item = Move>> {
         let iter = self
-            .pawn_moves::<P>()
-            .chain(self.king_moves::<P>())
-            .chain(self.knight_moves::<P>())
+            .king_moves::<P>()
+            .chain(self.queen_moves::<P>())
             .chain(self.rook_moves::<P>())
             .chain(self.bishop_moves::<P>())
-            .chain(self.queen_moves::<P>());
+            .chain(self.knight_moves::<P>())
+            .chain(self.pawn_moves::<P>());
 
         Box::new(iter)
     }
@@ -69,10 +69,10 @@ impl Board {
             Move::new(piece, source, target)
         });
 
-        pushes_iter
-            .chain(double_pushes_iter)
+        captures_west_iter
             .chain(captures_east_iter)
-            .chain(captures_west_iter)
+            .chain(double_pushes_iter)
+            .chain(pushes_iter)
     }
 
     fn king_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {

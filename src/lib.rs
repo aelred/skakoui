@@ -13,6 +13,8 @@ mod square;
 
 use enum_map::Enum;
 
+pub mod search;
+
 pub use crate::{
     bitboard::{bitboards, Bitboard},
     board::Board,

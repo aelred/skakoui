@@ -12,7 +12,7 @@ use enum_map::EnumMap;
 use std::fmt;
 use std::ops::BitOr;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct Board {
     bitboards: EnumMap<Player, EnumMap<PieceType, Bitboard>>,
     player: Player,
@@ -88,6 +88,20 @@ impl Board {
         self.bitboards[player]
             .values()
             .fold(bitboards::EMPTY, BitOr::bitor)
+    }
+
+    pub fn eval(&self) -> i32 {
+        200 * (self.count(Piece::WK) - self.count(Piece::BK))
+            + 9 * (self.count(Piece::WQ) - self.count(Piece::BQ))
+            + 5 * (self.count(Piece::WR) - self.count(Piece::BR))
+            + 3 * (self.count(Piece::WB) - self.count(Piece::BB))
+            + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
+            + 1 * (self.count(Piece::WP) - self.count(Piece::BP))
+        // TODO: mobility, isolated pawns, blah blah blah
+    }
+
+    fn count(&self, piece: Piece) -> i32 {
+        self.bitboard_piece(piece).count() as i32
     }
 }
 

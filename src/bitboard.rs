@@ -10,7 +10,7 @@ use std::ops::BitXor;
 use std::ops::BitXorAssign;
 use std::ops::Not;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Bitboard(u64);
 
 impl Bitboard {
@@ -67,6 +67,10 @@ impl Bitboard {
     /// Returns set squares in order from a1 to g8.
     pub fn squares(self) -> impl DoubleEndedIterator<Item = Square> {
         SquareIterator(self)
+    }
+
+    pub fn count(&self) -> u32 {
+        self.0.count_ones()
     }
 
     fn index_of_lsb_set(self) -> u32 {
