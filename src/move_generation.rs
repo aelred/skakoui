@@ -124,11 +124,7 @@ impl Board {
         let occupancy = self.occupancy();
 
         self.moves_for_piece(PieceType::Rook, move |source| {
-            let north = slide::<North>(source, occupancy);
-            let south = slide::<South>(source, occupancy);
-            let east = slide::<East>(source, occupancy);
-            let west = slide::<West>(source, occupancy);
-            (north | south | east | west)
+            slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
         })
     }
 
@@ -136,11 +132,7 @@ impl Board {
         let occupancy = self.occupancy();
 
         self.moves_for_piece(PieceType::Bishop, move |source| {
-            let nw = slide::<NorthWest>(source, occupancy);
-            let se = slide::<SouthEast>(source, occupancy);
-            let ne = slide::<NorthEast>(source, occupancy);
-            let sw = slide::<SouthWest>(source, occupancy);
-            (nw | se | ne | sw)
+            slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
         })
     }
 
@@ -148,15 +140,10 @@ impl Board {
         let occupancy = self.occupancy();
 
         self.moves_for_piece(PieceType::Queen, move |source| {
-            let north = slide::<North>(source, occupancy);
-            let south = slide::<South>(source, occupancy);
-            let east = slide::<East>(source, occupancy);
-            let west = slide::<West>(source, occupancy);
-            let nw = slide::<NorthWest>(source, occupancy);
-            let se = slide::<SouthEast>(source, occupancy);
-            let ne = slide::<NorthEast>(source, occupancy);
-            let sw = slide::<SouthWest>(source, occupancy);
-            (north | south | east | west | nw | se | ne | sw)
+            slide::<NorthSouth>(source, occupancy)
+                | slide::<EastWest>(source, occupancy)
+                | slide::<Diagonal>(source, occupancy)
+                | slide::<AntiDiagonal>(source, occupancy)
         })
     }
 
@@ -180,115 +167,73 @@ impl Board {
 }
 
 fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
-    let movement = Dir::bitboard(source);
-    let mut blockers = movement & occupancy;
+    let pos_movement = Dir::positive_bitboard(source);
+    let mut blockers = pos_movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
-    blockers.set(Dir::Type::LAST_SQUARE);
-    let blocking_square = Dir::Type::first_square(&mut blockers.squares()).unwrap();
-    movement ^ Dir::bitboard(blocking_square)
+    blockers.set(Square::H8);
+    let blocking_square = blockers.squares().next().unwrap();
+    let pos_movement = pos_movement ^ Dir::positive_bitboard(blocking_square);
+
+    let neg_movement = Dir::negative_bitboard(source);
+    let mut blockers = neg_movement & occupancy;
+    // Set the last square so there is always a blocking square (no need to branch)
+    blockers.set(Square::A1);
+    let blocking_square = blockers.squares().rev().next().unwrap();
+    let neg_movement = neg_movement ^ Dir::negative_bitboard(blocking_square);
+
+    pos_movement | neg_movement
 }
 
 trait SlideDirection {
-    type Type: SlideDirectionType;
-    fn bitboard(source: Square) -> Bitboard;
+    fn positive_bitboard(source: Square) -> Bitboard;
+    fn negative_bitboard(source: Square) -> Bitboard;
 }
 
-struct North;
-impl SlideDirection for North {
-    type Type = Positive;
-
-    fn bitboard(source: Square) -> Bitboard {
+struct NorthSouth;
+impl SlideDirection for NorthSouth {
+    fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::FILES[source.file()] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
     }
-}
 
-struct South;
-impl SlideDirection for South {
-    type Type = Negative;
-
-    fn bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index()]
     }
 }
 
-struct East;
-impl SlideDirection for East {
-    type Type = Positive;
-
-    fn bitboard(source: Square) -> Bitboard {
+struct EastWest;
+impl SlideDirection for EastWest {
+    fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::RANKS[source.rank()] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
     }
-}
 
-struct West;
-impl SlideDirection for West {
-    type Type = Negative;
-
-    fn bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index()]
     }
 }
 
-struct NorthWest;
-impl SlideDirection for NorthWest {
-    type Type = Positive;
-
-    fn bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
-            & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
-    }
-}
-
-struct SouthEast;
-impl SlideDirection for SouthEast {
-    type Type = Negative;
-
-    fn bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
-            & bitboards::RANKS_FILLED[source.rank().to_index()]
-    }
-}
-
-struct NorthEast;
-impl SlideDirection for NorthEast {
-    type Type = Positive;
-
-    fn bitboard(source: Square) -> Bitboard {
+struct Diagonal;
+impl SlideDirection for Diagonal {
+    fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::DIAGONALS[source.file()][source.rank()]
             & !bitboards::FILES_FILLED[source.file().to_index() + 1]
     }
-}
 
-struct SouthWest;
-impl SlideDirection for SouthWest {
-    type Type = Negative;
-
-    fn bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::DIAGONALS[source.file()][source.rank()]
             & bitboards::FILES_FILLED[source.file().to_index()]
     }
 }
 
-trait SlideDirectionType {
-    const LAST_SQUARE: Square;
-    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square>;
-}
-
-struct Positive;
-impl SlideDirectionType for Positive {
-    const LAST_SQUARE: Square = Square::H8;
-
-    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
-        squares.next()
+struct AntiDiagonal;
+impl SlideDirection for AntiDiagonal {
+    fn positive_bitboard(source: Square) -> Bitboard {
+        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
+            & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
     }
-}
 
-struct Negative;
-impl SlideDirectionType for Negative {
-    const LAST_SQUARE: Square = Square::A1;
-
-    fn first_square(squares: &mut impl DoubleEndedIterator<Item = Square>) -> Option<Square> {
-        squares.rev().next()
+    fn negative_bitboard(source: Square) -> Bitboard {
+        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
+            & bitboards::RANKS_FILLED[source.rank().to_index()]
     }
 }
 
