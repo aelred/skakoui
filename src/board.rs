@@ -16,36 +16,49 @@ use std::ops::BitOr;
 pub struct Board {
     bitboards: EnumMap<Player, EnumMap<PieceType, Bitboard>>,
     player: Player,
+    pieces: EnumMap<Rank, EnumMap<File, Option<Piece>>>,
+    occupancy_player: EnumMap<Player, Bitboard>,
+    occupancy: Bitboard,
 }
 
 impl Board {
-    pub fn new(pieces: [[Option<Piece>; 8]; 8], player: Player) -> Self {
+    pub fn new(pieces_array: [[Option<Piece>; 8]; 8], player: Player) -> Self {
         let mut bitboards = EnumMap::from(|_| EnumMap::from(|_| bitboards::EMPTY));
 
-        for (i, pieces_rank) in pieces.iter().enumerate() {
-            for (j, optional_piece) in pieces_rank.iter().enumerate() {
-                if let Some(piece) = *optional_piece {
-                    let rank = Rank::from_index(i);
-                    let file = File::from_index(j);
+        let pieces = EnumMap::from(|rank: Rank| {
+            EnumMap::from(|file: File| pieces_array[rank.to_index()][file.to_index()])
+        });
+
+        for (rank, pieces_rank) in pieces {
+            for (file, optional_piece) in pieces_rank {
+                if let Some(piece) = optional_piece {
                     let square = Square::new(file, rank);
                     bitboards[piece.player()][piece.piece_type()].set(square);
                 }
             }
         }
 
-        Board { bitboards, player }
+        let occupancy_player = EnumMap::from(|player| {
+            bitboards[player]
+                .values()
+                .fold(bitboards::EMPTY, BitOr::bitor)
+        });
+
+        let occupancy = occupancy_player
+            .values()
+            .fold(bitboards::EMPTY, BitOr::bitor);
+
+        Board {
+            bitboards,
+            player,
+            pieces,
+            occupancy_player,
+            occupancy,
+        }
     }
 
     fn get(&self, square: Square) -> Option<Piece> {
-        for (player, bitboards) in self.bitboards.iter() {
-            for (piece_type, bitboard) in bitboards {
-                if bitboard.get(square) {
-                    return Some(Piece::new(player, piece_type));
-                }
-            }
-        }
-
-        None
+        self.pieces[square.rank()][square.file()]
     }
 
     pub fn player(&self) -> Player {
@@ -53,21 +66,35 @@ impl Board {
     }
 
     pub fn make_move(&mut self, mov: Move) {
-        if let Some(captured_piece) = self.get(mov.to()) {
-            self.bitboard_piece_mut(captured_piece).reset(mov.to());
+        let player = self.player();
+        let from = mov.from();
+        let to = mov.to();
+
+        if let Some(captured_piece) = self.get(to) {
+            self.bitboard_piece_mut(captured_piece).reset(to);
+            self.occupancy_player[player.opponent()].reset(to);
         }
 
-        let player = self.player();
+        self.pieces[from.rank()][from.file()] = None;
+
         let piece = Piece::new(player, mov.piece_type());
         let bitboard = self.bitboard_piece_mut(piece);
 
         if let Some(promotion_type) = mov.promoting() {
             let promotion = Piece::new(player, promotion_type);
-            bitboard.reset(mov.from());
-            self.bitboard_piece_mut(promotion).set(mov.to());
+            bitboard.reset(from);
+            self.bitboard_piece_mut(promotion).set(to);
+
+            self.pieces[to.rank()][to.file()] = Some(promotion);
         } else {
-            bitboard.move_bit(mov.from(), mov.to());
+            bitboard.move_bit(from, to);
+
+            self.pieces[to.rank()][to.file()] = Some(piece);
         }
+
+        self.occupancy.reset(from);
+        self.occupancy.set(to);
+        self.occupancy_player[player].move_bit(from, to);
 
         self.player = self.player.opponent();
     }
@@ -76,21 +103,16 @@ impl Board {
         &self.bitboards[piece.player()][piece.piece_type()]
     }
 
-    pub fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
+    fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
         &mut self.bitboards[piece.player()][piece.piece_type()]
     }
 
     pub fn occupancy(&self) -> Bitboard {
-        self.bitboards
-            .values()
-            .flat_map(EnumMap::values)
-            .fold(bitboards::EMPTY, BitOr::bitor)
+        self.occupancy
     }
 
     pub fn occupancy_player(&self, player: Player) -> Bitboard {
-        self.bitboards[player]
-            .values()
-            .fold(bitboards::EMPTY, BitOr::bitor)
+        self.occupancy_player[player]
     }
 
     pub fn eval(&self) -> i32 {
@@ -110,10 +132,33 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self {
-            bitboards: *bitboards::START_POSITIONS,
-            player: Player::White,
-        }
+        const __: Option<Piece> = None;
+        const WK: Option<Piece> = Some(Piece::WK);
+        const WQ: Option<Piece> = Some(Piece::WQ);
+        const WR: Option<Piece> = Some(Piece::WR);
+        const WB: Option<Piece> = Some(Piece::WB);
+        const WN: Option<Piece> = Some(Piece::WN);
+        const WP: Option<Piece> = Some(Piece::WP);
+        const BK: Option<Piece> = Some(Piece::BK);
+        const BQ: Option<Piece> = Some(Piece::BQ);
+        const BR: Option<Piece> = Some(Piece::BR);
+        const BB: Option<Piece> = Some(Piece::BB);
+        const BN: Option<Piece> = Some(Piece::BN);
+        const BP: Option<Piece> = Some(Piece::BP);
+
+        Board::new(
+            [
+                [WR, WN, WB, WQ, WK, WB, WN, WR],
+                [WP, WP, WP, WP, WP, WP, WP, WP],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [BP, BP, BP, BP, BP, BP, BP, BP],
+                [BR, BN, BB, BQ, BK, BB, BN, BR],
+            ],
+            Player::White,
+        )
     }
 }
 
@@ -122,12 +167,12 @@ impl fmt::Display for Board {
         let files_str: String = File::VALUES.iter().map(File::to_string).collect();
         f.write_fmt(format_args!("  {}\n", files_str))?;
 
-        for rank in Rank::VALUES.iter().rev() {
+        for (rank, pieces) in self.pieces.iter().rev() {
             f.write_fmt(format_args!("{} ", rank))?;
-            for file in &File::VALUES {
-                let square = Square::new(*file, *rank);
+            for (file, optional_piece) in pieces {
+                let square = Square::new(file, rank);
 
-                let s = if let Some(piece) = self.get(square) {
+                let s = if let Some(piece) = optional_piece {
                     piece.to_string()
                 } else {
                     let col = match square.color() {

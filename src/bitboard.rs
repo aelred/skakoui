@@ -218,59 +218,14 @@ pub mod bitboards {
 
     use super::Bitboard;
     use crate::File;
-    use crate::PieceType;
-    use crate::Player;
     use crate::Rank;
     use crate::Square;
-    use enum_map::enum_map;
     use enum_map::EnumMap;
     use lazy_static::lazy_static;
 
     pub const EMPTY: Bitboard = Bitboard(0);
 
     lazy_static! {
-        pub static ref START_POSITIONS: EnumMap<Player, EnumMap<PieceType, Bitboard>> = enum_map! {
-            Player::White => enum_map! {
-                PieceType::King => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010000)
-                }
-                PieceType::Queen => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001000)
-                }
-                PieceType::Rook => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_10000001)
-                }
-                PieceType::Bishop => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100100)
-                }
-                PieceType::Knight => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_01000010)
-                }
-                PieceType::Pawn => {
-                    Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000)
-                }
-            },
-            Player::Black => enum_map! {
-                PieceType::King => {
-                    Bitboard(0b_00010000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-                PieceType::Queen => {
-                    Bitboard(0b_00001000_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-                PieceType::Rook => {
-                    Bitboard(0b_10000001_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-                PieceType::Bishop => {
-                    Bitboard(0b_00100100_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-                PieceType::Knight => {
-                    Bitboard(0b_01000010_00000000_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-                PieceType::Pawn => {
-                    Bitboard(0b_00000000_11111111_00000000_00000000_00000000_00000000_00000000_00000000)
-                }
-            }
-        };
         pub static ref FILES: EnumMap<File, Bitboard> = {
             let b = 0b_00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001;
             EnumMap::from(|file: File| Bitboard(b << file.to_index()))
@@ -352,7 +307,7 @@ mod tests {
 
     #[test]
     fn can_get_an_iterator_of_squares_from_bitboard() {
-        let bitboard = (*bitboards::START_POSITIONS)[Player::White][PieceType::Pawn];
+        let bitboard = Bitboard(0b_11111111_00000000);
 
         let squares: HashSet<Square> = bitboard.squares().collect();
 
