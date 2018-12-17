@@ -287,11 +287,8 @@ mod tests {
     const WB: Option<Piece> = Some(Piece::WB);
     const WN: Option<Piece> = Some(Piece::WN);
     const WP: Option<Piece> = Some(Piece::WP);
-    const BK: Option<Piece> = Some(Piece::BK);
     const BQ: Option<Piece> = Some(Piece::BQ);
-    const BR: Option<Piece> = Some(Piece::BR);
     const BB: Option<Piece> = Some(Piece::BB);
-    const BN: Option<Piece> = Some(Piece::BN);
     const BP: Option<Piece> = Some(Piece::BP);
 
     macro_rules! assert_moves {

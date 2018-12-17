@@ -99,7 +99,7 @@ impl Board {
             + 5 * (self.count(Piece::WR) - self.count(Piece::BR))
             + 3 * (self.count(Piece::WB) - self.count(Piece::BB))
             + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
-            + 1 * (self.count(Piece::WP) - self.count(Piece::BP))
+            + (self.count(Piece::WP) - self.count(Piece::BP))
         // TODO: mobility, isolated pawns, blah blah blah
     }
 

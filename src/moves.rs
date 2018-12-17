@@ -1,4 +1,3 @@
-use crate::Piece;
 use crate::PieceType;
 use crate::Square;
 
@@ -20,7 +19,12 @@ impl Move {
         }
     }
 
-    pub fn new_promoting(piece_type: PieceType, from: Square, to: Square, promoting: PieceType) -> Self {
+    pub fn new_promoting(
+        piece_type: PieceType,
+        from: Square,
+        to: Square,
+        promoting: PieceType,
+    ) -> Self {
         Self {
             piece_type,
             from,

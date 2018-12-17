@@ -69,7 +69,7 @@ impl Bitboard {
         SquareIterator(self)
     }
 
-    pub fn count(&self) -> u32 {
+    pub fn count(self) -> u32 {
         self.0.count_ones()
     }
 

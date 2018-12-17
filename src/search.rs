@@ -1,9 +1,7 @@
 use crate::Board;
 use crate::Move;
 use rand::seq::SliceRandom;
-use rand::Rng;
 use std::collections::HashMap;
-use std::fmt;
 use std::hash::Hash;
 
 pub trait State<M> {
@@ -25,13 +23,15 @@ pub struct Searcher<M, S> {
     cache: HashMap<S, CacheValue<M>>,
 }
 
-impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
-    pub fn new() -> Self {
+impl<M, S: Hash + Eq> Default for Searcher<M, S> {
+    fn default() -> Self {
         Self {
             cache: HashMap::new(),
         }
     }
+}
 
+impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
     pub fn run(&mut self, state: &S, depth: u32, maximising_player: bool) -> (Option<M>, i32) {
         self.search(
             state,
@@ -46,8 +46,8 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         &mut self,
         state: &S,
         depth: u32,
-        mut alpha: i32,
-        mut beta: i32,
+        alpha: i32,
+        beta: i32,
         maximising_player: bool,
     ) -> (Option<M>, i32) {
         if self.cache.contains_key(state) && self.cache[state].depth >= depth {
