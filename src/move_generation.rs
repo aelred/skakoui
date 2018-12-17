@@ -52,11 +52,11 @@ impl Board {
     }
 
     fn pseudo_legal_moves<P: PlayerType + 'static>(&self) -> impl Iterator<Item = Move> {
-        self.king_moves::<P>()
-            .chain(self.queen_moves::<P>())
-            .chain(self.rook_moves::<P>())
-            .chain(self.bishop_moves::<P>())
-            .chain(self.knight_moves::<P>())
+        self.king_moves()
+            .chain(self.queen_moves())
+            .chain(self.rook_moves())
+            .chain(self.bishop_moves())
+            .chain(self.knight_moves())
             .chain(self.pawn_moves::<P>())
     }
 
@@ -105,8 +105,8 @@ impl Board {
             .chain(pushes_iter)
     }
 
-    fn king_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_for_piece::<P, _>(PieceType::King, move |source| {
+    fn king_moves(&self) -> impl Iterator<Item = Move> {
+        self.moves_for_piece(PieceType::King, move |source| {
             let king = Bitboard::from(source);
             let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
             let ranks = king | attacks;
@@ -114,16 +114,16 @@ impl Board {
         })
     }
 
-    fn knight_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_for_piece::<P, _>(PieceType::Knight, move |source| {
+    fn knight_moves(&self) -> impl Iterator<Item = Move> {
+        self.moves_for_piece(PieceType::Knight, move |source| {
             Bitboard::from(source).knight_moves()
         })
     }
 
-    fn rook_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+    fn rook_moves(&self) -> impl Iterator<Item = Move> {
         let occupancy = self.occupancy();
 
-        self.moves_for_piece::<P, _>(PieceType::Rook, move |source| {
+        self.moves_for_piece(PieceType::Rook, move |source| {
             let north = slide::<North>(source, occupancy);
             let south = slide::<South>(source, occupancy);
             let east = slide::<East>(source, occupancy);
@@ -132,10 +132,10 @@ impl Board {
         })
     }
 
-    fn bishop_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+    fn bishop_moves(&self) -> impl Iterator<Item = Move> {
         let occupancy = self.occupancy();
 
-        self.moves_for_piece::<P, _>(PieceType::Bishop, move |source| {
+        self.moves_for_piece(PieceType::Bishop, move |source| {
             let nw = slide::<NorthWest>(source, occupancy);
             let se = slide::<SouthEast>(source, occupancy);
             let ne = slide::<NorthEast>(source, occupancy);
@@ -144,10 +144,10 @@ impl Board {
         })
     }
 
-    fn queen_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+    fn queen_moves(&self) -> impl Iterator<Item = Move> {
         let occupancy = self.occupancy();
 
-        self.moves_for_piece::<P, _>(PieceType::Queen, move |source| {
+        self.moves_for_piece(PieceType::Queen, move |source| {
             let north = slide::<North>(source, occupancy);
             let south = slide::<South>(source, occupancy);
             let east = slide::<East>(source, occupancy);
@@ -160,15 +160,14 @@ impl Board {
         })
     }
 
-    fn moves_for_piece<P, F>(&self, piece_type: PieceType, attacks: F) -> impl Iterator<Item = Move>
+    fn moves_for_piece<F>(&self, piece_type: PieceType, attacks: F) -> impl Iterator<Item = Move>
     where
-        P: PlayerType,
         F: Fn(Square) -> Bitboard,
     {
-        let piece = Piece::new(P::PLAYER, piece_type);
+        let piece = Piece::new(self.player(), piece_type);
         let positions = *self.bitboard_piece(piece);
 
-        let occupancy_player = self.occupancy_player(P::PLAYER);
+        let occupancy_player = self.occupancy_player(self.player());
 
         positions.squares().flat_map(move |source| {
             let attacks = attacks(source) & !occupancy_player;
