@@ -1,6 +1,8 @@
 use crate::file::File;
 use crate::Rank;
+use std::error::Error;
 use std::fmt;
+use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Square {
@@ -321,6 +323,16 @@ impl fmt::Debug for Square {
 impl fmt::Display for Square {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         f.write_fmt(format_args!("{}{}", self.file, self.rank))
+    }
+}
+
+impl FromStr for Square {
+    type Err = Box<dyn Error>;
+
+    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
+        let file = s.get(..1).ok_or("couldn't index string")?.parse()?;
+        let rank = s.get(1..).ok_or("coudln't index string")?.parse()?;
+        Ok(Square::new(file, rank))
     }
 }
 

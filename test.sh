@@ -1,3 +1,3 @@
 set -e
-cargo test --features strict
+cargo test
 cargo clippy --features strict -- -D clippy::all

@@ -1,6 +1,7 @@
 use enum_map::Enum;
 use std::fmt;
 use std::ops::Add;
+use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
 pub enum File {
@@ -56,5 +57,24 @@ impl fmt::Display for File {
             File::H => "h",
         };
         f.write_str(s)
+    }
+}
+
+impl FromStr for File {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        let file = match s {
+            "a" => File::A,
+            "b" => File::B,
+            "c" => File::C,
+            "d" => File::D,
+            "e" => File::E,
+            "f" => File::F,
+            "g" => File::G,
+            "h" => File::H,
+            _ => return Err("unrecognised file".to_string()),
+        };
+        Ok(file)
     }
 }

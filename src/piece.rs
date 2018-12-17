@@ -1,4 +1,5 @@
 use crate::Player;
+use core::fmt::Write;
 use enum_map::Enum;
 use std::fmt;
 use std::str::FromStr;
@@ -149,6 +150,30 @@ impl PieceType {
             PieceType::Knight => 'N',
             PieceType::Pawn => 'P',
         }
+    }
+}
+
+impl fmt::Display for PieceType {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        f.write_char(self.as_char())
+    }
+}
+
+impl FromStr for PieceType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, String> {
+        let piece_type = match s {
+            "K" => PieceType::King,
+            "Q" => PieceType::Queen,
+            "R" => PieceType::Rook,
+            "B" => PieceType::Bishop,
+            "N" => PieceType::Knight,
+            "P" => PieceType::Pawn,
+            _ => return Err("couldn't recognise piece".to_string()),
+        };
+
+        Ok(piece_type)
     }
 }
 

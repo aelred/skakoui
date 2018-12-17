@@ -1,7 +1,9 @@
 use enum_map::Enum;
+use std::error::Error;
 use std::fmt;
 use std::ops::Add;
 use std::ops::Sub;
+use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
 pub enum Rank {
@@ -55,5 +57,18 @@ impl Sub<isize> for Rank {
 impl fmt::Display for Rank {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         f.write_fmt(format_args!("{}", self.to_index() + 1))
+    }
+}
+
+impl FromStr for Rank {
+    type Err = Box<dyn Error>;
+
+    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
+        let num: usize = s.parse()?;
+        if num < 1 || num > Rank::VALUES.len() + 1 {
+            Err("unrecognised rank".to_string().into())
+        } else {
+            Ok(Rank::from_index(num - 1))
+        }
     }
 }
