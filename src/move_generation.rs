@@ -36,19 +36,23 @@ impl Board {
     fn can_take_king<P: PlayerType + 'static>(&self) -> bool {
         let king = Piece::new(P::Opp::PLAYER, PieceType::King);
 
-        if self.count(king) == 0 {
-            return false;
-        }
+        if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
+            for mov in self.pseudo_legal_moves::<P>() {
+                if mov.to() != king_pos {
+                    continue;
+                }
 
-        for mov in self.pseudo_legal_moves::<P>() {
-            let mut after_move = self.clone();
-            after_move.make_move(mov);
-            if after_move.count(king) == 0 {
-                return true;
+                let mut after_move = self.clone();
+                after_move.make_move(mov);
+                if after_move.count(king) == 0 {
+                    return true;
+                }
             }
-        }
 
-        false
+            false
+        } else {
+            false
+        }
     }
 
     fn pseudo_legal_moves<P: PlayerType + 'static>(&self) -> impl Iterator<Item = Move> {
