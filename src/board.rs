@@ -103,7 +103,7 @@ impl Board {
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
-    fn count(&self, piece: Piece) -> i32 {
+    pub fn count(&self, piece: Piece) -> i32 {
         self.bitboard_piece(piece).count() as i32
     }
 }

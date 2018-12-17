@@ -1,50 +1,92 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use chess::search;
+use chess::search::Searcher;
 use chess::Board;
 use chess::Move;
 use chess::Player;
 use std::collections::HashSet;
 use std::io;
 use std::io::BufRead;
+use std::io::Lines;
 use std::io::Write;
 
 fn main() {
     let stdin = io::stdin();
-    let mut input = stdin.lock().lines();
+    let lock = stdin.lock();
 
     let mut board = Board::default();
-    let mut searcher = search::Searcher::default();
     println!("{}", board);
 
+    let mut white = Computer::default();
+    let mut black = Human::new(lock);
+
     loop {
-        let valid_moves: HashSet<Move> = board.moves().collect();
-
-        let player_move = loop {
-            print!("Player: ");
-            io::stdout().flush().expect("Could not flush stdout");
-
-            let line = input.next().unwrap().unwrap();
-            if let Ok(mov) = line.parse() {
-                if valid_moves.contains(&mov) {
-                    break mov;
-                }
-            }
-        };
-
-        board.make_move(player_move);
-        println!("\n{}", board);
-
-        let computer_move = decide(&mut searcher, &board).unwrap();
-        println!("Computer: {}", computer_move);
-        board.make_move(computer_move);
-        println!("\n{}", board);
+        play(&mut white, &mut board);
+        play(&mut black, &mut board);
     }
 }
 
-fn decide(searcher: &mut search::Searcher<Move, Board>, board: &Board) -> Option<Move> {
-    let maximising_player = board.player() == Player::White;
+fn play<A: Agent>(agent: &mut A, board: &mut Board) {
+    println!();
+    print!("{}: ", A::NAME);
+    io::stdout().flush().expect("Could not flush stdout");
+    if let Some(mov) = agent.get_move(board) {
+        println!("{}", mov);
+        board.make_move(mov);
+        println!();
+        println!("{}", board);
+    } else {
+        println!("Game Over!");
+        panic!(); // TODO: don't just panic on game over ¯\_(ツ)_/¯
+    }
+}
 
-    let (mov, _) = searcher.run(board, 4, maximising_player);
-    mov
+trait Agent {
+    const NAME: &'static str;
+
+    fn get_move(&mut self, board: &Board) -> Option<Move>;
+}
+
+#[derive(Default)]
+struct Computer {
+    searcher: Searcher<Move, Board>,
+}
+
+impl Agent for Computer {
+    const NAME: &'static str = "Computer";
+
+    fn get_move(&mut self, board: &Board) -> Option<Move> {
+        let maximising_player = board.player() == Player::White;
+        let (mov, _) = self.searcher.run(board, 5, maximising_player);
+        mov
+    }
+}
+
+struct Human<B> {
+    input: Lines<B>,
+}
+
+impl<B: BufRead> Human<B> {
+    fn new(input: B) -> Self {
+        Self {
+            input: input.lines(),
+        }
+    }
+}
+
+impl<B: BufRead> Agent for Human<B> {
+    const NAME: &'static str = "Player";
+
+    fn get_move(&mut self, board: &Board) -> Option<Move> {
+        let valid_moves: HashSet<Move> = board.moves().collect();
+
+        loop {
+            let line = self.input.next().unwrap().unwrap();
+            if let Ok(mov) = line.parse() {
+                if valid_moves.contains(&mov) {
+                    return Some(mov);
+                }
+            }
+        }
+    }
 }

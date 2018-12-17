@@ -19,15 +19,45 @@ impl Board {
     }
 
     fn moves_for_player<P: PlayerType + 'static>(&self) -> Box<dyn Iterator<Item = Move>> {
-        let iter = self
-            .king_moves::<P>()
+        let pseudo_legal_moves = self.pseudo_legal_moves::<P>();
+
+        let cloned_board = self.clone();
+
+        // TODO: this is a very inefficient way to confirm if in check
+        let legal_moves = pseudo_legal_moves.filter(move |mov| {
+            let mut after_move = cloned_board.clone();
+            after_move.make_move(*mov);
+            !after_move.can_take_king::<P::Opp>()
+        });
+
+        Box::new(legal_moves)
+    }
+
+    fn can_take_king<P: PlayerType + 'static>(&self) -> bool {
+        let king = Piece::new(P::Opp::PLAYER, PieceType::King);
+
+        if self.count(king) == 0 {
+            return false;
+        }
+
+        for mov in self.pseudo_legal_moves::<P>() {
+            let mut after_move = self.clone();
+            after_move.make_move(mov);
+            if after_move.count(king) == 0 {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn pseudo_legal_moves<P: PlayerType + 'static>(&self) -> impl Iterator<Item = Move> {
+        self.king_moves::<P>()
             .chain(self.queen_moves::<P>())
             .chain(self.rook_moves::<P>())
             .chain(self.bishop_moves::<P>())
             .chain(self.knight_moves::<P>())
-            .chain(self.pawn_moves::<P>());
-
-        Box::new(iter)
+            .chain(self.pawn_moves::<P>())
     }
 
     fn pawn_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
@@ -288,6 +318,7 @@ mod tests {
     const WN: Option<Piece> = Some(Piece::WN);
     const WP: Option<Piece> = Some(Piece::WP);
     const BQ: Option<Piece> = Some(Piece::BQ);
+    const BR: Option<Piece> = Some(Piece::BR);
     const BB: Option<Piece> = Some(Piece::BB);
     const BP: Option<Piece> = Some(Piece::BP);
 
@@ -551,11 +582,11 @@ mod tests {
             Player::White,
         );
 
+        // Kb3b2 is missing because it puts the king in check
         assert_moves!(
             board,
             [
                 Move::new(PieceType::King, Square::B3, Square::A2),
-                Move::new(PieceType::King, Square::B3, Square::B2),
                 Move::new(PieceType::King, Square::B3, Square::A3),
                 Move::new(PieceType::King, Square::B3, Square::C3),
                 Move::new(PieceType::King, Square::B3, Square::A4),
@@ -677,6 +708,34 @@ mod tests {
                 Move::new(PieceType::Queen, Square::B3, Square::B4),
                 Move::new(PieceType::Queen, Square::B3, Square::B5),
                 Move::new(PieceType::Queen, Square::B3, Square::B6),
+            ]
+        );
+    }
+
+    #[test]
+    fn cannot_make_a_move_that_leaves_king_in_check() {
+        let board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [WK, WP, __, __, __, __, __, BR],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        // Note that the pawn is not allowed to move
+        assert_moves!(
+            board,
+            [
+                Move::new(PieceType::King, Square::A2, Square::A1),
+                Move::new(PieceType::King, Square::A2, Square::B1),
+                Move::new(PieceType::King, Square::A2, Square::A3),
+                Move::new(PieceType::King, Square::A2, Square::B3),
             ]
         );
     }

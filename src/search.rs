@@ -71,7 +71,14 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         let mut moves = state.moves().peekable();
 
         if moves.peek().is_none() {
-            return (None, state.eval());
+            return (
+                None,
+                if maximising_player {
+                    std::i32::MIN
+                } else {
+                    std::i32::MAX
+                },
+            );
         }
 
         if depth == 0 {
@@ -142,7 +149,18 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
     ) -> (Option<M>, i32) {
         let mut moves = state.moves().peekable();
 
-        if depth == 0 || moves.peek().is_none() || state.quiet() {
+        if moves.peek().is_none() {
+            return (
+                None,
+                if maximising_player {
+                    std::i32::MIN
+                } else {
+                    std::i32::MAX
+                },
+            );
+        }
+
+        if depth == 0 || state.quiet() {
             return (None, state.eval());
         }
 
