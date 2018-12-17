@@ -31,106 +31,101 @@ impl<M, S: Hash + Eq> Default for Searcher<M, S> {
     }
 }
 
-impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
-    pub fn run(&mut self, state: &S, depth: u32, maximising_player: bool) -> (Option<M>, i32) {
-        self.search(
-            state,
-            depth,
-            std::i32::MIN,
-            std::i32::MAX,
-            maximising_player,
-        )
+trait Player {
+    type Opp: Player;
+    const WORST_SCORE: i32;
+    fn set_alpha_beta(alpha: &mut i32, beta: &mut i32, score: i32);
+    fn better_score(new_score: i32, old_score: i32) -> bool;
+}
+
+struct Maximising;
+impl Player for Maximising {
+    type Opp = Minimising;
+    const WORST_SCORE: i32 = std::i32::MIN;
+
+    fn set_alpha_beta(alpha: &mut i32, _: &mut i32, score: i32) {
+        *alpha = i32::max(*alpha, score);
     }
 
-    fn search(
+    fn better_score(new_score: i32, old_score: i32) -> bool {
+        new_score > old_score
+    }
+}
+
+struct Minimising;
+impl Player for Minimising {
+    type Opp = Maximising;
+    const WORST_SCORE: i32 = std::i32::MAX;
+
+    fn set_alpha_beta(_: &mut i32, beta: &mut i32, score: i32) {
+        *beta = i32::min(*beta, score);
+    }
+
+    fn better_score(new_score: i32, old_score: i32) -> bool {
+        new_score < old_score
+    }
+}
+
+impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
+    pub fn run(&mut self, state: &S, depth: u32, maximising_player: bool) -> (Option<M>, i32) {
+        if maximising_player {
+            self.search::<Maximising>(state, depth, std::i32::MIN, std::i32::MAX)
+        } else {
+            self.search::<Minimising>(state, depth, std::i32::MIN, std::i32::MAX)
+        }
+    }
+
+    fn search<P: Player>(
         &mut self,
         state: &S,
         depth: u32,
         alpha: i32,
         beta: i32,
-        maximising_player: bool,
     ) -> (Option<M>, i32) {
         if self.cache.contains_key(state) && self.cache[state].depth >= depth {
             self.cache[state].result
         } else {
-            let result = self.search_uncached(state, depth, alpha, beta, maximising_player);
+            let result = self.search_uncached::<P>(state, depth, alpha, beta);
             let cache_entry = CacheValue { depth, result };
             self.cache.insert(state.clone(), cache_entry);
             result
         }
     }
 
-    fn search_uncached(
+    fn search_uncached<P: Player>(
         &mut self,
         state: &S,
         depth: u32,
         mut alpha: i32,
         mut beta: i32,
-        maximising_player: bool,
     ) -> (Option<M>, i32) {
         let mut moves = state.moves().peekable();
 
         if moves.peek().is_none() {
-            return (
-                None,
-                if maximising_player {
-                    std::i32::MIN
-                } else {
-                    std::i32::MAX
-                },
-            );
+            return (None, P::WORST_SCORE);
         }
 
         if depth == 0 {
-            return self.quiescence_search(
-                state,
-                1,
-                std::i32::MIN,
-                std::i32::MAX,
-                maximising_player,
-            );
+            return self.quiescence_search::<P>(state, 1, std::i32::MIN, std::i32::MAX);
         }
 
         let mut best_moves = vec![];
-        let mut best_value;
+        let mut best_value = P::WORST_SCORE;
 
-        if maximising_player {
-            best_value = std::i32::MIN;
+        for mov in moves {
+            let mut child = state.clone();
+            child.make_move(mov);
+            let value = self.search::<P::Opp>(&child, depth - 1, alpha, beta).1;
+            if P::better_score(value, best_value) {
+                best_moves = vec![mov];
+                best_value = value;
 
-            for mov in moves {
-                let mut child = state.clone();
-                child.make_move(mov);
-                let value = self.search(&child, depth - 1, alpha, beta, false).1;
-                if value > best_value {
-                    best_moves = vec![mov];
-                    best_value = value;
-
-                    alpha = i32::max(alpha, best_value);
-                    if alpha >= beta {
-                        break;
-                    }
-                } else if value == best_value {
-                    best_moves.push(mov);
+                P::set_alpha_beta(&mut alpha, &mut beta, best_value);
+                if alpha >= beta {
+                    break;
                 }
-            }
-        } else {
-            best_value = std::i32::MAX;
-
-            for mov in moves {
-                let mut child = state.clone();
-                child.make_move(mov);
-                let value = self.search(&child, depth - 1, alpha, beta, true).1;
-                if value < best_value {
-                    best_moves = vec![mov];
-                    best_value = value;
-
-                    beta = i32::min(beta, best_value);
-                    if alpha >= beta {
-                        break;
-                    }
-                } else if value == best_value {
-                    best_moves.push(mov);
-                }
+            } else if value == best_value {
+                best_moves.push(mov);
             }
         }
 
@@ -139,25 +134,17 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         (best_move, best_value)
     }
 
-    fn quiescence_search(
+    fn quiescence_search<P: Player>(
         &self,
         state: &S,
         depth: u32,
         mut alpha: i32,
         mut beta: i32,
-        maximising_player: bool,
     ) -> (Option<M>, i32) {
         let mut moves = state.moves().peekable();
 
         if moves.peek().is_none() {
-            return (
-                None,
-                if maximising_player {
-                    std::i32::MIN
-                } else {
-                    std::i32::MAX
-                },
-            );
+            return (None, P::WORST_SCORE);
         }
 
         if depth == 0 || state.quiet() {
@@ -165,44 +152,21 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         }
 
         let mut best_move = None;
-        let mut best_value;
+        let mut best_value = P::WORST_SCORE;
 
-        if maximising_player {
-            best_value = std::i32::MIN;
+        for mov in moves {
+            let mut child = state.clone();
+            child.make_move(mov);
+            let value = self
+                .quiescence_search::<P::Opp>(&child, depth - 1, alpha, beta)
+                .1;
+            if P::better_score(value, best_value) {
+                best_move = Some(mov);
+                best_value = value;
 
-            for mov in moves {
-                let mut child = state.clone();
-                child.make_move(mov);
-                let value = self
-                    .quiescence_search(&child, depth - 1, alpha, beta, false)
-                    .1;
-                if value > best_value {
-                    best_move = Some(mov);
-                    best_value = value;
-
-                    alpha = i32::max(alpha, best_value);
-                    if alpha >= beta {
-                        break;
-                    }
-                }
-            }
-        } else {
-            best_value = std::i32::MAX;
-
-            for mov in moves {
-                let mut child = state.clone();
-                child.make_move(mov);
-                let value = self
-                    .quiescence_search(&child, depth - 1, alpha, beta, true)
-                    .1;
-                if value < best_value {
-                    best_move = Some(mov);
-                    best_value = value;
-
-                    beta = i32::min(beta, best_value);
-                    if alpha >= beta {
-                        break;
-                    }
+                P::set_alpha_beta(&mut alpha, &mut beta, best_value);
+                if alpha >= beta {
+                    break;
                 }
             }
         }
