@@ -49,7 +49,7 @@ trait Agent {
 
 #[derive(Default)]
 struct Computer {
-    searcher: Searcher<Move, Board>,
+    searcher: Searcher<Board>,
 }
 
 impl Agent for Computer {

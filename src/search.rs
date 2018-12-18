@@ -1,13 +1,13 @@
-use crate::Board;
-use crate::Move;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-pub trait State<M> {
-    fn moves(&self) -> Box<dyn Iterator<Item = M>>;
+pub trait State {
+    type Move;
 
-    fn make_move(&mut self, mov: M);
+    fn moves(&self) -> Box<dyn Iterator<Item = Self::Move>>;
+
+    fn make_move(&mut self, mov: Self::Move);
 
     fn eval(&self) -> i32;
 
@@ -19,11 +19,11 @@ struct CacheValue<M> {
     result: (Option<M>, i32),
 }
 
-pub struct Searcher<M, S> {
-    cache: HashMap<S, CacheValue<M>>,
+pub struct Searcher<S: State> {
+    cache: HashMap<S, CacheValue<S::Move>>,
 }
 
-impl<M, S: Hash + Eq> Default for Searcher<M, S> {
+impl<S: State + Hash + Eq> Default for Searcher<S> {
     fn default() -> Self {
         Self {
             cache: HashMap::new(),
@@ -66,8 +66,16 @@ impl Player for Minimising {
     }
 }
 
-impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
-    pub fn run(&mut self, state: &S, depth: u32, maximising_player: bool) -> (Option<M>, i32) {
+impl<S: State + Hash + Eq + Clone> Searcher<S>
+where
+    S::Move: Copy,
+{
+    pub fn run(
+        &mut self,
+        state: &S,
+        depth: u32,
+        maximising_player: bool,
+    ) -> (Option<S::Move>, i32) {
         if maximising_player {
             self.search::<Maximising>(state, depth, std::i32::MIN, std::i32::MAX)
         } else {
@@ -81,7 +89,7 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         depth: u32,
         alpha: i32,
         beta: i32,
-    ) -> (Option<M>, i32) {
+    ) -> (Option<S::Move>, i32) {
         if self.cache.contains_key(state) && self.cache[state].depth >= depth {
             self.cache[state].result
         } else {
@@ -98,7 +106,7 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         depth: u32,
         mut alpha: i32,
         mut beta: i32,
-    ) -> (Option<M>, i32) {
+    ) -> (Option<S::Move>, i32) {
         let mut moves = state.moves().peekable();
 
         if moves.peek().is_none() {
@@ -140,7 +148,7 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
         depth: u32,
         mut alpha: i32,
         mut beta: i32,
-    ) -> (Option<M>, i32) {
+    ) -> (Option<S::Move>, i32) {
         let mut moves = state.moves().peekable();
 
         if moves.peek().is_none() {
@@ -175,17 +183,19 @@ impl<M: Copy, S: State<M> + Hash + Eq + Clone> Searcher<M, S> {
     }
 }
 
-impl State<Move> for Board {
-    fn moves(&self) -> Box<dyn Iterator<Item = Move>> {
-        Box::new(Board::moves(self))
+impl State for crate::Board {
+    type Move = crate::Move;
+
+    fn moves(&self) -> Box<dyn Iterator<Item = crate::Move>> {
+        Box::new(crate::Board::moves(self))
     }
 
-    fn make_move(&mut self, mov: Move) {
-        Board::make_move(self, mov);
+    fn make_move(&mut self, mov: crate::Move) {
+        crate::Board::make_move(self, mov);
     }
 
     fn eval(&self) -> i32 {
-        Board::eval(self)
+        crate::Board::eval(self)
     }
 
     fn quiet(&self) -> bool {
@@ -202,8 +212,8 @@ impl State<Move> for Board {
     }
 }
 
-impl Board {
-    fn states(&self) -> impl Iterator<Item = Board> {
+impl crate::Board {
+    fn states(&self) -> impl Iterator<Item = crate::Board> {
         let this = self.clone();
         self.moves().map(move |mov| {
             let mut child = this.clone();
