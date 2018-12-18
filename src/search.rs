@@ -2,8 +2,8 @@ use rand::seq::SliceRandom;
 use std::collections::HashMap;
 use std::hash::Hash;
 
-pub trait State {
-    type Move;
+pub trait State: Hash + Eq + Clone {
+    type Move: Copy;
 
     fn moves(&self) -> Box<dyn Iterator<Item = Self::Move>>;
 
@@ -21,12 +21,14 @@ struct CacheValue<M> {
 
 pub struct Searcher<S: State> {
     cache: HashMap<S, CacheValue<S::Move>>,
+    quiescence_searcher: QuiescenceSearcher<S>,
 }
 
-impl<S: State + Hash + Eq> Default for Searcher<S> {
+impl<S: State> Default for Searcher<S> {
     fn default() -> Self {
         Self {
-            cache: HashMap::new(),
+            cache: HashMap::default(),
+            quiescence_searcher: QuiescenceSearcher::default(),
         }
     }
 }
@@ -66,21 +68,15 @@ impl Player for Minimising {
     }
 }
 
-impl<S: State + Hash + Eq + Clone> Searcher<S>
-where
-    S::Move: Copy,
-{
-    pub fn run(
-        &mut self,
-        state: &S,
-        depth: u32,
-        maximising_player: bool,
-    ) -> (Option<S::Move>, i32) {
-        if maximising_player {
-            self.search::<Maximising>(state, depth, std::i32::MIN, std::i32::MAX)
-        } else {
-            self.search::<Minimising>(state, depth, std::i32::MIN, std::i32::MAX)
-        }
+trait AlphaBetaSearcher<S: State> {
+    fn evaluate_leaf<P: Player>(&mut self, state: &S) -> (Option<S::Move>, i32);
+
+    fn cache(&mut self) -> &mut HashMap<S, CacheValue<S::Move>>;
+
+    fn should_terminate(state: &S) -> bool;
+
+    fn run<P: Player>(&mut self, state: &S, depth: u32) -> (Option<S::Move>, i32) {
+        self.search::<P>(state, depth, std::i32::MIN, std::i32::MAX)
     }
 
     fn search<P: Player>(
@@ -90,12 +86,12 @@ where
         alpha: i32,
         beta: i32,
     ) -> (Option<S::Move>, i32) {
-        if self.cache.contains_key(state) && self.cache[state].depth >= depth {
-            self.cache[state].result
+        if self.cache().contains_key(state) && self.cache()[state].depth >= depth {
+            self.cache()[state].result
         } else {
             let result = self.search_uncached::<P>(state, depth, alpha, beta);
             let cache_entry = CacheValue { depth, result };
-            self.cache.insert(state.clone(), cache_entry);
+            self.cache().insert(state.clone(), cache_entry);
             result
         }
     }
@@ -114,7 +110,7 @@ where
         }
 
         if depth == 0 {
-            return self.quiescence_search::<P>(state, 1, std::i32::MIN, std::i32::MAX);
+            return self.evaluate_leaf::<P>(state);
         }
 
         let mut best_moves = vec![];
@@ -141,45 +137,60 @@ where
 
         (best_move, best_value)
     }
+}
 
-    fn quiescence_search<P: Player>(
-        &self,
+impl<S: State> Searcher<S> {
+    pub fn run(
+        &mut self,
         state: &S,
         depth: u32,
-        mut alpha: i32,
-        mut beta: i32,
+        maximising_player: bool,
     ) -> (Option<S::Move>, i32) {
-        let mut moves = state.moves().peekable();
-
-        if moves.peek().is_none() {
-            return (None, P::WORST_SCORE);
+        if maximising_player {
+            AlphaBetaSearcher::run::<Maximising>(self, state, depth)
+        } else {
+            AlphaBetaSearcher::run::<Minimising>(self, state, depth)
         }
+    }
+}
 
-        if depth == 0 || state.quiet() {
-            return (None, state.eval());
+impl<S: State> AlphaBetaSearcher<S> for Searcher<S> {
+    fn evaluate_leaf<P: Player>(&mut self, state: &S) -> (Option<S::Move>, i32) {
+        self.quiescence_searcher.run::<P>(state, 1)
+    }
+
+    fn cache(&mut self) -> &mut HashMap<S, CacheValue<S::Move>> {
+        &mut self.cache
+    }
+
+    fn should_terminate(_: &S) -> bool {
+        false
+    }
+}
+
+struct QuiescenceSearcher<S: State> {
+    cache: HashMap<S, CacheValue<S::Move>>,
+}
+
+impl<S: State> Default for QuiescenceSearcher<S> {
+    fn default() -> Self {
+        Self {
+            cache: HashMap::default(),
         }
+    }
+}
 
-        let mut best_move = None;
-        let mut best_value = P::WORST_SCORE;
+impl<S: State> AlphaBetaSearcher<S> for QuiescenceSearcher<S> {
+    fn evaluate_leaf<P: Player>(&mut self, state: &S) -> (Option<<S as State>::Move>, i32) {
+        (None, state.eval())
+    }
 
-        for mov in moves {
-            let mut child = state.clone();
-            child.make_move(mov);
-            let value = self
-                .quiescence_search::<P::Opp>(&child, depth - 1, alpha, beta)
-                .1;
-            if P::better_score(value, best_value) {
-                best_move = Some(mov);
-                best_value = value;
+    fn cache(&mut self) -> &mut HashMap<S, CacheValue<S::Move>> {
+        &mut self.cache
+    }
 
-                P::set_alpha_beta(&mut alpha, &mut beta, best_value);
-                if alpha >= beta {
-                    break;
-                }
-            }
-        }
-
-        (best_move, best_value)
+    fn should_terminate(state: &S) -> bool {
+        state.quiet()
     }
 }
 
