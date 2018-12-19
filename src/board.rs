@@ -184,12 +184,14 @@ impl Board {
     }
 
     pub fn eval(&self) -> i32 {
-        200 * (self.count(Piece::WK) - self.count(Piece::BK))
+        let white_centric_score = 200 * (self.count(Piece::WK) - self.count(Piece::BK))
             + 9 * (self.count(Piece::WQ) - self.count(Piece::BQ))
             + 5 * (self.count(Piece::WR) - self.count(Piece::BR))
             + 3 * (self.count(Piece::WB) - self.count(Piece::BB))
             + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
-            + (self.count(Piece::WP) - self.count(Piece::BP))
+            + (self.count(Piece::WP) - self.count(Piece::BP));
+
+        white_centric_score * self.player.score_multiplier()
         // TODO: mobility, isolated pawns, blah blah blah
     }
 

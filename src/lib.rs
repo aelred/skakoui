@@ -43,6 +43,13 @@ impl Player {
             Player::Black => 'B',
         }
     }
+
+    fn score_multiplier(self) -> i32 {
+        match self {
+            Player::White => 1,
+            Player::Black => -1,
+        }
+    }
 }
 
 pub trait PlayerType {
@@ -51,13 +58,8 @@ pub trait PlayerType {
     const PLAYER: Player;
     const DIRECTION: isize;
     const PAWN_RANK: Rank;
-    const WORST_SCORE: i32;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard;
-
-    fn set_alpha_beta(alpha: &mut i32, beta: &mut i32, score: i32);
-
-    fn better_score(new_score: i32, old_score: i32) -> bool;
 }
 
 pub struct WhitePlayer;
@@ -69,18 +71,9 @@ impl PlayerType for WhitePlayer {
     const PLAYER: Player = Player::White;
     const DIRECTION: isize = 1;
     const PAWN_RANK: Rank = Rank::_2;
-    const WORST_SCORE: i32 = std::i32::MIN;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {
         bitboard.shift_rank(1)
-    }
-
-    fn set_alpha_beta(alpha: &mut i32, _: &mut i32, score: i32) {
-        *alpha = i32::max(*alpha, score);
-    }
-
-    fn better_score(new_score: i32, old_score: i32) -> bool {
-        new_score > old_score
     }
 }
 
@@ -90,17 +83,8 @@ impl PlayerType for BlackPlayer {
     const PLAYER: Player = Player::Black;
     const DIRECTION: isize = -1;
     const PAWN_RANK: Rank = Rank::_7;
-    const WORST_SCORE: i32 = std::i32::MAX;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {
         bitboard.shift_rank_neg(1)
-    }
-
-    fn set_alpha_beta(_: &mut i32, beta: &mut i32, score: i32) {
-        *beta = i32::min(*beta, score);
-    }
-
-    fn better_score(new_score: i32, old_score: i32) -> bool {
-        new_score < old_score
     }
 }
