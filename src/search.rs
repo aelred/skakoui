@@ -12,7 +12,7 @@ type Key = (
 
 struct CacheValue {
     depth: u32,
-    result: (Option<Move>, i32),
+    result: i32,
 }
 
 #[derive(Default)]
@@ -28,23 +28,17 @@ impl Board {
 }
 
 trait AlphaBetaSearcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> (Option<Move>, i32);
+    fn evaluate_leaf(&mut self, board: &mut Board) -> i32;
 
     fn cache(&mut self) -> &mut HashMap<Key, CacheValue>;
 
     fn should_terminate(board: &mut Board) -> bool;
 
-    fn run(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
+    fn run(&mut self, board: &mut Board, depth: u32) -> i32 {
         self.search(board, depth, std::i32::MIN, std::i32::MAX)
     }
 
-    fn search(
-        &mut self,
-        board: &mut Board,
-        depth: u32,
-        alpha: i32,
-        beta: i32,
-    ) -> (Option<Move>, i32) {
+    fn search(&mut self, board: &mut Board, depth: u32, alpha: i32, beta: i32) -> i32 {
         let key = board.key();
         if self.cache().contains_key(&key) && self.cache()[&key].depth >= depth {
             self.cache()[&key].result
@@ -56,21 +50,49 @@ trait AlphaBetaSearcher {
         }
     }
 
-    fn search_uncached(
-        &mut self,
-        board: &mut Board,
-        depth: u32,
-        mut alpha: i32,
-        beta: i32,
-    ) -> (Option<Move>, i32) {
+    fn search_uncached(&mut self, board: &mut Board, depth: u32, mut alpha: i32, beta: i32) -> i32 {
         let mut moves = board.moves().peekable();
 
         if moves.peek().is_none() {
-            return (None, std::i32::MIN);
+            return std::i32::MIN;
         }
 
         if depth == 0 {
             return self.evaluate_leaf(board);
+        }
+
+        let mut best_value = std::i32::MIN;
+
+        for mov in moves {
+            board.make_move(mov);
+            let value = -self.search(board, depth - 1, -beta, -alpha);
+            board.unmake_move(mov);
+
+            if value > best_value {
+                best_value = value;
+
+                alpha = i32::max(alpha, best_value);
+
+                if alpha >= beta {
+                    break;
+                }
+            }
+        }
+
+        best_value
+    }
+}
+
+impl Searcher {
+    pub fn run(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+        let mut alpha = std::i32::MIN;
+        let beta = std::i32::MAX;
+        let depth = 5;
+
+        let mut moves = board.moves().peekable();
+
+        if moves.peek().is_none() {
+            return (None, std::i32::MIN);
         }
 
         let mut best_moves = vec![];
@@ -78,7 +100,7 @@ trait AlphaBetaSearcher {
 
         for mov in moves {
             board.make_move(mov);
-            let value = -self.search(board, depth - 1, -beta, -alpha).1;
+            let value = -self.search(board, depth, -beta, -alpha);
             board.unmake_move(mov);
 
             if value > best_value {
@@ -101,14 +123,8 @@ trait AlphaBetaSearcher {
     }
 }
 
-impl Searcher {
-    pub fn run(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
-        AlphaBetaSearcher::run(self, board, depth)
-    }
-}
-
 impl AlphaBetaSearcher for Searcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+    fn evaluate_leaf(&mut self, board: &mut Board) -> i32 {
         self.quiescence_searcher.run(board, 1)
     }
 
@@ -127,8 +143,8 @@ struct QuiescenceSearcher {
 }
 
 impl AlphaBetaSearcher for QuiescenceSearcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> (Option<Move>, i32) {
-        (None, board.eval())
+    fn evaluate_leaf(&mut self, board: &mut Board) -> i32 {
+        board.eval()
     }
 
     fn cache(&mut self) -> &mut HashMap<Key, CacheValue> {

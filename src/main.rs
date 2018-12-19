@@ -55,7 +55,7 @@ impl Agent for Computer {
     const NAME: &'static str = "Computer";
 
     fn get_move(&mut self, board: &mut Board) -> Option<Move> {
-        let (mov, _) = self.searcher.run(board, 5);
+        let (mov, _) = self.searcher.run(board);
         mov
     }
 }
