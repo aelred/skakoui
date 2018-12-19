@@ -44,7 +44,7 @@ fn play<A: Agent>(agent: &mut A, board: &mut Board) {
 trait Agent {
     const NAME: &'static str;
 
-    fn get_move(&mut self, board: &Board) -> Option<Move>;
+    fn get_move(&mut self, board: &mut Board) -> Option<Move>;
 }
 
 #[derive(Default)]
@@ -55,7 +55,7 @@ struct Computer {
 impl Agent for Computer {
     const NAME: &'static str = "Computer";
 
-    fn get_move(&mut self, board: &Board) -> Option<Move> {
+    fn get_move(&mut self, board: &mut Board) -> Option<Move> {
         let maximising_player = board.player() == Player::White;
         let (mov, _) = self.searcher.run(board, 5, maximising_player);
         mov
@@ -77,7 +77,7 @@ impl<B: BufRead> Human<B> {
 impl<B: BufRead> Agent for Human<B> {
     const NAME: &'static str = "Player";
 
-    fn get_move(&mut self, board: &Board) -> Option<Move> {
+    fn get_move(&mut self, board: &mut Board) -> Option<Move> {
         let valid_moves: HashSet<Move> = board.moves().collect();
 
         loop {

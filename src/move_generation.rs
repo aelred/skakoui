@@ -11,23 +11,24 @@ use crate::Square;
 use crate::WhitePlayer;
 
 impl Board {
-    pub fn moves(&self) -> impl Iterator<Item = Move> {
+    pub fn moves(&mut self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
             Player::White => self.moves_for_player::<WhitePlayer>(),
             Player::Black => self.moves_for_player::<BlackPlayer>(),
         }
     }
 
-    fn moves_for_player<P: PlayerType + 'static>(&self) -> Box<dyn Iterator<Item = Move>> {
+    fn moves_for_player<P: PlayerType + 'static>(&mut self) -> Box<dyn Iterator<Item = Move>> {
         let pseudo_legal_moves = self.pseudo_legal_moves::<P>();
 
-        let cloned_board = self.clone();
+        let mut this = self.clone();
 
         // TODO: this is a very inefficient way to confirm if in check
         let legal_moves = pseudo_legal_moves.filter(move |mov| {
-            let mut after_move = cloned_board.clone();
-            after_move.make_move(*mov);
-            !after_move.can_take_king::<P::Opp>()
+            this.make_move(*mov);
+            let in_check = this.can_take_king::<P::Opp>();
+            this.unmake_move(*mov);
+            !in_check
         });
 
         Box::new(legal_moves)
@@ -292,7 +293,7 @@ mod tests {
 
     #[test]
     fn can_generate_all_possible_starting_moves_for_white() {
-        let board = Board::default();
+        let mut board = Board::default();
 
         assert_moves!(
             board,
@@ -322,7 +323,7 @@ mod tests {
         // Such a situation is impossible in normal chess, but it's an edge case that could cause
         // something to go out of bounds.
 
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [BP, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -341,7 +342,7 @@ mod tests {
 
     #[test]
     fn pawn_cannot_capture_piece_directly_in_front_of_it() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -360,7 +361,7 @@ mod tests {
 
     #[test]
     fn pawn_can_capture_pieces_on_diagonal() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -379,7 +380,7 @@ mod tests {
 
     #[test]
     fn pawn_cannot_capture_same_player_pieces() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -398,7 +399,7 @@ mod tests {
 
     #[test]
     fn pawn_cannot_double_push_if_blocked() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [WP, __, __, __, __, __, __, __],
@@ -417,7 +418,7 @@ mod tests {
 
     #[test]
     fn pawn_cannot_double_push_when_not_at_initial_position() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -480,7 +481,7 @@ mod tests {
 
     #[test]
     fn king_can_move_and_capture_one_square_in_any_direction() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, WP, __, __, __, __, __],
@@ -500,7 +501,7 @@ mod tests {
 
     #[test]
     fn knight_can_move_and_capture_in_its_weird_way() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -519,7 +520,7 @@ mod tests {
 
     #[test]
     fn rook_can_move_and_capture_along_rank_and_file() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -538,7 +539,7 @@ mod tests {
 
     #[test]
     fn bishop_can_move_and_capture_diagonally() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, BB, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -557,7 +558,7 @@ mod tests {
 
     #[test]
     fn queen_can_move_and_capture_in_all_directions() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, BB, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -579,7 +580,7 @@ mod tests {
 
     #[test]
     fn cannot_make_a_move_that_leaves_king_in_check() {
-        let board = Board::new(
+        let mut board = Board::new(
             [
                 [__, __, __, __, __, __, __, __],
                 [WK, WP, __, __, __, __, __, BR],

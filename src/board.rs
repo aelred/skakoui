@@ -163,6 +163,10 @@ impl Board {
         self.player = player;
     }
 
+    pub fn bitboards(&self) -> &EnumMap<Player, EnumMap<PieceType, Bitboard>> {
+        &self.bitboards
+    }
+
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
         &self.bitboards[piece.player()][piece.piece_type()]
     }
