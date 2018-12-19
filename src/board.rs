@@ -84,6 +84,7 @@ impl Board {
         let player = self.player();
         let from = mov.from();
         let to = mov.to();
+        let piece = Piece::new(player, mov.piece_type());
 
         let captured_piece_type;
 
@@ -97,7 +98,6 @@ impl Board {
 
         self.pieces[from.rank()][from.file()] = None;
 
-        let piece = Piece::new(player, mov.piece_type());
         let bitboard = self.bitboard_piece_mut(piece);
 
         if let Some(promotion_type) = mov.promoting() {
@@ -123,6 +123,44 @@ impl Board {
         };
 
         self.board_states.push(new_board_state);
+    }
+
+    pub fn unmake_move(&mut self, mov: Move) {
+        let player = self.player().opponent();
+        let from = mov.from();
+        let to = mov.to();
+        let piece = Piece::new(player, mov.piece_type());
+
+        let BoardState {
+            captured_piece_type,
+        } = self.board_states.pop().expect("No move to undo");
+
+        if let Some(captured_piece_type) = captured_piece_type {
+            let captured_piece = Piece::new(player.opponent(), captured_piece_type);
+            self.bitboard_piece_mut(captured_piece).set(to);
+            self.occupancy_player[player.opponent()].set(to);
+            self.pieces[to.rank()][to.file()] = Some(captured_piece);
+        } else {
+            self.occupancy.reset(to);
+            self.pieces[to.rank()][to.file()] = None;
+        }
+
+        let bitboard = self.bitboard_piece_mut(piece);
+
+        if let Some(promotion_type) = mov.promoting() {
+            let promotion = Piece::new(player, promotion_type);
+            bitboard.set(from);
+            self.bitboard_piece_mut(promotion).reset(to);
+        } else {
+            bitboard.move_bit(to, from);
+        }
+
+        self.pieces[from.rank()][from.file()] = Some(piece);
+
+        self.occupancy.set(from);
+        self.occupancy_player[player].move_bit(to, from);
+
+        self.player = player;
     }
 
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
@@ -387,6 +425,38 @@ mod tests {
                 captured_piece_type: None,
             }],
         );
+
+        assert_eq!(board, expected_board);
+    }
+
+    #[test]
+    fn can_unmake_a_move_on_board() {
+        let mut board = Board::new(
+            [
+                [WR, WN, WB, WQ, WK, WB, WN, WR],
+                [WP, WP, WP, WP, WP, __, WP, WP],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, BN, __],
+                [__, __, __, __, __, BP, __, __],
+                [__, __, __, __, __, __, __, __],
+                [BP, BP, BP, BP, BP, __, WP, BP],
+                [BR, BN, BB, BQ, BK, BB, __, BR],
+            ],
+            Player::White,
+        );
+
+        let expected_board = board.clone();
+
+        let mov1 = Move::new_promoting(PieceType::Pawn, Square::G7, Square::H8, PieceType::Queen);
+        let mov2 = Move::new(PieceType::Pawn, Square::H7, Square::H5);
+        let mov3 = Move::new(PieceType::Queen, Square::H8, Square::H5);
+
+        board.make_move(mov1);
+        board.make_move(mov2);
+        board.make_move(mov3);
+        board.unmake_move(mov3);
+        board.unmake_move(mov2);
+        board.unmake_move(mov1);
 
         assert_eq!(board, expected_board);
     }
