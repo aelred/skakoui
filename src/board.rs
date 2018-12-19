@@ -19,10 +19,24 @@ pub struct Board {
     pieces: EnumMap<Rank, EnumMap<File, Option<Piece>>>,
     occupancy_player: EnumMap<Player, Bitboard>,
     occupancy: Bitboard,
+    board_states: Vec<BoardState>,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Hash)]
+struct BoardState {
+    captured_piece_type: Option<PieceType>,
 }
 
 impl Board {
     pub fn new(pieces_array: [[Option<Piece>; 8]; 8], player: Player) -> Self {
+        Self::with_states(pieces_array, player, vec![])
+    }
+
+    fn with_states(
+        pieces_array: [[Option<Piece>; 8]; 8],
+        player: Player,
+        board_states: Vec<BoardState>,
+    ) -> Self {
         let mut bitboards = EnumMap::from(|_| EnumMap::from(|_| bitboards::EMPTY));
 
         let pieces = EnumMap::from(|rank: Rank| {
@@ -54,6 +68,7 @@ impl Board {
             pieces,
             occupancy_player,
             occupancy,
+            board_states,
         }
     }
 
@@ -70,9 +85,14 @@ impl Board {
         let from = mov.from();
         let to = mov.to();
 
+        let captured_piece_type;
+
         if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy_player[player.opponent()].reset(to);
+            captured_piece_type = Some(captured_piece.piece_type());
+        } else {
+            captured_piece_type = None;
         }
 
         self.pieces[from.rank()][from.file()] = None;
@@ -97,6 +117,12 @@ impl Board {
         self.occupancy_player[player].move_bit(from, to);
 
         self.player = self.player.opponent();
+
+        let new_board_state = BoardState {
+            captured_piece_type,
+        };
+
+        self.board_states.push(new_board_state);
     }
 
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
@@ -265,7 +291,7 @@ mod tests {
 
         board.make_move(mov);
 
-        let expected_board = Board::new(
+        let expected_board = Board::with_states(
             [
                 [WR, __, WB, WQ, WK, WB, WN, WR],
                 [WP, WP, WP, WP, WP, WP, WP, WP],
@@ -277,6 +303,9 @@ mod tests {
                 [BR, BN, BB, BQ, BK, BB, BN, BR],
             ],
             Player::Black,
+            vec![BoardState {
+                captured_piece_type: None,
+            }],
         );
 
         assert_eq!(board, expected_board);
@@ -302,7 +331,7 @@ mod tests {
 
         board.make_move(mov);
 
-        let expected_board = Board::new(
+        let expected_board = Board::with_states(
             [
                 [WR, WN, WB, WQ, WK, __, WN, WR],
                 [WP, WP, WP, WP, __, WP, WP, WP],
@@ -314,6 +343,9 @@ mod tests {
                 [BR, BN, BB, BQ, BK, BB, BN, BR],
             ],
             Player::Black,
+            vec![BoardState {
+                captured_piece_type: Some(PieceType::Pawn),
+            }],
         );
 
         assert_eq!(board, expected_board);
@@ -339,7 +371,7 @@ mod tests {
 
         board.make_move(mov);
 
-        let expected_board = Board::new(
+        let expected_board = Board::with_states(
             [
                 [WR, WN, WB, WQ, WK, WB, WN, WR],
                 [WP, WP, WP, WP, WP, __, WP, WP],
@@ -351,6 +383,9 @@ mod tests {
                 [BR, BN, BB, BQ, BK, BB, WQ, BR],
             ],
             Player::Black,
+            vec![BoardState {
+                captured_piece_type: None,
+            }],
         );
 
         assert_eq!(board, expected_board);
@@ -378,7 +413,7 @@ mod tests {
         let en_passant = Move::new(PieceType::Pawn, Square::B4, Square::A3);
         board.make_move(en_passant);
 
-        let expected_board = Board::new(
+        let expected_board = Board::with_states(
             [
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
@@ -390,6 +425,9 @@ mod tests {
                 [__, __, __, __, __, __, __, __],
             ],
             Player::White,
+            vec![BoardState {
+                captured_piece_type: Some(PieceType::Pawn),
+            }],
         );
 
         assert_eq!(board, expected_board);
