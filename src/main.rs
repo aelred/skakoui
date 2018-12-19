@@ -3,7 +3,6 @@
 use chess::search::Searcher;
 use chess::Board;
 use chess::Move;
-use chess::Player;
 use std::collections::HashSet;
 use std::io;
 use std::io::BufRead;
@@ -56,8 +55,7 @@ impl Agent for Computer {
     const NAME: &'static str = "Computer";
 
     fn get_move(&mut self, board: &mut Board) -> Option<Move> {
-        let maximising_player = board.player() == Player::White;
-        let (mov, _) = self.searcher.run(board, 5, maximising_player);
+        let (mov, _) = self.searcher.run(board, 5);
         mov
     }
 }

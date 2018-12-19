@@ -1,5 +1,9 @@
+use crate::BlackPlayer;
 use crate::Board;
 use crate::Move;
+use crate::Player;
+use crate::PlayerType;
+use crate::WhitePlayer;
 use enum_map::EnumMap;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
@@ -17,53 +21,18 @@ pub struct Searcher {
     quiescence_searcher: QuiescenceSearcher,
 }
 
-trait Player {
-    type Opp: Player;
-    const WORST_SCORE: i32;
-    fn set_alpha_beta(alpha: &mut i32, beta: &mut i32, score: i32);
-    fn better_score(new_score: i32, old_score: i32) -> bool;
-}
-
-struct Maximising;
-impl Player for Maximising {
-    type Opp = Minimising;
-    const WORST_SCORE: i32 = std::i32::MIN;
-
-    fn set_alpha_beta(alpha: &mut i32, _: &mut i32, score: i32) {
-        *alpha = i32::max(*alpha, score);
-    }
-
-    fn better_score(new_score: i32, old_score: i32) -> bool {
-        new_score > old_score
-    }
-}
-
-struct Minimising;
-impl Player for Minimising {
-    type Opp = Maximising;
-    const WORST_SCORE: i32 = std::i32::MAX;
-
-    fn set_alpha_beta(_: &mut i32, beta: &mut i32, score: i32) {
-        *beta = i32::min(*beta, score);
-    }
-
-    fn better_score(new_score: i32, old_score: i32) -> bool {
-        new_score < old_score
-    }
-}
-
 trait AlphaBetaSearcher {
-    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32);
+    fn evaluate_leaf<P: PlayerType>(&mut self, board: &mut Board) -> (Option<Move>, i32);
 
     fn cache(&mut self) -> &mut HashMap<Key, CacheValue>;
 
     fn should_terminate(board: &mut Board) -> bool;
 
-    fn run<P: Player>(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
+    fn run<P: PlayerType>(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
         self.search::<P>(board, depth, std::i32::MIN, std::i32::MAX)
     }
 
-    fn search<P: Player>(
+    fn search<P: PlayerType>(
         &mut self,
         board: &mut Board,
         depth: u32,
@@ -81,7 +50,7 @@ trait AlphaBetaSearcher {
         }
     }
 
-    fn search_uncached<P: Player>(
+    fn search_uncached<P: PlayerType>(
         &mut self,
         board: &mut Board,
         depth: u32,
@@ -126,22 +95,17 @@ trait AlphaBetaSearcher {
 }
 
 impl Searcher {
-    pub fn run(
-        &mut self,
-        board: &mut Board,
-        depth: u32,
-        maximising_player: bool,
-    ) -> (Option<Move>, i32) {
-        if maximising_player {
-            AlphaBetaSearcher::run::<Maximising>(self, board, depth)
+    pub fn run(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
+        if board.player() == Player::White {
+            AlphaBetaSearcher::run::<WhitePlayer>(self, board, depth)
         } else {
-            AlphaBetaSearcher::run::<Minimising>(self, board, depth)
+            AlphaBetaSearcher::run::<BlackPlayer>(self, board, depth)
         }
     }
 }
 
 impl AlphaBetaSearcher for Searcher {
-    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+    fn evaluate_leaf<P: PlayerType>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
         self.quiescence_searcher.run::<P>(board, 1)
     }
 
@@ -160,7 +124,7 @@ struct QuiescenceSearcher {
 }
 
 impl AlphaBetaSearcher for QuiescenceSearcher {
-    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+    fn evaluate_leaf<P: PlayerType>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
         (None, board.eval())
     }
 
