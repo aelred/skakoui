@@ -1,42 +1,20 @@
+use crate::Board;
+use crate::Move;
 use enum_map::EnumMap;
 use rand::seq::SliceRandom;
 use std::collections::HashMap;
-use std::hash::Hash;
 
-pub trait State {
-    type Move: Copy;
-    type Key: Hash + Eq;
+type Key = EnumMap<crate::Player, EnumMap<crate::PieceType, crate::Bitboard>>;
 
-    fn moves(&mut self) -> Box<dyn Iterator<Item = Self::Move>>;
-
-    fn make_move(&mut self, mov: Self::Move);
-
-    fn unmake_move(&mut self, mov: Self::Move);
-
-    fn eval(&self) -> i32;
-
-    fn quiet(&mut self) -> bool;
-
-    fn key(&self) -> Self::Key;
-}
-
-struct CacheValue<M> {
+struct CacheValue {
     depth: u32,
-    result: (Option<M>, i32),
+    result: (Option<Move>, i32),
 }
 
-pub struct Searcher<S: State> {
-    cache: HashMap<S::Key, CacheValue<S::Move>>,
-    quiescence_searcher: QuiescenceSearcher<S>,
-}
-
-impl<S: State> Default for Searcher<S> {
-    fn default() -> Self {
-        Self {
-            cache: HashMap::default(),
-            quiescence_searcher: QuiescenceSearcher::default(),
-        }
-    }
+#[derive(Default)]
+pub struct Searcher {
+    cache: HashMap<Key, CacheValue>,
+    quiescence_searcher: QuiescenceSearcher,
 }
 
 trait Player {
@@ -74,29 +52,29 @@ impl Player for Minimising {
     }
 }
 
-trait AlphaBetaSearcher<S: State> {
-    fn evaluate_leaf<P: Player>(&mut self, state: &mut S) -> (Option<S::Move>, i32);
+trait AlphaBetaSearcher {
+    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32);
 
-    fn cache(&mut self) -> &mut HashMap<S::Key, CacheValue<S::Move>>;
+    fn cache(&mut self) -> &mut HashMap<Key, CacheValue>;
 
-    fn should_terminate(state: &mut S) -> bool;
+    fn should_terminate(board: &mut Board) -> bool;
 
-    fn run<P: Player>(&mut self, state: &mut S, depth: u32) -> (Option<S::Move>, i32) {
-        self.search::<P>(state, depth, std::i32::MIN, std::i32::MAX)
+    fn run<P: Player>(&mut self, board: &mut Board, depth: u32) -> (Option<Move>, i32) {
+        self.search::<P>(board, depth, std::i32::MIN, std::i32::MAX)
     }
 
     fn search<P: Player>(
         &mut self,
-        state: &mut S,
+        board: &mut Board,
         depth: u32,
         alpha: i32,
         beta: i32,
-    ) -> (Option<S::Move>, i32) {
-        let key = state.key();
+    ) -> (Option<Move>, i32) {
+        let key = *board.bitboards();
         if self.cache().contains_key(&key) && self.cache()[&key].depth >= depth {
             self.cache()[&key].result
         } else {
-            let result = self.search_uncached::<P>(state, depth, alpha, beta);
+            let result = self.search_uncached::<P>(board, depth, alpha, beta);
             let cache_entry = CacheValue { depth, result };
             self.cache().insert(key, cache_entry);
             result
@@ -105,28 +83,28 @@ trait AlphaBetaSearcher<S: State> {
 
     fn search_uncached<P: Player>(
         &mut self,
-        state: &mut S,
+        board: &mut Board,
         depth: u32,
         mut alpha: i32,
         mut beta: i32,
-    ) -> (Option<S::Move>, i32) {
-        let mut moves = state.moves().peekable();
+    ) -> (Option<Move>, i32) {
+        let mut moves = board.moves().peekable();
 
         if moves.peek().is_none() {
             return (None, P::WORST_SCORE);
         }
 
         if depth == 0 {
-            return self.evaluate_leaf::<P>(state);
+            return self.evaluate_leaf::<P>(board);
         }
 
         let mut best_moves = vec![];
         let mut best_value = P::WORST_SCORE;
 
         for mov in moves {
-            state.make_move(mov);
-            let value = self.search::<P::Opp>(state, depth - 1, alpha, beta).1;
-            state.unmake_move(mov);
+            board.make_move(mov);
+            let value = self.search::<P::Opp>(board, depth - 1, alpha, beta).1;
+            board.unmake_move(mov);
 
             if P::better_score(value, best_value) {
                 best_moves = vec![mov];
@@ -147,97 +125,61 @@ trait AlphaBetaSearcher<S: State> {
     }
 }
 
-impl<S: State> Searcher<S> {
+impl Searcher {
     pub fn run(
         &mut self,
-        state: &mut S,
+        board: &mut Board,
         depth: u32,
         maximising_player: bool,
-    ) -> (Option<S::Move>, i32) {
+    ) -> (Option<Move>, i32) {
         if maximising_player {
-            AlphaBetaSearcher::run::<Maximising>(self, state, depth)
+            AlphaBetaSearcher::run::<Maximising>(self, board, depth)
         } else {
-            AlphaBetaSearcher::run::<Minimising>(self, state, depth)
+            AlphaBetaSearcher::run::<Minimising>(self, board, depth)
         }
     }
 }
 
-impl<S: State> AlphaBetaSearcher<S> for Searcher<S> {
-    fn evaluate_leaf<P: Player>(&mut self, state: &mut S) -> (Option<S::Move>, i32) {
-        self.quiescence_searcher.run::<P>(state, 1)
+impl AlphaBetaSearcher for Searcher {
+    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+        self.quiescence_searcher.run::<P>(board, 1)
     }
 
-    fn cache(&mut self) -> &mut HashMap<S::Key, CacheValue<S::Move>> {
+    fn cache(&mut self) -> &mut HashMap<Key, CacheValue> {
         &mut self.cache
     }
 
-    fn should_terminate(_: &mut S) -> bool {
+    fn should_terminate(_: &mut Board) -> bool {
         false
     }
 }
 
-struct QuiescenceSearcher<S: State> {
-    cache: HashMap<S::Key, CacheValue<S::Move>>,
+#[derive(Default)]
+struct QuiescenceSearcher {
+    cache: HashMap<Key, CacheValue>,
 }
 
-impl<S: State> Default for QuiescenceSearcher<S> {
-    fn default() -> Self {
-        Self {
-            cache: HashMap::default(),
-        }
-    }
-}
-
-impl<S: State> AlphaBetaSearcher<S> for QuiescenceSearcher<S> {
-    fn evaluate_leaf<P: Player>(&mut self, state: &mut S) -> (Option<<S as State>::Move>, i32) {
-        (None, state.eval())
+impl AlphaBetaSearcher for QuiescenceSearcher {
+    fn evaluate_leaf<P: Player>(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+        (None, board.eval())
     }
 
-    fn cache(&mut self) -> &mut HashMap<S::Key, CacheValue<S::Move>> {
+    fn cache(&mut self) -> &mut HashMap<Key, CacheValue> {
         &mut self.cache
     }
 
-    fn should_terminate(state: &mut S) -> bool {
-        state.quiet()
-    }
-}
-
-impl State for crate::Board {
-    type Move = crate::Move;
-    type Key = EnumMap<crate::Player, EnumMap<crate::PieceType, crate::Bitboard>>;
-
-    fn moves(&mut self) -> Box<dyn Iterator<Item = crate::Move>> {
-        Box::new(crate::Board::moves(self))
-    }
-
-    fn make_move(&mut self, mov: crate::Move) {
-        crate::Board::make_move(self, mov);
-    }
-
-    fn unmake_move(&mut self, mov: crate::Move) {
-        crate::Board::unmake_move(self, mov);
-    }
-
-    fn eval(&self) -> i32 {
-        crate::Board::eval(self)
-    }
-
-    fn quiet(&mut self) -> bool {
+    fn should_terminate(board: &mut Board) -> bool {
         let mut min = std::i32::MAX;
         let mut max = std::i32::MIN;
 
-        for mov in self.moves() {
-            self.make_move(mov);
-            let value = self.eval();
-            self.unmake_move(mov);
+        for mov in board.moves() {
+            board.make_move(mov);
+            let value = board.eval();
+            board.unmake_move(mov);
             min = i32::min(min, value);
             max = i32::max(max, value);
         }
 
         ((max - min) as u32) < 5
-    }
-
-    fn key(&self) -> Self::Key {
-        *self.bitboards()
     }
 }
