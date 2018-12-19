@@ -257,7 +257,7 @@ impl Bitboard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Square;
+    use pretty_assertions::assert_eq;
 
     const __: Option<Piece> = None;
     const WK: Option<Piece> = Some(Piece::WK);

@@ -296,8 +296,7 @@ mod tests {
     #![allow(clippy::large_digit_groups)] // We have a lot of bitboards which clippy doesn't like
 
     use super::*;
-    use crate::PieceType;
-    use crate::Player;
+    use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 
     #[test]

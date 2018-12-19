@@ -1,9 +1,5 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-
 mod bitboard;
 mod board;
 mod file;

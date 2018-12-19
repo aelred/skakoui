@@ -105,6 +105,7 @@ impl FromStr for Move {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn can_create_a_move_from_piece_and_two_squares() {
