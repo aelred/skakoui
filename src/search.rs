@@ -21,63 +21,11 @@ struct CacheValue {
 #[derive(Default)]
 pub struct Searcher {
     cache: HashMap<Key, CacheValue>,
-    quiescence_searcher: QuiescenceSearcher,
 }
 
 impl Board {
     fn key(&self) -> Key {
         (*self.bitboards(), self.player())
-    }
-}
-
-trait AlphaBetaSearcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> i32;
-
-    fn cache(&mut self) -> &mut HashMap<Key, CacheValue>;
-
-    fn should_terminate(board: &mut Board) -> bool;
-
-    fn run(&mut self, board: &mut Board, depth: u32) -> i32 {
-        self.search(board, depth, LOW_SCORE, HIGH_SCORE)
-    }
-
-    fn search(&mut self, board: &mut Board, depth: u32, alpha: i32, beta: i32) -> i32 {
-        let key = board.key();
-        if self.cache().contains_key(&key) && self.cache()[&key].depth >= depth {
-            self.cache()[&key].result
-        } else {
-            let result = self.search_uncached(board, depth, alpha, beta);
-            let cache_entry = CacheValue { depth, result };
-            self.cache().insert(key, cache_entry);
-            result
-        }
-    }
-
-    fn search_uncached(&mut self, board: &mut Board, depth: u32, mut alpha: i32, beta: i32) -> i32 {
-        let mut moves = board.moves().peekable();
-
-        if moves.peek().is_none() {
-            return LOW_SCORE;
-        }
-
-        if depth == 0 {
-            return self.evaluate_leaf(board);
-        }
-
-        for mov in moves {
-            board.make_move(mov);
-            let value = -self.search(board, depth - 1, -beta, -alpha);
-            board.unmake_move(mov);
-
-            if value >= beta {
-                return beta;
-            }
-            if value > alpha {
-                alpha = value;
-            }
-        }
-
-        alpha
     }
 }
 
@@ -111,48 +59,75 @@ impl Searcher {
 
         (best_move, alpha)
     }
-}
 
-impl AlphaBetaSearcher for Searcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> i32 {
-        self.quiescence_searcher.run(board, 1)
+    fn search(&mut self, board: &mut Board, depth: u32, alpha: i32, beta: i32) -> i32 {
+        let key = board.key();
+        if self.cache.contains_key(&key) && self.cache[&key].depth >= depth {
+            self.cache[&key].result
+        } else {
+            let result = self.search_uncached(board, depth, alpha, beta);
+            let cache_entry = CacheValue { depth, result };
+            self.cache.insert(key, cache_entry);
+            result
+        }
     }
 
-    fn cache(&mut self) -> &mut HashMap<Key, CacheValue> {
-        &mut self.cache
+    fn search_uncached(&mut self, board: &mut Board, depth: u32, mut alpha: i32, beta: i32) -> i32 {
+        if depth == 0 {
+            return Self::quiesce(board, alpha, beta);
+        }
+
+        let mut moves = board.moves().peekable();
+
+        if moves.peek().is_none() {
+            return LOW_SCORE;
+        }
+
+        for mov in moves {
+            board.make_move(mov);
+            let value = -self.search(board, depth - 1, -beta, -alpha);
+            board.unmake_move(mov);
+
+            if value >= beta {
+                return beta;
+            }
+            if value > alpha {
+                alpha = value;
+            }
+        }
+
+        alpha
     }
 
-    fn should_terminate(_: &mut Board) -> bool {
-        false
-    }
-}
+    fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
+        let stand_pat = board.eval();
 
-#[derive(Default)]
-struct QuiescenceSearcher {
-    cache: HashMap<Key, CacheValue>,
-}
+        if stand_pat >= beta {
+            return beta;
+        }
 
-impl AlphaBetaSearcher for QuiescenceSearcher {
-    fn evaluate_leaf(&mut self, board: &mut Board) -> i32 {
-        board.eval()
-    }
-
-    fn cache(&mut self) -> &mut HashMap<Key, CacheValue> {
-        &mut self.cache
-    }
-
-    fn should_terminate(board: &mut Board) -> bool {
-        let mut min = HIGH_SCORE;
-        let mut max = LOW_SCORE;
+        if alpha < stand_pat {
+            alpha = stand_pat;
+        }
 
         for mov in board.moves() {
             board.make_move(mov);
-            let value = board.eval();
+            // Only evaluate captures
+            if board.eval() == stand_pat {
+                board.unmake_move(mov);
+                continue;
+            }
+            let value = -Self::quiesce(board, -beta, -alpha);
             board.unmake_move(mov);
-            min = i32::min(min, value);
-            max = i32::max(max, value);
+
+            if value >= beta {
+                return beta;
+            }
+            if value > alpha {
+                alpha = value;
+            }
         }
 
-        ((max - min) as u32) < 5
+        alpha
     }
 }
