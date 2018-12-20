@@ -13,14 +13,21 @@ type Key = (
     Player,
 );
 
-struct CacheValue {
+struct TranspositionEntry {
     depth: u32,
-    result: i32,
+    value: i32,
+    flag: Flag,
+}
+
+enum Flag {
+    Exact,
+    LowerBound,
+    UpperBound,
 }
 
 #[derive(Default)]
 pub struct Searcher {
-    cache: HashMap<Key, CacheValue>,
+    transposition_table: HashMap<Key, TranspositionEntry>,
 }
 
 impl Board {
@@ -60,16 +67,46 @@ impl Searcher {
         (best_move, alpha)
     }
 
-    fn search(&mut self, board: &mut Board, depth: u32, alpha: i32, beta: i32) -> i32 {
+    fn search(&mut self, board: &mut Board, depth: u32, mut alpha: i32, mut beta: i32) -> i32 {
+        let alpha_orig = alpha;
+
         let key = board.key();
-        if self.cache.contains_key(&key) && self.cache[&key].depth >= depth {
-            self.cache[&key].result
-        } else {
-            let result = self.search_uncached(board, depth, alpha, beta);
-            let cache_entry = CacheValue { depth, result };
-            self.cache.insert(key, cache_entry);
-            result
+
+        if let Some(entry) = self.transposition_table.get(&key) {
+            if entry.depth >= depth {
+                match entry.flag {
+                    Flag::Exact => {
+                        return entry.value;
+                    }
+                    Flag::LowerBound => {
+                        alpha = i32::max(alpha, entry.value);
+                    }
+                    Flag::UpperBound => {
+                        beta = i32::min(beta, entry.value);
+                    }
+                }
+
+                if alpha >= beta {
+                    return entry.value;
+                }
+            }
         }
+
+        let value = self.search_uncached(board, depth, alpha, beta);
+
+        let flag = if value <= alpha_orig {
+            Flag::UpperBound
+        } else if value >= beta {
+            Flag::LowerBound
+        } else {
+            Flag::Exact
+        };
+
+        let entry = TranspositionEntry { depth, value, flag };
+
+        self.transposition_table.insert(key, entry);
+
+        value
     }
 
     fn search_uncached(&mut self, board: &mut Board, depth: u32, mut alpha: i32, beta: i32) -> i32 {
