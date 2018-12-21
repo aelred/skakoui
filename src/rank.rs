@@ -7,14 +7,14 @@ use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
 pub enum Rank {
-    _1,
-    _2,
-    _3,
-    _4,
-    _5,
-    _6,
-    _7,
-    _8,
+    _1 = 0,
+    _2 = 1,
+    _3 = 2,
+    _4 = 3,
+    _5 = 4,
+    _6 = 5,
+    _7 = 6,
+    _8 = 7,
 }
 
 impl Rank {
@@ -36,7 +36,7 @@ impl Rank {
 
     #[inline]
     pub fn to_index(self) -> usize {
-        Enum::<usize>::to_usize(self)
+        self as usize
     }
 }
 
