@@ -234,8 +234,6 @@ pub mod bitboards {
 
     use super::Bitboard;
     use crate::file::FileMap;
-    use crate::File;
-    use crate::Rank;
     use crate::RankMap;
     use crate::Square;
     use crate::SquareMap;
@@ -265,57 +263,88 @@ pub mod bitboards {
         Bitboard(0b_11111111_00000000_00000000_00000000_00000000_00000000_00000000_00000000),
     ]);
 
+    pub const FILES_FILLED: [Bitboard; 9] = [
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000),
+        Bitboard(0b_00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001),
+        Bitboard(0b_00000011_00000011_00000011_00000011_00000011_00000011_00000011_00000011),
+        Bitboard(0b_00000111_00000111_00000111_00000111_00000111_00000111_00000111_00000111),
+        Bitboard(0b_00001111_00001111_00001111_00001111_00001111_00001111_00001111_00001111),
+        Bitboard(0b_00011111_00011111_00011111_00011111_00011111_00011111_00011111_00011111),
+        Bitboard(0b_00111111_00111111_00111111_00111111_00111111_00111111_00111111_00111111),
+        Bitboard(0b_01111111_01111111_01111111_01111111_01111111_01111111_01111111_01111111),
+        Bitboard(0b_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111),
+    ];
+
+    pub const RANKS_FILLED: [Bitboard; 9] = [
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000000),
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111),
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_11111111_11111111),
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_11111111_11111111_11111111),
+        Bitboard(0b_00000000_00000000_00000000_00000000_11111111_11111111_11111111_11111111),
+        Bitboard(0b_00000000_00000000_00000000_11111111_11111111_11111111_11111111_11111111),
+        Bitboard(0b_00000000_00000000_11111111_11111111_11111111_11111111_11111111_11111111),
+        Bitboard(0b_00000000_11111111_11111111_11111111_11111111_11111111_11111111_11111111),
+        Bitboard(0b_11111111_11111111_11111111_11111111_11111111_11111111_11111111_11111111),
+    ];
+
+    pub const DIAGONAL: Bitboard =
+        Bitboard(0b_10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001);
+
+    pub const ANTIDIAGONAL: Bitboard =
+        Bitboard(0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000);
+
     lazy_static! {
-        pub static ref FILES_FILLED: [Bitboard; 9] = {
-            let fill_0 = EMPTY;
-            let fill_1 = fill_0 | FILES[File::A];
-            let fill_2 = fill_1 | FILES[File::B];
-            let fill_3 = fill_2 | FILES[File::C];
-            let fill_4 = fill_3 | FILES[File::D];
-            let fill_5 = fill_4 | FILES[File::E];
-            let fill_6 = fill_5 | FILES[File::F];
-            let fill_7 = fill_6 | FILES[File::G];
-            let fill_8 = fill_7 | FILES[File::H];
-            [
-                fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
-            ]
-        };
-        pub static ref RANKS_FILLED: [Bitboard; 9] = {
-            let fill_0 = EMPTY;
-            let fill_1 = fill_0 | RANKS[Rank::_1];
-            let fill_2 = fill_1 | RANKS[Rank::_2];
-            let fill_3 = fill_2 | RANKS[Rank::_3];
-            let fill_4 = fill_3 | RANKS[Rank::_4];
-            let fill_5 = fill_4 | RANKS[Rank::_5];
-            let fill_6 = fill_5 | RANKS[Rank::_6];
-            let fill_7 = fill_6 | RANKS[Rank::_7];
-            let fill_8 = fill_7 | RANKS[Rank::_8];
-            [
-                fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
-            ]
-        };
         pub static ref DIAGONALS: SquareMap<Bitboard> = {
             SquareMap::from(|square: Square| {
                 let sq = square.to_index() as isize;
-                let maindia =
-                    0b_10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001;
                 let diag = 8 * (sq & 7) - (sq & 56);
                 let nort = -diag & (diag >> 31);
                 let sout = diag & (-diag >> 31);
-                Bitboard((maindia >> sout) << nort)
+                Bitboard((DIAGONAL.0 >> sout) << nort)
             })
         };
         pub static ref ANTIDIAGONALS: SquareMap<Bitboard> = {
             SquareMap::from(|square: Square| {
                 let sq = square.to_index() as isize;
-                let maindia =
-                    0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000;
                 let diag = 56 - 8 * (sq & 7) - (sq & 56);
                 let nort = -diag & (diag >> 31);
                 let sout = diag & (-diag >> 31);
-                Bitboard((maindia >> sout) << nort)
+                Bitboard((ANTIDIAGONAL.0 >> sout) << nort)
             })
         };
+        pub static ref NORTH: SquareMap<Bitboard> =
+            SquareMap::from(|square| FILES[square.file()]
+                & !RANKS_FILLED[square.rank().to_index() as usize + 1]);
+        pub static ref SOUTH: SquareMap<Bitboard> = SquareMap::from(
+            |square| FILES[square.file()] & RANKS_FILLED[square.rank().to_index() as usize]
+        );
+        pub static ref EAST: SquareMap<Bitboard> =
+            SquareMap::from(|square| RANKS[square.rank()]
+                & !FILES_FILLED[square.file().to_index() as usize + 1]);
+        pub static ref WEST: SquareMap<Bitboard> = SquareMap::from(
+            |square| RANKS[square.rank()] & FILES_FILLED[square.file().to_index() as usize]
+        );
+        pub static ref POSITIVE_DIAGONALS: SquareMap<Bitboard> = SquareMap::from(
+            |square| DIAGONALS[square] & !FILES_FILLED[square.file().to_index() as usize + 1]
+        );
+        pub static ref NEGATIVE_DIAGONALS: SquareMap<Bitboard> = SquareMap::from(
+            |square| DIAGONALS[square] & FILES_FILLED[square.file().to_index() as usize]
+        );
+        pub static ref POSITIVE_ANTIDIAGONALS: SquareMap<Bitboard> =
+            SquareMap::from(|square| ANTIDIAGONALS[square]
+                & !RANKS_FILLED[square.rank().to_index() as usize + 1]);
+        pub static ref NEGATIVE_ANTIDIAGONALS: SquareMap<Bitboard> =
+            SquareMap::from(
+                |square| ANTIDIAGONALS[square] & RANKS_FILLED[square.rank().to_index() as usize]
+            );
+        pub static ref KNIGHT_MOVES: SquareMap<Bitboard> = SquareMap::from(|square| {
+            let knight = Bitboard::from(square);
+            let ranks = knight.shift_rank(2) | knight.shift_rank_neg(2);
+            let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
+            let files = knight.shift_file(2) | knight.shift_file_neg(2);
+            let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
+            rank_attacks | file_attacks
+        });
     }
 }
 

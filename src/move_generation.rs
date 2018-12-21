@@ -294,13 +294,9 @@ struct KnightType;
 impl PieceTypeT for KnightType {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
+    #[inline]
     fn movement(source: Square, _: Bitboard) -> Bitboard {
-        let knight = Bitboard::from(source);
-        let ranks = knight.shift_rank(2) | knight.shift_rank_neg(2);
-        let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
-        let files = knight.shift_file(2) | knight.shift_file_neg(2);
-        let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
-        rank_attacks | file_attacks
+        bitboards::KNIGHT_MOVES[source]
     }
 }
 
@@ -308,6 +304,7 @@ struct RookType;
 impl PieceTypeT for RookType {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
+    #[inline]
     fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
     }
@@ -317,6 +314,7 @@ struct BishopType;
 impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
+    #[inline]
     fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
     }
@@ -326,6 +324,7 @@ struct QueenType;
 impl PieceTypeT for QueenType {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
+    #[inline]
     fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<NorthSouth>(source, occupancy)
             | slide::<EastWest>(source, occupancy)
@@ -361,13 +360,12 @@ struct NorthSouth;
 impl SlideDirection for NorthSouth {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::FILES[source.file()]
-            & !bitboards::RANKS_FILLED[source.rank().to_index() as usize + 1]
+        bitboards::NORTH[source]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index() as usize]
+        bitboards::SOUTH[source]
     }
 }
 
@@ -375,13 +373,12 @@ struct EastWest;
 impl SlideDirection for EastWest {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::RANKS[source.rank()]
-            & !bitboards::FILES_FILLED[source.file().to_index() as usize + 1]
+        bitboards::EAST[source]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index() as usize]
+        bitboards::WEST[source]
     }
 }
 
@@ -389,13 +386,12 @@ struct Diagonal;
 impl SlideDirection for Diagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source]
-            & !bitboards::FILES_FILLED[source.file().to_index() as usize + 1]
+        bitboards::POSITIVE_DIAGONALS[source]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source] & bitboards::FILES_FILLED[source.file().to_index() as usize]
+        bitboards::NEGATIVE_DIAGONALS[source]
     }
 }
 
@@ -403,14 +399,12 @@ struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source]
-            & !bitboards::RANKS_FILLED[source.rank().to_index() as usize + 1]
+        bitboards::POSITIVE_ANTIDIAGONALS[source]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source]
-            & bitboards::RANKS_FILLED[source.rank().to_index() as usize]
+        bitboards::NEGATIVE_ANTIDIAGONALS[source]
     }
 }
 
