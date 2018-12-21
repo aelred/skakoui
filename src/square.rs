@@ -1,79 +1,84 @@
 use crate::file::File;
 use crate::Rank;
-use enum_map::Enum;
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt;
+use std::hash::Hash;
+use std::hash::Hasher;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Enum)]
-pub enum Square {
-    A1 = 0,
-    B1 = 1,
-    C1 = 2,
-    D1 = 3,
-    E1 = 4,
-    F1 = 5,
-    G1 = 6,
-    H1 = 7,
-    A2 = 8,
-    B2 = 9,
-    C2 = 10,
-    D2 = 11,
-    E2 = 12,
-    F2 = 13,
-    G2 = 14,
-    H2 = 15,
-    A3 = 16,
-    B3 = 17,
-    C3 = 18,
-    D3 = 19,
-    E3 = 20,
-    F3 = 21,
-    G3 = 22,
-    H3 = 23,
-    A4 = 24,
-    B4 = 25,
-    C4 = 26,
-    D4 = 27,
-    E4 = 28,
-    F4 = 29,
-    G4 = 30,
-    H4 = 31,
-    A5 = 32,
-    B5 = 33,
-    C5 = 34,
-    D5 = 35,
-    E5 = 36,
-    F5 = 37,
-    G5 = 38,
-    H5 = 39,
-    A6 = 40,
-    B6 = 41,
-    C6 = 42,
-    D6 = 43,
-    E6 = 44,
-    F6 = 45,
-    G6 = 46,
-    H6 = 47,
-    A7 = 48,
-    B7 = 49,
-    C7 = 50,
-    D7 = 51,
-    E7 = 52,
-    F7 = 53,
-    G7 = 54,
-    H7 = 55,
-    A8 = 56,
-    B8 = 57,
-    C8 = 58,
-    D8 = 59,
-    E8 = 60,
-    F8 = 61,
-    G8 = 62,
-    H8 = 63,
-}
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Square(usize);
 
 impl Square {
+    pub const A1: Square = Square(0);
+    pub const B1: Square = Square(1);
+    pub const C1: Square = Square(2);
+    pub const D1: Square = Square(3);
+    pub const E1: Square = Square(4);
+    pub const F1: Square = Square(5);
+    pub const G1: Square = Square(6);
+    pub const H1: Square = Square(7);
+    pub const A2: Square = Square(8);
+    pub const B2: Square = Square(9);
+    pub const C2: Square = Square(10);
+    pub const D2: Square = Square(11);
+    pub const E2: Square = Square(12);
+    pub const F2: Square = Square(13);
+    pub const G2: Square = Square(14);
+    pub const H2: Square = Square(15);
+    pub const A3: Square = Square(16);
+    pub const B3: Square = Square(17);
+    pub const C3: Square = Square(18);
+    pub const D3: Square = Square(19);
+    pub const E3: Square = Square(20);
+    pub const F3: Square = Square(21);
+    pub const G3: Square = Square(22);
+    pub const H3: Square = Square(23);
+    pub const A4: Square = Square(24);
+    pub const B4: Square = Square(25);
+    pub const C4: Square = Square(26);
+    pub const D4: Square = Square(27);
+    pub const E4: Square = Square(28);
+    pub const F4: Square = Square(29);
+    pub const G4: Square = Square(30);
+    pub const H4: Square = Square(31);
+    pub const A5: Square = Square(32);
+    pub const B5: Square = Square(33);
+    pub const C5: Square = Square(34);
+    pub const D5: Square = Square(35);
+    pub const E5: Square = Square(36);
+    pub const F5: Square = Square(37);
+    pub const G5: Square = Square(38);
+    pub const H5: Square = Square(39);
+    pub const A6: Square = Square(40);
+    pub const B6: Square = Square(41);
+    pub const C6: Square = Square(42);
+    pub const D6: Square = Square(43);
+    pub const E6: Square = Square(44);
+    pub const F6: Square = Square(45);
+    pub const G6: Square = Square(46);
+    pub const H6: Square = Square(47);
+    pub const A7: Square = Square(48);
+    pub const B7: Square = Square(49);
+    pub const C7: Square = Square(50);
+    pub const D7: Square = Square(51);
+    pub const E7: Square = Square(52);
+    pub const F7: Square = Square(53);
+    pub const G7: Square = Square(54);
+    pub const H7: Square = Square(55);
+    pub const A8: Square = Square(56);
+    pub const B8: Square = Square(57);
+    pub const C8: Square = Square(58);
+    pub const D8: Square = Square(59);
+    pub const E8: Square = Square(60);
+    pub const F8: Square = Square(61);
+    pub const G8: Square = Square(62);
+    pub const H8: Square = Square(63);
+
+    #[inline]
     pub fn new(file: File, rank: Rank) -> Self {
         let index = file.to_index() + rank.to_index() * File::VALUES.len();
         Self::from_index(index)
@@ -81,12 +86,12 @@ impl Square {
 
     #[inline]
     pub fn from_index(index: usize) -> Self {
-        Enum::<usize>::from_usize(index)
+        Square(index)
     }
 
     #[inline]
     pub fn to_index(self) -> usize {
-        self as usize
+        self.0
     }
 
     #[inline]
@@ -142,6 +147,80 @@ impl FromStr for Square {
     }
 }
 
+pub struct SquareMap<T>([T; 64]);
+
+impl<T> SquareMap<T> {
+    #[inline]
+    pub const fn new(values: [T; 64]) -> SquareMap<T> {
+        SquareMap(values)
+    }
+
+    #[inline]
+    pub fn from<F: Fn(Square) -> T>(f: F) -> Self {
+        let arr = array_init::array_init(|i| f(Square(i)));
+        SquareMap::new(arr)
+    }
+
+    #[inline]
+    pub fn iter(&self) -> impl Iterator<Item = (Square, &T)> {
+        self.0
+            .iter()
+            .enumerate()
+            .map(|(index, item)| (Square(index), item))
+    }
+}
+
+impl<T, S: Borrow<Square>> Index<S> for SquareMap<T> {
+    type Output = T;
+
+    #[inline]
+    fn index(&self, square: S) -> &T {
+        &self.0[square.borrow().to_index()]
+    }
+}
+
+impl<T, S: Borrow<Square>> IndexMut<S> for SquareMap<T> {
+    #[inline]
+    fn index_mut(&mut self, square: S) -> &mut T {
+        &mut self.0[square.borrow().to_index()]
+    }
+}
+
+impl<T: fmt::Debug> fmt::Debug for SquareMap<T> {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        f.write_fmt(format_args!("SquareMap(["))?;
+        let mut str = "";
+        for item in self.0.iter() {
+            f.write_str(str)?;
+            item.fmt(f)?;
+            str = ", ";
+        }
+        f.write_str("])")
+    }
+}
+
+impl<T: Hash> Hash for SquareMap<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for item in self.0.iter() {
+            item.hash(state);
+        }
+    }
+}
+
+impl<T: Copy> Clone for SquareMap<T> {
+    fn clone(&self) -> Self {
+        SquareMap(self.0)
+    }
+}
+
+impl<T: PartialEq> PartialEq for SquareMap<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0[..] == other.0[..]
+    }
+}
+
+impl<T: Eq> Eq for SquareMap<T> {}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum SquareColor {
     Black,
@@ -151,41 +230,39 @@ pub enum SquareColor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::File::*;
-    use crate::Rank::*;
 
     #[test]
     fn files_are_ordered_letters() {
-        assert!(A < B);
-        assert!(B < C);
-        assert!(C < D);
-        assert!(D < E);
-        assert!(E < F);
-        assert!(F < G);
-        assert!(G < H);
+        assert!(File::A < File::B);
+        assert!(File::B < File::C);
+        assert!(File::C < File::D);
+        assert!(File::D < File::E);
+        assert!(File::E < File::F);
+        assert!(File::F < File::G);
+        assert!(File::G < File::H);
     }
 
     #[test]
     fn ranks_are_ordered_numbers() {
-        assert!(_1 < _2);
-        assert!(_2 < _3);
-        assert!(_3 < _4);
-        assert!(_4 < _5);
-        assert!(_5 < _6);
-        assert!(_6 < _7);
-        assert!(_7 < _8);
+        assert!(Rank::_1 < Rank::_2);
+        assert!(Rank::_2 < Rank::_3);
+        assert!(Rank::_3 < Rank::_4);
+        assert!(Rank::_4 < Rank::_5);
+        assert!(Rank::_5 < Rank::_6);
+        assert!(Rank::_6 < Rank::_7);
+        assert!(Rank::_7 < Rank::_8);
     }
 
     #[test]
     fn ranks_can_be_displayed() {
-        assert_eq!("1", _1.to_string());
-        assert_eq!("8", _8.to_string());
+        assert_eq!("1", Rank::_1.to_string());
+        assert_eq!("8", Rank::_8.to_string());
     }
 
     #[test]
     fn files_can_be_displayed() {
-        assert_eq!("a", A.to_string());
-        assert_eq!("d", D.to_string());
+        assert_eq!("a", File::A.to_string());
+        assert_eq!("d", File::D.to_string());
     }
 
     #[test]
@@ -216,18 +293,6 @@ mod tests {
         assert_eq!(Square::C3.shift_rank(-1), Square::C2);
         assert_eq!(Square::C3.shift_rank(-2), Square::C1);
         assert_eq!(Square::C3.shift_rank(5), Square::C8);
-    }
-
-    #[test]
-    #[should_panic]
-    fn can_not_shift_rank_south_of_board() {
-        Square::C3.shift_rank(-3);
-    }
-
-    #[test]
-    #[should_panic]
-    fn can_not_shift_rank_north_of_board() {
-        Square::C3.shift_rank(6);
     }
 
     #[test]

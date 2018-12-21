@@ -233,23 +233,39 @@ pub mod bitboards {
     #![allow(clippy::large_digit_groups)] // We have a lot of bitboards which clippy doesn't like
 
     use super::Bitboard;
+    use crate::file::FileMap;
     use crate::File;
     use crate::Rank;
+    use crate::RankMap;
     use crate::Square;
-    use enum_map::EnumMap;
+    use crate::SquareMap;
     use lazy_static::lazy_static;
 
     pub const EMPTY: Bitboard = Bitboard(0);
 
+    pub const FILES: FileMap<Bitboard> = FileMap::new([
+        Bitboard(0b_00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001),
+        Bitboard(0b_00000010_00000010_00000010_00000010_00000010_00000010_00000010_00000010),
+        Bitboard(0b_00000100_00000100_00000100_00000100_00000100_00000100_00000100_00000100),
+        Bitboard(0b_00001000_00001000_00001000_00001000_00001000_00001000_00001000_00001000),
+        Bitboard(0b_00010000_00010000_00010000_00010000_00010000_00010000_00010000_00010000),
+        Bitboard(0b_00100000_00100000_00100000_00100000_00100000_00100000_00100000_00100000),
+        Bitboard(0b_01000000_01000000_01000000_01000000_01000000_01000000_01000000_01000000),
+        Bitboard(0b_10000000_10000000_10000000_10000000_10000000_10000000_10000000_10000000),
+    ]);
+
+    pub const RANKS: RankMap<Bitboard> = RankMap::new([
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_00000000_11111111),
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_00000000_11111111_00000000),
+        Bitboard(0b_00000000_00000000_00000000_00000000_00000000_11111111_00000000_00000000),
+        Bitboard(0b_00000000_00000000_00000000_00000000_11111111_00000000_00000000_00000000),
+        Bitboard(0b_00000000_00000000_00000000_11111111_00000000_00000000_00000000_00000000),
+        Bitboard(0b_00000000_00000000_11111111_00000000_00000000_00000000_00000000_00000000),
+        Bitboard(0b_00000000_11111111_00000000_00000000_00000000_00000000_00000000_00000000),
+        Bitboard(0b_11111111_00000000_00000000_00000000_00000000_00000000_00000000_00000000),
+    ]);
+
     lazy_static! {
-        pub static ref FILES: EnumMap<File, Bitboard> = {
-            let b = 0b_00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001;
-            EnumMap::from(|file: File| Bitboard(b << file.to_index()))
-        };
-        pub static ref RANKS: EnumMap<Rank, Bitboard> = {
-            let b = 0b_11111111;
-            EnumMap::from(|rank: Rank| Bitboard(b << (rank.to_index() * Rank::VALUES.len())))
-        };
         pub static ref FILES_FILLED: [Bitboard; 9] = {
             let fill_0 = EMPTY;
             let fill_1 = fill_0 | FILES[File::A];
@@ -278,30 +294,26 @@ pub mod bitboards {
                 fill_0, fill_1, fill_2, fill_3, fill_4, fill_5, fill_6, fill_7, fill_8,
             ]
         };
-        pub static ref DIAGONALS: EnumMap<File, EnumMap<Rank, Bitboard>> = {
-            EnumMap::from(|file: File| {
-                EnumMap::from(|rank: Rank| {
-                    let sq = Square::new(file, rank).to_index() as isize;
-                    let maindia =
-                        0b_10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001;
-                    let diag = 8 * (sq & 7) - (sq & 56);
-                    let nort = -diag & (diag >> 31);
-                    let sout = diag & (-diag >> 31);
-                    Bitboard((maindia >> sout) << nort)
-                })
+        pub static ref DIAGONALS: SquareMap<Bitboard> = {
+            SquareMap::from(|square: Square| {
+                let sq = square.to_index() as isize;
+                let maindia =
+                    0b_10000000_01000000_00100000_00010000_00001000_00000100_00000010_00000001;
+                let diag = 8 * (sq & 7) - (sq & 56);
+                let nort = -diag & (diag >> 31);
+                let sout = diag & (-diag >> 31);
+                Bitboard((maindia >> sout) << nort)
             })
         };
-        pub static ref ANTIDIAGONALS: EnumMap<File, EnumMap<Rank, Bitboard>> = {
-            EnumMap::from(|file: File| {
-                EnumMap::from(|rank: Rank| {
-                    let sq = Square::new(file, rank).to_index() as isize;
-                    let maindia =
-                        0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000;
-                    let diag = 56 - 8 * (sq & 7) - (sq & 56);
-                    let nort = -diag & (diag >> 31);
-                    let sout = diag & (-diag >> 31);
-                    Bitboard((maindia >> sout) << nort)
-                })
+        pub static ref ANTIDIAGONALS: SquareMap<Bitboard> = {
+            SquareMap::from(|square: Square| {
+                let sq = square.to_index() as isize;
+                let maindia =
+                    0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000;
+                let diag = 56 - 8 * (sq & 7) - (sq & 56);
+                let nort = -diag & (diag >> 31);
+                let sout = diag & (-diag >> 31);
+                Bitboard((maindia >> sout) << nort)
             })
         };
     }

@@ -8,6 +8,7 @@ use crate::Player;
 use crate::Rank;
 use crate::Square;
 use crate::SquareColor;
+use crate::SquareMap;
 use enum_map::EnumMap;
 use std::fmt;
 use std::ops::BitOr;
@@ -16,7 +17,7 @@ use std::ops::BitOr;
 pub struct Board {
     bitboards: EnumMap<Player, EnumMap<PieceType, Bitboard>>,
     player: Player,
-    pieces: EnumMap<Rank, EnumMap<File, Option<Piece>>>,
+    pieces: SquareMap<Option<Piece>>,
     occupancy_player: EnumMap<Player, Bitboard>,
     occupancy: Bitboard,
     board_states: Vec<BoardState>,
@@ -39,16 +40,13 @@ impl Board {
     ) -> Self {
         let mut bitboards = EnumMap::from(|_| EnumMap::from(|_| bitboards::EMPTY));
 
-        let pieces = EnumMap::from(|rank: Rank| {
-            EnumMap::from(|file: File| pieces_array[rank.to_index()][file.to_index()])
+        let pieces = SquareMap::from(|square: Square| {
+            pieces_array[square.rank().to_index()][square.file().to_index()]
         });
 
-        for (rank, pieces_rank) in pieces {
-            for (file, optional_piece) in pieces_rank {
-                if let Some(piece) = optional_piece {
-                    let square = Square::new(file, rank);
-                    bitboards[piece.player()][piece.piece_type()].set(square);
-                }
+        for (square, optional_piece) in pieces.iter() {
+            if let Some(piece) = optional_piece {
+                bitboards[piece.player()][piece.piece_type()].set(square);
             }
         }
 
@@ -74,7 +72,7 @@ impl Board {
 
     #[inline]
     pub fn get(&self, square: Square) -> Option<Piece> {
-        self.pieces[square.rank()][square.file()]
+        self.pieces[square]
     }
 
     #[inline]
@@ -98,7 +96,7 @@ impl Board {
             captured_piece_type = None;
         }
 
-        self.pieces[from.rank()][from.file()] = None;
+        self.pieces[from] = None;
 
         let bitboard = self.bitboard_piece_mut(piece);
 
@@ -107,11 +105,11 @@ impl Board {
             bitboard.reset(from);
             self.bitboard_piece_mut(promotion).set(to);
 
-            self.pieces[to.rank()][to.file()] = Some(promotion);
+            self.pieces[to] = Some(promotion);
         } else {
             bitboard.move_bit(from, to);
 
-            self.pieces[to.rank()][to.file()] = Some(piece);
+            self.pieces[to] = Some(piece);
         }
 
         self.occupancy.reset(from);
@@ -141,10 +139,10 @@ impl Board {
             let captured_piece = Piece::new(player.opponent(), captured_piece_type);
             self.bitboard_piece_mut(captured_piece).set(to);
             self.occupancy_player[player.opponent()].set(to);
-            self.pieces[to.rank()][to.file()] = Some(captured_piece);
+            self.pieces[to] = Some(captured_piece);
         } else {
             self.occupancy.reset(to);
-            self.pieces[to.rank()][to.file()] = None;
+            self.pieces[to] = None;
         }
 
         let bitboard = self.bitboard_piece_mut(piece);
@@ -157,7 +155,7 @@ impl Board {
             bitboard.move_bit(to, from);
         }
 
-        self.pieces[from.rank()][from.file()] = Some(piece);
+        self.pieces[from] = Some(piece);
 
         self.occupancy.set(from);
         self.occupancy_player[player].move_bit(to, from);
@@ -245,12 +243,12 @@ impl fmt::Display for Board {
         let files_str: String = File::VALUES.iter().map(File::to_string).collect();
         f.write_fmt(format_args!("  {}\n", files_str))?;
 
-        for (rank, pieces) in self.pieces.iter().rev() {
+        for rank in Rank::VALUES.iter().rev() {
             f.write_fmt(format_args!("{} ", rank))?;
-            for (file, optional_piece) in pieces {
-                let square = Square::new(file, rank);
+            for file in &File::VALUES {
+                let square = Square::new(*file, *rank);
 
-                let s = if let Some(piece) = optional_piece {
+                let s = if let Some(piece) = self.get(square) {
                     piece.to_string()
                 } else {
                     let col = match square.color() {

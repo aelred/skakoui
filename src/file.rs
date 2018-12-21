@@ -1,21 +1,22 @@
-use enum_map::Enum;
+use std::borrow::Borrow;
 use std::fmt;
 use std::ops::Add;
+use std::ops::Index;
 use std::str::FromStr;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
-pub enum File {
-    A = 0,
-    B = 1,
-    C = 2,
-    D = 3,
-    E = 4,
-    F = 5,
-    G = 6,
-    H = 7,
-}
+#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
+pub struct File(usize);
 
 impl File {
+    pub const A: File = File(0);
+    pub const B: File = File(1);
+    pub const C: File = File(2);
+    pub const D: File = File(3);
+    pub const E: File = File(4);
+    pub const F: File = File(5);
+    pub const G: File = File(6);
+    pub const H: File = File(7);
+
     pub const VALUES: [Self; 8] = [
         File::A,
         File::B,
@@ -29,12 +30,12 @@ impl File {
 
     #[inline]
     pub fn from_index(index: usize) -> Self {
-        Enum::<usize>::from_usize(index)
+        File(index)
     }
 
     #[inline]
     pub fn to_index(self) -> usize {
-        self as usize
+        self.0
     }
 }
 
@@ -49,17 +50,8 @@ impl Add<isize> for File {
 
 impl fmt::Display for File {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        let s = match self {
-            File::A => "a",
-            File::B => "b",
-            File::C => "c",
-            File::D => "d",
-            File::E => "e",
-            File::F => "f",
-            File::G => "g",
-            File::H => "h",
-        };
-        f.write_str(s)
+        const STRS: FileMap<&str> = FileMap::new(["a", "b", "c", "d", "e", "f", "g", "h"]);
+        f.write_str(STRS[self])
     }
 }
 
@@ -79,5 +71,22 @@ impl FromStr for File {
             _ => return Err("unrecognised file".to_string()),
         };
         Ok(file)
+    }
+}
+
+pub struct FileMap<T>([T; 8]);
+
+impl<T> FileMap<T> {
+    pub const fn new(values: [T; 8]) -> FileMap<T> {
+        FileMap(values)
+    }
+}
+
+impl<T, F: Borrow<File>> Index<F> for FileMap<T> {
+    type Output = T;
+
+    #[inline]
+    fn index(&self, file: F) -> &T {
+        &self.0[file.borrow().to_index()]
     }
 }

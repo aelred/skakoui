@@ -19,8 +19,8 @@ pub use crate::{
     file::File,
     moves::Move,
     piece::{Piece, PieceType},
-    rank::Rank,
-    square::{Square, SquareColor},
+    rank::{Rank, RankMap},
+    square::{Square, SquareColor, SquareMap},
 };
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]

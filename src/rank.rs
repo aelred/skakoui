@@ -1,23 +1,24 @@
-use enum_map::Enum;
+use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt;
 use std::ops::Add;
+use std::ops::Index;
 use std::ops::Sub;
 use std::str::FromStr;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Enum, Copy, Clone, Debug, Hash)]
-pub enum Rank {
-    _1 = 0,
-    _2 = 1,
-    _3 = 2,
-    _4 = 3,
-    _5 = 4,
-    _6 = 5,
-    _7 = 6,
-    _8 = 7,
-}
+#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
+pub struct Rank(usize);
 
 impl Rank {
+    pub const _1: Rank = Rank(0);
+    pub const _2: Rank = Rank(1);
+    pub const _3: Rank = Rank(2);
+    pub const _4: Rank = Rank(3);
+    pub const _5: Rank = Rank(4);
+    pub const _6: Rank = Rank(5);
+    pub const _7: Rank = Rank(6);
+    pub const _8: Rank = Rank(7);
+
     pub const VALUES: [Self; 8] = [
         Rank::_1,
         Rank::_2,
@@ -31,12 +32,12 @@ impl Rank {
 
     #[inline]
     pub fn from_index(index: usize) -> Self {
-        Enum::<usize>::from_usize(index)
+        Rank(index)
     }
 
     #[inline]
     pub fn to_index(self) -> usize {
-        self as usize
+        self.0
     }
 }
 
@@ -45,7 +46,7 @@ impl Add<isize> for Rank {
 
     #[inline]
     fn add(self, offset: isize) -> Self {
-        Self::VALUES[(self.to_index() as isize + offset) as usize]
+        Rank((self.0 as isize + offset) as usize)
     }
 }
 
@@ -54,7 +55,7 @@ impl Sub<isize> for Rank {
 
     #[inline]
     fn sub(self, offset: isize) -> Self {
-        self + (-offset)
+        Rank((self.0 as isize - offset) as usize)
     }
 }
 
@@ -74,5 +75,22 @@ impl FromStr for Rank {
         } else {
             Ok(Rank::from_index(num - 1))
         }
+    }
+}
+
+pub struct RankMap<T>([T; 8]);
+
+impl<T> RankMap<T> {
+    pub const fn new(values: [T; 8]) -> RankMap<T> {
+        RankMap(values)
+    }
+}
+
+impl<T, R: Borrow<Rank>> Index<R> for RankMap<T> {
+    type Output = T;
+
+    #[inline]
+    fn index(&self, rank: R) -> &T {
+        &self.0[rank.borrow().to_index()]
     }
 }

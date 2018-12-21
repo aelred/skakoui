@@ -387,14 +387,12 @@ struct Diagonal;
 impl SlideDirection for Diagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source.file()][source.rank()]
-            & !bitboards::FILES_FILLED[source.file().to_index() + 1]
+        bitboards::DIAGONALS[source] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source.file()][source.rank()]
-            & bitboards::FILES_FILLED[source.file().to_index()]
+        bitboards::DIAGONALS[source] & bitboards::FILES_FILLED[source.file().to_index()]
     }
 }
 
@@ -402,14 +400,12 @@ struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
-            & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
+        bitboards::ANTIDIAGONALS[source] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source.file()][source.rank()]
-            & bitboards::RANKS_FILLED[source.rank().to_index()]
+        bitboards::ANTIDIAGONALS[source] & bitboards::RANKS_FILLED[source.rank().to_index()]
     }
 }
 
