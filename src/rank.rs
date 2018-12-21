@@ -7,7 +7,7 @@ use std::ops::Sub;
 use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
-pub struct Rank(usize);
+pub struct Rank(u8);
 
 impl Rank {
     pub const _1: Rank = Rank(0);
@@ -31,31 +31,31 @@ impl Rank {
     ];
 
     #[inline]
-    pub fn from_index(index: usize) -> Self {
+    pub fn from_index(index: u8) -> Self {
         Rank(index)
     }
 
     #[inline]
-    pub fn to_index(self) -> usize {
+    pub fn to_index(self) -> u8 {
         self.0
     }
 }
 
-impl Add<isize> for Rank {
+impl Add<i8> for Rank {
     type Output = Self;
 
     #[inline]
-    fn add(self, offset: isize) -> Self {
-        Rank((self.0 as isize + offset) as usize)
+    fn add(self, offset: i8) -> Self {
+        Rank((self.0 as i8 + offset) as u8)
     }
 }
 
-impl Sub<isize> for Rank {
+impl Sub<i8> for Rank {
     type Output = Self;
 
     #[inline]
-    fn sub(self, offset: isize) -> Self {
-        Rank((self.0 as isize - offset) as usize)
+    fn sub(self, offset: i8) -> Self {
+        Rank((self.0 as i8 - offset) as u8)
     }
 }
 
@@ -69,8 +69,8 @@ impl FromStr for Rank {
     type Err = Box<dyn Error>;
 
     fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
-        let num: usize = s.parse()?;
-        if num < 1 || num > Rank::VALUES.len() + 1 {
+        let num: u8 = s.parse()?;
+        if num < 1 || num > 9 {
             Err("unrecognised rank".to_string().into())
         } else {
             Ok(Rank::from_index(num - 1))
@@ -91,6 +91,6 @@ impl<T, R: Borrow<Rank>> Index<R> for RankMap<T> {
 
     #[inline]
     fn index(&self, rank: R) -> &T {
-        &self.0[rank.borrow().to_index()]
+        &self.0[rank.borrow().to_index() as usize]
     }
 }

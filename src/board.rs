@@ -41,7 +41,7 @@ impl Board {
         let mut bitboards = EnumMap::from(|_| EnumMap::from(|_| bitboards::EMPTY));
 
         let pieces = SquareMap::from(|square: Square| {
-            pieces_array[square.rank().to_index()][square.file().to_index()]
+            pieces_array[square.rank().to_index() as usize][square.file().to_index() as usize]
         });
 
         for (square, optional_piece) in pieces.iter() {
@@ -202,7 +202,7 @@ impl Board {
 
     #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
-        self.bitboard_piece(piece).count() as i32
+        i32::from(self.bitboard_piece(piece).count())
     }
 }
 

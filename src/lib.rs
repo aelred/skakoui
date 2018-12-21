@@ -56,7 +56,7 @@ pub trait PlayerType {
     type Opp: PlayerType;
 
     const PLAYER: Player;
-    const DIRECTION: isize;
+    const DIRECTION: i8;
     const PAWN_RANK: Rank;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard;
@@ -69,7 +69,7 @@ impl PlayerType for WhitePlayer {
     type Opp = BlackPlayer;
 
     const PLAYER: Player = Player::White;
-    const DIRECTION: isize = 1;
+    const DIRECTION: i8 = 1;
     const PAWN_RANK: Rank = Rank::_2;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {
@@ -81,7 +81,7 @@ impl PlayerType for BlackPlayer {
     type Opp = WhitePlayer;
 
     const PLAYER: Player = Player::Black;
-    const DIRECTION: isize = -1;
+    const DIRECTION: i8 = -1;
     const PAWN_RANK: Rank = Rank::_7;
 
     fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {

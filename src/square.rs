@@ -10,7 +10,7 @@ use std::ops::IndexMut;
 use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct Square(usize);
+pub struct Square(u8);
 
 impl Square {
     pub const A1: Square = Square(0);
@@ -80,17 +80,17 @@ impl Square {
 
     #[inline]
     pub fn new(file: File, rank: Rank) -> Self {
-        let index = file.to_index() + rank.to_index() * File::VALUES.len();
+        let index = file.to_index() + rank.to_index() * 8;
         Self::from_index(index)
     }
 
     #[inline]
-    pub fn from_index(index: usize) -> Self {
+    pub fn from_index(index: u8) -> Self {
         Square(index)
     }
 
     #[inline]
-    pub fn to_index(self) -> usize {
+    pub fn to_index(self) -> u8 {
         self.0
     }
 
@@ -105,19 +105,19 @@ impl Square {
     }
 
     #[inline]
-    pub fn shift_rank(self, offset: isize) -> Self {
-        Self::from_index((self.to_index() as isize + offset * 8) as usize)
+    pub fn shift_rank(self, offset: i8) -> Self {
+        Self::from_index((self.to_index() as i8 + offset * 8) as u8)
     }
 
     #[inline]
-    pub fn shift_file(self, offset: isize) -> Self {
-        Self::from_index((self.to_index() as isize + offset) as usize)
+    pub fn shift_file(self, offset: i8) -> Self {
+        Self::from_index((self.to_index() as i8 + offset) as u8)
     }
 
     #[inline]
     pub fn color(self) -> SquareColor {
         // bitwise magic here
-        if ((9 * self.to_index()) & 8) == 0 {
+        if ((9 * u32::from(self.to_index())) & 8) == 0 {
             SquareColor::Black
         } else {
             SquareColor::White
@@ -157,7 +157,7 @@ impl<T> SquareMap<T> {
 
     #[inline]
     pub fn from<F: Fn(Square) -> T>(f: F) -> Self {
-        let arr = array_init::array_init(|i| f(Square(i)));
+        let arr = array_init::array_init(|i| f(Square(i as u8)));
         SquareMap::new(arr)
     }
 
@@ -166,7 +166,7 @@ impl<T> SquareMap<T> {
         self.0
             .iter()
             .enumerate()
-            .map(|(index, item)| (Square(index), item))
+            .map(|(index, item)| (Square(index as u8), item))
     }
 }
 
@@ -175,14 +175,14 @@ impl<T, S: Borrow<Square>> Index<S> for SquareMap<T> {
 
     #[inline]
     fn index(&self, square: S) -> &T {
-        &self.0[square.borrow().to_index()]
+        &self.0[square.borrow().to_index() as usize]
     }
 }
 
 impl<T, S: Borrow<Square>> IndexMut<S> for SquareMap<T> {
     #[inline]
     fn index_mut(&mut self, square: S) -> &mut T {
-        &mut self.0[square.borrow().to_index()]
+        &mut self.0[square.borrow().to_index() as usize]
     }
 }
 

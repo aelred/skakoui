@@ -5,7 +5,7 @@ use std::ops::Index;
 use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
-pub struct File(usize);
+pub struct File(u8);
 
 impl File {
     pub const A: File = File(0);
@@ -29,22 +29,22 @@ impl File {
     ];
 
     #[inline]
-    pub fn from_index(index: usize) -> Self {
+    pub fn from_index(index: u8) -> Self {
         File(index)
     }
 
     #[inline]
-    pub fn to_index(self) -> usize {
+    pub fn to_index(self) -> u8 {
         self.0
     }
 }
 
-impl Add<isize> for File {
+impl Add<i8> for File {
     type Output = Self;
 
     #[inline]
-    fn add(self, offset: isize) -> Self {
-        Self::VALUES[(self.to_index() as isize + offset) as usize]
+    fn add(self, offset: i8) -> Self {
+        Self::VALUES[(self.to_index() as i8 + offset) as usize]
     }
 }
 
@@ -87,6 +87,6 @@ impl<T, F: Borrow<File>> Index<F> for FileMap<T> {
 
     #[inline]
     fn index(&self, file: F) -> &T {
-        &self.0[file.borrow().to_index()]
+        &self.0[file.borrow().to_index() as usize]
     }
 }

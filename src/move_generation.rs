@@ -361,12 +361,13 @@ struct NorthSouth;
 impl SlideDirection for NorthSouth {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::FILES[source.file()] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
+        bitboards::FILES[source.file()]
+            & !bitboards::RANKS_FILLED[source.rank().to_index() as usize + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index()]
+        bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index() as usize]
     }
 }
 
@@ -374,12 +375,13 @@ struct EastWest;
 impl SlideDirection for EastWest {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::RANKS[source.rank()] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
+        bitboards::RANKS[source.rank()]
+            & !bitboards::FILES_FILLED[source.file().to_index() as usize + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index()]
+        bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index() as usize]
     }
 }
 
@@ -387,12 +389,13 @@ struct Diagonal;
 impl SlideDirection for Diagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
+        bitboards::DIAGONALS[source]
+            & !bitboards::FILES_FILLED[source.file().to_index() as usize + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::DIAGONALS[source] & bitboards::FILES_FILLED[source.file().to_index()]
+        bitboards::DIAGONALS[source] & bitboards::FILES_FILLED[source.file().to_index() as usize]
     }
 }
 
@@ -400,12 +403,14 @@ struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
     #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
+        bitboards::ANTIDIAGONALS[source]
+            & !bitboards::RANKS_FILLED[source.rank().to_index() as usize + 1]
     }
 
     #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::ANTIDIAGONALS[source] & bitboards::RANKS_FILLED[source.rank().to_index()]
+        bitboards::ANTIDIAGONALS[source]
+            & bitboards::RANKS_FILLED[source.rank().to_index() as usize]
     }
 }
 
