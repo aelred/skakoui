@@ -72,7 +72,8 @@ impl Board {
         }
     }
 
-    fn get(&self, square: Square) -> Option<Piece> {
+    #[inline]
+    pub fn get(&self, square: Square) -> Option<Piece> {
         self.pieces[square.rank()][square.file()]
     }
 

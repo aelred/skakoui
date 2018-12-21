@@ -65,7 +65,8 @@ impl Bitboard {
     }
 
     /// Returns set squares in order from a1 to g8.
-    pub fn squares(self) -> impl DoubleEndedIterator<Item = Square> {
+    #[inline]
+    pub fn squares(self) -> SquareIterator {
         SquareIterator(self)
     }
 
@@ -86,7 +87,7 @@ impl Bitboard {
     }
 }
 
-struct SquareIterator(Bitboard);
+pub struct SquareIterator(Bitboard);
 
 impl Iterator for SquareIterator {
     type Item = Square;

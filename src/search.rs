@@ -40,7 +40,7 @@ impl Searcher {
     const DEPTH: u32 = 4;
 
     pub fn run(&mut self, board: &mut Board) -> (Option<Move>, i32) {
-        let mut moves = board.moves().peekable();
+        let mut moves = board.pseudo_legal_moves().peekable();
 
         if moves.peek().is_none() {
             return (None, LOW_SCORE);
@@ -114,7 +114,7 @@ impl Searcher {
             return Self::quiesce(board, alpha, beta);
         }
 
-        let mut moves = board.moves().peekable();
+        let mut moves = board.pseudo_legal_moves().peekable();
 
         if moves.peek().is_none() {
             return LOW_SCORE;
@@ -147,13 +147,8 @@ impl Searcher {
             alpha = stand_pat;
         }
 
-        for mov in board.moves() {
+        for mov in board.capturing_moves() {
             board.make_move(mov);
-            // Only evaluate captures
-            if board.eval() == stand_pat {
-                board.unmake_move(mov);
-                continue;
-            }
             let value = -Self::quiesce(board, -beta, -alpha);
             board.unmake_move(mov);
 

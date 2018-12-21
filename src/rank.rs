@@ -29,10 +29,12 @@ impl Rank {
         Rank::_8,
     ];
 
+    #[inline]
     pub fn from_index(index: usize) -> Self {
         Enum::<usize>::from_usize(index)
     }
 
+    #[inline]
     pub fn to_index(self) -> usize {
         Enum::<usize>::to_usize(self)
     }

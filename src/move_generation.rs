@@ -1,3 +1,4 @@
+use crate::bitboard::SquareIterator;
 use crate::bitboards;
 use crate::Bitboard;
 use crate::BlackPlayer;
@@ -9,36 +10,51 @@ use crate::Player;
 use crate::PlayerType;
 use crate::Square;
 use crate::WhitePlayer;
+use std::marker::PhantomData;
 
 impl Board {
-    pub fn moves(&mut self) -> Box<dyn Iterator<Item = Move>> {
+    pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
+        let pseudo_legal_moves = self.pseudo_legal_moves();
+
+        // TODO: this is a very inefficient way to confirm if in check
+        pseudo_legal_moves.filter(move |mov| {
+            self.make_move(*mov);
+            let in_check = self.can_take_king();
+            self.unmake_move(*mov);
+            !in_check
+        })
+    }
+
+    pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
-            Player::White => self.moves_for_player::<WhitePlayer>(),
-            Player::Black => self.moves_for_player::<BlackPlayer>(),
+            Player::White => Box::new(self.moves_of_type::<AllMoves<WhitePlayer>>()),
+            Player::Black => Box::new(self.moves_of_type::<AllMoves<BlackPlayer>>()),
         }
     }
 
-    fn moves_for_player<P: PlayerType + 'static>(&mut self) -> Box<dyn Iterator<Item = Move>> {
-        let pseudo_legal_moves = self.pseudo_legal_moves::<P>();
-
-        let mut this = self.clone();
-
-        // TODO: this is a very inefficient way to confirm if in check
-        let legal_moves = pseudo_legal_moves.filter(move |mov| {
-            this.make_move(*mov);
-            let in_check = this.can_take_king::<P::Opp>();
-            this.unmake_move(*mov);
-            !in_check
-        });
-
-        Box::new(legal_moves)
+    pub fn capturing_moves(&self) -> Box<dyn Iterator<Item = Move>> {
+        match self.player() {
+            Player::White => Box::new(self.moves_of_type::<CapturingMoves<WhitePlayer>>()),
+            Player::Black => Box::new(self.moves_of_type::<CapturingMoves<BlackPlayer>>()),
+        }
     }
 
-    fn can_take_king<P: PlayerType + 'static>(&self) -> bool {
-        let king = Piece::new(P::Opp::PLAYER, PieceType::King);
+    fn moves_of_type<M: Movement>(&self) -> AllPiecesIter<M::PawnIter> {
+        AllPiecesIter {
+            king: M::piece::<KingType>(self),
+            queen: M::piece::<QueenType>(self),
+            rook: M::piece::<RookType>(self),
+            bishop: M::piece::<BishopType>(self),
+            knight: M::piece::<KnightType>(self),
+            pawn: M::pawn(self),
+        }
+    }
+
+    fn can_take_king(&self) -> bool {
+        let king = Piece::new(self.player().opponent(), PieceType::King);
 
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
-            for mov in self.pseudo_legal_moves::<P>() {
+            for mov in self.pseudo_legal_moves() {
                 if mov.to() != king_pos {
                     continue;
                 }
@@ -55,119 +71,266 @@ impl Board {
             false
         }
     }
+}
 
-    fn pseudo_legal_moves<P: PlayerType + 'static>(&self) -> impl Iterator<Item = Move> {
-        self.king_moves()
-            .chain(self.queen_moves())
-            .chain(self.rook_moves())
-            .chain(self.bishop_moves())
-            .chain(self.knight_moves())
-            .chain(self.pawn_moves::<P>())
+struct AllPiecesIter<I> {
+    king: MovesIter<KingType>,
+    queen: MovesIter<QueenType>,
+    rook: MovesIter<RookType>,
+    bishop: MovesIter<BishopType>,
+    knight: MovesIter<KnightType>,
+    pawn: I,
+}
+
+impl<I: Iterator<Item = Move>> Iterator for AllPiecesIter<I> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Move> {
+        if let Some(mov) = self.king.next() {
+            return Some(mov);
+        }
+        if let Some(mov) = self.queen.next() {
+            return Some(mov);
+        }
+        if let Some(mov) = self.rook.next() {
+            return Some(mov);
+        }
+        if let Some(mov) = self.bishop.next() {
+            return Some(mov);
+        }
+        if let Some(mov) = self.knight.next() {
+            return Some(mov);
+        }
+        self.pawn.next()
+    }
+}
+
+struct MovesIter<P> {
+    mask: Bitboard,
+    occupancy: Bitboard,
+    sources: SquareIterator,
+    target_iter: Option<TargetIter>,
+    _phantom: PhantomData<P>,
+}
+
+struct TargetIter {
+    source: Square,
+    targets: SquareIterator,
+}
+
+impl<PT: PieceTypeT> MovesIter<PT> {
+    fn new(board: &Board, mask: Bitboard) -> Self {
+        let piece = Piece::new(board.player(), PT::PIECE_TYPE);
+        MovesIter {
+            mask,
+            occupancy: board.occupancy(),
+            sources: board.bitboard_piece(piece).squares(),
+            target_iter: None,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Move> {
+        loop {
+            if self.target_iter.is_none() {
+                let source = self.sources.next()?;
+                let attacks = PT::movement(source, self.occupancy) & self.mask;
+                let targets = attacks.squares();
+                self.target_iter = Some(TargetIter { source, targets });
+            }
+
+            let target_iter = self.target_iter.as_mut().unwrap();
+
+            let source = target_iter.source;
+
+            if let Some(target) = target_iter.targets.next() {
+                return Some(Move::new(PT::PIECE_TYPE, source, target));
+            } else {
+                self.target_iter = None;
+            }
+        }
+    }
+}
+
+struct PawnMovesIter<P> {
+    pushes: SquareIterator,
+    double_pushes: SquareIterator,
+    captures: PawnCapturesIter<P>,
+    _phantom: PhantomData<P>,
+}
+
+impl<P: PlayerType> Iterator for PawnMovesIter<P> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Move> {
+        if let Some(target) = self.pushes.next() {
+            let source = target.shift_rank(-P::DIRECTION);
+            return Some(Move::new(PieceType::Pawn, source, target));
+        }
+
+        if let Some(target) = self.double_pushes.next() {
+            let source = target.shift_rank(-P::DIRECTION * 2);
+            return Some(Move::new(PieceType::Pawn, source, target));
+        }
+
+        self.captures.next()
+    }
+}
+
+struct PawnCapturesIter<P> {
+    captures_east: SquareIterator,
+    captures_west: SquareIterator,
+    _phantom: PhantomData<P>,
+}
+
+impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Move> {
+        if let Some(target) = self.captures_east.next() {
+            let source = target.shift_rank(-P::DIRECTION).shift_file(1);
+            return Some(Move::new(PieceType::Pawn, source, target));
+        }
+
+        if let Some(target) = self.captures_west.next() {
+            let source = target.shift_rank(-P::DIRECTION).shift_file(-1);
+            return Some(Move::new(PieceType::Pawn, source, target));
+        }
+
+        None
+    }
+}
+
+trait Movement {
+    type PawnIter: Iterator<Item = Move>;
+
+    fn pawn(board: &Board) -> Self::PawnIter;
+
+    fn piece<PT: PieceTypeT>(board: &Board) -> MovesIter<PT> {
+        MovesIter::new(board, Self::movement_mask(board))
     }
 
-    fn pawn_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+    fn movement_mask(board: &Board) -> Bitboard;
+}
+
+struct AllMoves<P>(PhantomData<P>);
+impl<P: PlayerType> Movement for AllMoves<P> {
+    type PawnIter = PawnMovesIter<P>;
+
+    fn pawn(board: &Board) -> PawnMovesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
 
-        let pawns = self.bitboard_piece(piece);
-        let free_spaces = !self.occupancy();
+        let pawns = board.bitboard_piece(piece);
+        let free_spaces = !board.occupancy();
 
         let pawns_forward = P::advance_bitboard(pawns);
 
         let pushes = pawns_forward & free_spaces;
 
-        let pushes_iter = pushes.squares().map(move |target| {
-            let source = target.shift_rank(-P::DIRECTION);
-            Move::new(PieceType::Pawn, source, target)
-        });
-
         let double_mask = bitboards::RANKS[P::PAWN_RANK + P::DIRECTION];
         let double_pushes = P::advance_bitboard(&(pushes & double_mask)) & free_spaces;
 
-        let double_pushes_iter = double_pushes.squares().map(move |target| {
-            let source = target.shift_rank(-P::DIRECTION * 2);
-            Move::new(PieceType::Pawn, source, target)
-        });
+        PawnMovesIter {
+            pushes: pushes.squares(),
+            double_pushes: double_pushes.squares(),
+            captures: CapturingMoves::pawn(board),
+            _phantom: PhantomData,
+        }
+    }
 
-        let opponent_pieces = self.occupancy_player(P::PLAYER.opponent());
+    fn movement_mask(board: &Board) -> Bitboard {
+        !board.occupancy_player(P::PLAYER)
+    }
+}
+
+struct CapturingMoves<P>(PhantomData<P>);
+impl<P: PlayerType> Movement for CapturingMoves<P> {
+    type PawnIter = PawnCapturesIter<P>;
+
+    fn pawn(board: &Board) -> PawnCapturesIter<P> {
+        let piece = Piece::new(P::PLAYER, PieceType::Pawn);
+        let pawns = board.bitboard_piece(piece);
+        let pawns_forward = P::advance_bitboard(pawns);
+
+        let opponent_pieces = board.occupancy_player(P::Opp::PLAYER);
 
         let captures_east = pawns_forward.shift_file_neg(1) & opponent_pieces;
-
-        let captures_east_iter = captures_east.squares().map(move |target| {
-            let source = target.shift_rank(-P::DIRECTION).shift_file(1);
-            Move::new(PieceType::Pawn, source, target)
-        });
-
         let captures_west = pawns_forward.shift_file(1) & opponent_pieces;
 
-        let captures_west_iter = captures_west.squares().map(move |target| {
-            let source = target.shift_rank(-P::DIRECTION).shift_file(-1);
-            Move::new(PieceType::Pawn, source, target)
-        });
-
-        captures_west_iter
-            .chain(captures_east_iter)
-            .chain(double_pushes_iter)
-            .chain(pushes_iter)
+        PawnCapturesIter {
+            captures_east: captures_east.squares(),
+            captures_west: captures_west.squares(),
+            _phantom: PhantomData,
+        }
     }
 
-    fn king_moves(&self) -> impl Iterator<Item = Move> {
-        self.moves_for_piece(PieceType::King, move |source| {
-            let king = Bitboard::from(source);
-            let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
-            let ranks = king | attacks;
-            attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
-        })
+    fn movement_mask(board: &Board) -> Bitboard {
+        board.occupancy_player(P::Opp::PLAYER)
     }
+}
 
-    fn knight_moves(&self) -> impl Iterator<Item = Move> {
-        self.moves_for_piece(PieceType::Knight, move |source| {
-            Bitboard::from(source).knight_moves()
-        })
+trait PieceTypeT {
+    const PIECE_TYPE: PieceType;
+    fn movement(source: Square, occupancy: Bitboard) -> Bitboard;
+}
+
+struct KingType;
+impl PieceTypeT for KingType {
+    const PIECE_TYPE: PieceType = PieceType::King;
+
+    fn movement(source: Square, _: Bitboard) -> Bitboard {
+        let king = Bitboard::from(source);
+        let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
+        let ranks = king | attacks;
+        attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
     }
+}
 
-    fn rook_moves(&self) -> impl Iterator<Item = Move> {
-        let occupancy = self.occupancy();
+struct KnightType;
+impl PieceTypeT for KnightType {
+    const PIECE_TYPE: PieceType = PieceType::Knight;
 
-        self.moves_for_piece(PieceType::Rook, move |source| {
-            slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
-        })
+    fn movement(source: Square, _: Bitboard) -> Bitboard {
+        let knight = Bitboard::from(source);
+        let ranks = knight.shift_rank(2) | knight.shift_rank_neg(2);
+        let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
+        let files = knight.shift_file(2) | knight.shift_file_neg(2);
+        let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
+        rank_attacks | file_attacks
     }
+}
 
-    fn bishop_moves(&self) -> impl Iterator<Item = Move> {
-        let occupancy = self.occupancy();
+struct RookType;
+impl PieceTypeT for RookType {
+    const PIECE_TYPE: PieceType = PieceType::Rook;
 
-        self.moves_for_piece(PieceType::Bishop, move |source| {
-            slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
-        })
+    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+        slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
     }
+}
 
-    fn queen_moves(&self) -> impl Iterator<Item = Move> {
-        let occupancy = self.occupancy();
+struct BishopType;
+impl PieceTypeT for BishopType {
+    const PIECE_TYPE: PieceType = PieceType::Bishop;
 
-        self.moves_for_piece(PieceType::Queen, move |source| {
-            slide::<NorthSouth>(source, occupancy)
-                | slide::<EastWest>(source, occupancy)
-                | slide::<Diagonal>(source, occupancy)
-                | slide::<AntiDiagonal>(source, occupancy)
-        })
+    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+        slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
     }
+}
 
-    fn moves_for_piece<F>(&self, piece_type: PieceType, attacks: F) -> impl Iterator<Item = Move>
-    where
-        F: Fn(Square) -> Bitboard,
-    {
-        let piece = Piece::new(self.player(), piece_type);
-        let positions = *self.bitboard_piece(piece);
+struct QueenType;
+impl PieceTypeT for QueenType {
+    const PIECE_TYPE: PieceType = PieceType::Queen;
 
-        let occupancy_player = self.occupancy_player(self.player());
-
-        positions.squares().flat_map(move |source| {
-            let attacks = attacks(source) & !occupancy_player;
-
-            attacks
-                .squares()
-                .map(move |target| Move::new(piece_type, source, target))
-        })
+    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+        slide::<NorthSouth>(source, occupancy)
+            | slide::<EastWest>(source, occupancy)
+            | slide::<Diagonal>(source, occupancy)
+            | slide::<AntiDiagonal>(source, occupancy)
     }
 }
 
@@ -196,10 +359,12 @@ trait SlideDirection {
 
 struct NorthSouth;
 impl SlideDirection for NorthSouth {
+    #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::FILES[source.file()] & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
     }
 
+    #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::FILES[source.file()] & bitboards::RANKS_FILLED[source.rank().to_index()]
     }
@@ -207,10 +372,12 @@ impl SlideDirection for NorthSouth {
 
 struct EastWest;
 impl SlideDirection for EastWest {
+    #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::RANKS[source.rank()] & !bitboards::FILES_FILLED[source.file().to_index() + 1]
     }
 
+    #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::RANKS[source.rank()] & bitboards::FILES_FILLED[source.file().to_index()]
     }
@@ -218,11 +385,13 @@ impl SlideDirection for EastWest {
 
 struct Diagonal;
 impl SlideDirection for Diagonal {
+    #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::DIAGONALS[source.file()][source.rank()]
             & !bitboards::FILES_FILLED[source.file().to_index() + 1]
     }
 
+    #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::DIAGONALS[source.file()][source.rank()]
             & bitboards::FILES_FILLED[source.file().to_index()]
@@ -231,26 +400,16 @@ impl SlideDirection for Diagonal {
 
 struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
+    #[inline]
     fn positive_bitboard(source: Square) -> Bitboard {
         bitboards::ANTIDIAGONALS[source.file()][source.rank()]
             & !bitboards::RANKS_FILLED[source.rank().to_index() + 1]
     }
 
+    #[inline]
     fn negative_bitboard(source: Square) -> Bitboard {
         bitboards::ANTIDIAGONALS[source.file()][source.rank()]
             & bitboards::RANKS_FILLED[source.rank().to_index()]
-    }
-}
-
-impl Bitboard {
-    fn knight_moves(self) -> Bitboard {
-        let ranks = self.shift_rank(2) | self.shift_rank_neg(2);
-        let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
-
-        let files = self.shift_file(2) | self.shift_file_neg(2);
-        let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
-
-        rank_attacks | file_attacks
     }
 }
 
@@ -258,6 +417,7 @@ impl Bitboard {
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
+    use std::collections::HashSet;
 
     const __: Option<Piece> = None;
     const WK: Option<Piece> = Some(Piece::WK);
@@ -269,6 +429,7 @@ mod tests {
     const BQ: Option<Piece> = Some(Piece::BQ);
     const BR: Option<Piece> = Some(Piece::BR);
     const BB: Option<Piece> = Some(Piece::BB);
+    const BN: Option<Piece> = Some(Piece::BN);
     const BP: Option<Piece> = Some(Piece::BP);
 
     macro_rules! mov {
@@ -596,5 +757,37 @@ mod tests {
 
         // Note that the pawn is not allowed to move
         assert_moves!(board, [Ka2a1, Ka2b1, Ka2a3, Ka2b3,]);
+    }
+
+    #[test]
+    fn capturing_moves_are_all_pseudo_legal_moves_that_capture_a_piece() {
+        let mut board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [BP, __, __, __, BN, __, __, __],
+                [__, WQ, __, __, __, __, __, __],
+                [__, BB, __, WN, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        let capturing_moves: HashSet<Move> = board.capturing_moves().collect();
+
+        let expected: HashSet<Move> = board
+            .pseudo_legal_moves()
+            .filter(|mov| {
+                let pieces_before = board.occupancy().count();
+                board.make_move(*mov);
+                let pieces_after = board.occupancy().count();
+                board.unmake_move(*mov);
+                pieces_before != pieces_after
+            })
+            .collect();
+
+        assert_eq!(capturing_moves, expected);
     }
 }
