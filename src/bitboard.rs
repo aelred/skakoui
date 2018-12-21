@@ -80,6 +80,16 @@ impl Bitboard {
     }
 
     #[inline]
+    pub fn first_set(self) -> Square {
+        Square::from_index(self.index_of_lsb_set())
+    }
+
+    #[inline]
+    pub fn last_set(self) -> Square {
+        Square::from_index(self.index_of_msb_set())
+    }
+
+    #[inline]
     pub fn count(self) -> u32 {
         self.0.count_ones()
     }
@@ -116,23 +126,6 @@ impl Iterator for SquareIterator {
         self.0.reset_lsb();
 
         let square = Square::from_index(lsb_set);
-
-        Some(square)
-    }
-}
-
-impl DoubleEndedIterator for SquareIterator {
-    #[inline]
-    fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
-        if self.0 == bitboards::EMPTY {
-            return None;
-        }
-
-        let msb_set = self.0.index_of_msb_set();
-
-        let square = Square::from_index(msb_set);
-
-        self.0.reset(square);
 
         Some(square)
     }

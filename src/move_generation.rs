@@ -339,14 +339,14 @@ fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
     let mut blockers = pos_movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
     blockers.set(Square::H8);
-    let blocking_square = blockers.squares().next().unwrap();
+    let blocking_square = blockers.first_set();
     let pos_movement = pos_movement ^ Dir::positive_bitboard(blocking_square);
 
     let neg_movement = Dir::negative_bitboard(source);
     let mut blockers = neg_movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
     blockers.set(Square::A1);
-    let blocking_square = blockers.squares().rev().next().unwrap();
+    let blocking_square = blockers.last_set();
     let neg_movement = neg_movement ^ Dir::negative_bitboard(blocking_square);
 
     pos_movement | neg_movement
