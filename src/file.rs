@@ -27,10 +27,12 @@ impl File {
         File::H,
     ];
 
+    #[inline]
     pub fn from_index(index: usize) -> Self {
         Enum::<usize>::from_usize(index)
     }
 
+    #[inline]
     pub fn to_index(self) -> usize {
         Enum::<usize>::to_usize(self)
     }
@@ -39,6 +41,7 @@ impl File {
 impl Add<isize> for File {
     type Output = Self;
 
+    #[inline]
     fn add(self, offset: isize) -> Self {
         Self::VALUES[(self.to_index() as isize + offset) as usize]
     }

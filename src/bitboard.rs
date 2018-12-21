@@ -14,18 +14,22 @@ use std::ops::Not;
 pub struct Bitboard(u64);
 
 impl Bitboard {
+    #[inline]
     pub fn new(num: u64) -> Self {
         Bitboard(num)
     }
 
+    #[inline]
     pub fn get(self, square: Square) -> bool {
         Self::from(square) & self != bitboards::EMPTY
     }
 
+    #[inline]
     pub fn set(&mut self, square: Square) {
         *self |= Self::from(square);
     }
 
+    #[inline]
     pub fn reset(&mut self, square: Square) {
         *self &= !Self::from(square);
     }
@@ -34,6 +38,7 @@ impl Bitboard {
     ///
     /// This method assumes that `from` is already set and `to` is already reset. If this is not
     /// the case, the result is undefined.
+    #[inline]
     pub fn move_bit(&mut self, from: Square, to: Square) {
         debug_assert!(self.get(from));
         debug_assert!(!self.get(to));
@@ -42,22 +47,26 @@ impl Bitboard {
         *self ^= move_board;
     }
 
+    #[inline]
     #[must_use]
     pub fn shift_rank(self, offset: u32) -> Self {
         Bitboard(self.0.checked_shl(offset * 8).unwrap_or(0))
     }
 
+    #[inline]
     #[must_use]
     pub fn shift_rank_neg(self, offset: u32) -> Self {
         Bitboard(self.0.checked_shr(offset * 8).unwrap_or(0))
     }
 
+    #[inline]
     #[must_use]
     pub fn shift_file(self, offset: u32) -> Self {
         let mask = bitboards::FILES_FILLED[8 - offset as usize];
         Bitboard((self & mask).0 << offset)
     }
 
+    #[inline]
     #[must_use]
     pub fn shift_file_neg(self, offset: u32) -> Self {
         let mask = !bitboards::FILES_FILLED[offset as usize];
@@ -70,18 +79,22 @@ impl Bitboard {
         SquareIterator(self)
     }
 
+    #[inline]
     pub fn count(self) -> u32 {
         self.0.count_ones()
     }
 
+    #[inline]
     fn index_of_lsb_set(self) -> u32 {
         self.0.trailing_zeros()
     }
 
+    #[inline]
     fn index_of_msb_set(self) -> u32 {
         63 - self.0.leading_zeros()
     }
 
+    #[inline]
     fn reset_lsb(&mut self) {
         self.0 &= self.0 - 1;
     }
@@ -92,6 +105,7 @@ pub struct SquareIterator(Bitboard);
 impl Iterator for SquareIterator {
     type Item = Square;
 
+    #[inline]
     fn next(&mut self) -> Option<Square> {
         if self.0 == bitboards::EMPTY {
             return None;
@@ -108,6 +122,7 @@ impl Iterator for SquareIterator {
 }
 
 impl DoubleEndedIterator for SquareIterator {
+    #[inline]
     fn next_back(&mut self) -> Option<<Self as Iterator>::Item> {
         if self.0 == bitboards::EMPTY {
             return None;
@@ -124,6 +139,7 @@ impl DoubleEndedIterator for SquareIterator {
 }
 
 impl From<Square> for Bitboard {
+    #[inline]
     fn from(square: Square) -> Self {
         let file = bitboards::FILES[square.file()];
         let rank = bitboards::RANKS[square.rank()];
@@ -134,6 +150,7 @@ impl From<Square> for Bitboard {
 impl Not for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn not(self) -> Self {
         Bitboard(!self.0)
     }
@@ -142,12 +159,14 @@ impl Not for Bitboard {
 impl BitAnd for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitand(self, rhs: Self) -> Self {
         Bitboard(self.0 & rhs.0)
     }
 }
 
 impl BitAndAssign for Bitboard {
+    #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
     }
@@ -156,6 +175,7 @@ impl BitAndAssign for Bitboard {
 impl BitOr for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self {
         Bitboard(self.0 | rhs.0)
     }
@@ -164,12 +184,14 @@ impl BitOr for Bitboard {
 impl BitOr<&Bitboard> for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitor(self, rhs: &Self) -> Self {
         Bitboard(self.0 | rhs.0)
     }
 }
 
 impl BitOrAssign for Bitboard {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
     }
@@ -178,12 +200,14 @@ impl BitOrAssign for Bitboard {
 impl BitXor for Bitboard {
     type Output = Self;
 
+    #[inline]
     fn bitxor(self, rhs: Self) -> Self {
         Bitboard(self.0 ^ rhs.0)
     }
 }
 
 impl BitXorAssign for Bitboard {
+    #[inline]
     fn bitxor_assign(&mut self, rhs: Self) {
         self.0 ^= rhs.0;
     }

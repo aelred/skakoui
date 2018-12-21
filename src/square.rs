@@ -272,6 +272,7 @@ impl Square {
         Self { file, rank }
     }
 
+    #[inline]
     pub fn from_index(index: u32) -> Self {
         let index = index as usize;
         let quot = index / 8;
@@ -279,18 +280,22 @@ impl Square {
         Self::new(File::from_index(rem), Rank::from_index(quot))
     }
 
+    #[inline]
     pub fn to_index(self) -> usize {
         self.file.to_index() + self.rank.to_index() * File::VALUES.len()
     }
 
+    #[inline]
     pub fn file(self) -> File {
         self.file
     }
 
+    #[inline]
     pub fn rank(self) -> Rank {
         self.rank
     }
 
+    #[inline]
     pub fn shift_rank(self, offset: isize) -> Self {
         Self {
             rank: self.rank + offset,
@@ -298,6 +303,7 @@ impl Square {
         }
     }
 
+    #[inline]
     pub fn shift_file(self, offset: isize) -> Self {
         Self {
             rank: self.rank,
@@ -305,6 +311,7 @@ impl Square {
         }
     }
 
+    #[inline]
     pub fn color(self) -> SquareColor {
         if (self.file.to_index() + self.rank.to_index()) % 2 == 0 {
             SquareColor::Black

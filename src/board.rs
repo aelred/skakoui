@@ -77,6 +77,7 @@ impl Board {
         self.pieces[square.rank()][square.file()]
     }
 
+    #[inline]
     pub fn player(&self) -> Player {
         self.player
     }
@@ -164,22 +165,27 @@ impl Board {
         self.player = player;
     }
 
+    #[inline]
     pub fn bitboards(&self) -> &EnumMap<Player, EnumMap<PieceType, Bitboard>> {
         &self.bitboards
     }
 
+    #[inline]
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
         &self.bitboards[piece.player()][piece.piece_type()]
     }
 
+    #[inline]
     fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
         &mut self.bitboards[piece.player()][piece.piece_type()]
     }
 
+    #[inline]
     pub fn occupancy(&self) -> Bitboard {
         self.occupancy
     }
 
+    #[inline]
     pub fn occupancy_player(&self, player: Player) -> Bitboard {
         self.occupancy_player[player]
     }
@@ -196,6 +202,7 @@ impl Board {
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
+    #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
         self.bitboard_piece(piece).count() as i32
     }

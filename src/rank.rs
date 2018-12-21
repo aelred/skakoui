@@ -43,6 +43,7 @@ impl Rank {
 impl Add<isize> for Rank {
     type Output = Self;
 
+    #[inline]
     fn add(self, offset: isize) -> Self {
         Self::VALUES[(self.to_index() as isize + offset) as usize]
     }
@@ -51,6 +52,7 @@ impl Add<isize> for Rank {
 impl Sub<isize> for Rank {
     type Output = Self;
 
+    #[inline]
     fn sub(self, offset: isize) -> Self {
         self + (-offset)
     }
