@@ -1,319 +1,118 @@
 use crate::file::File;
 use crate::Rank;
+use enum_map::Enum;
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct Square {
-    file: File,
-    rank: Rank,
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Enum)]
+pub enum Square {
+    A1 = 0,
+    B1 = 1,
+    C1 = 2,
+    D1 = 3,
+    E1 = 4,
+    F1 = 5,
+    G1 = 6,
+    H1 = 7,
+    A2 = 8,
+    B2 = 9,
+    C2 = 10,
+    D2 = 11,
+    E2 = 12,
+    F2 = 13,
+    G2 = 14,
+    H2 = 15,
+    A3 = 16,
+    B3 = 17,
+    C3 = 18,
+    D3 = 19,
+    E3 = 20,
+    F3 = 21,
+    G3 = 22,
+    H3 = 23,
+    A4 = 24,
+    B4 = 25,
+    C4 = 26,
+    D4 = 27,
+    E4 = 28,
+    F4 = 29,
+    G4 = 30,
+    H4 = 31,
+    A5 = 32,
+    B5 = 33,
+    C5 = 34,
+    D5 = 35,
+    E5 = 36,
+    F5 = 37,
+    G5 = 38,
+    H5 = 39,
+    A6 = 40,
+    B6 = 41,
+    C6 = 42,
+    D6 = 43,
+    E6 = 44,
+    F6 = 45,
+    G6 = 46,
+    H6 = 47,
+    A7 = 48,
+    B7 = 49,
+    C7 = 50,
+    D7 = 51,
+    E7 = 52,
+    F7 = 53,
+    G7 = 54,
+    H7 = 55,
+    A8 = 56,
+    B8 = 57,
+    C8 = 58,
+    D8 = 59,
+    E8 = 60,
+    F8 = 61,
+    G8 = 62,
+    H8 = 63,
 }
 
 impl Square {
-    pub const A1: Self = Self {
-        file: File::A,
-        rank: Rank::_1,
-    };
-    pub const A2: Self = Self {
-        file: File::A,
-        rank: Rank::_2,
-    };
-    pub const A3: Self = Self {
-        file: File::A,
-        rank: Rank::_3,
-    };
-    pub const A4: Self = Self {
-        file: File::A,
-        rank: Rank::_4,
-    };
-    pub const A5: Self = Self {
-        file: File::A,
-        rank: Rank::_5,
-    };
-    pub const A6: Self = Self {
-        file: File::A,
-        rank: Rank::_6,
-    };
-    pub const A7: Self = Self {
-        file: File::A,
-        rank: Rank::_7,
-    };
-    pub const A8: Self = Self {
-        file: File::A,
-        rank: Rank::_8,
-    };
-    pub const B1: Self = Self {
-        file: File::B,
-        rank: Rank::_1,
-    };
-    pub const B2: Self = Self {
-        file: File::B,
-        rank: Rank::_2,
-    };
-    pub const B3: Self = Self {
-        file: File::B,
-        rank: Rank::_3,
-    };
-    pub const B4: Self = Self {
-        file: File::B,
-        rank: Rank::_4,
-    };
-    pub const B5: Self = Self {
-        file: File::B,
-        rank: Rank::_5,
-    };
-    pub const B6: Self = Self {
-        file: File::B,
-        rank: Rank::_6,
-    };
-    pub const B7: Self = Self {
-        file: File::B,
-        rank: Rank::_7,
-    };
-    pub const B8: Self = Self {
-        file: File::B,
-        rank: Rank::_8,
-    };
-    pub const C1: Self = Self {
-        file: File::C,
-        rank: Rank::_1,
-    };
-    pub const C2: Self = Self {
-        file: File::C,
-        rank: Rank::_2,
-    };
-    pub const C3: Self = Self {
-        file: File::C,
-        rank: Rank::_3,
-    };
-    pub const C4: Self = Self {
-        file: File::C,
-        rank: Rank::_4,
-    };
-    pub const C5: Self = Self {
-        file: File::C,
-        rank: Rank::_5,
-    };
-    pub const C6: Self = Self {
-        file: File::C,
-        rank: Rank::_6,
-    };
-    pub const C7: Self = Self {
-        file: File::C,
-        rank: Rank::_7,
-    };
-    pub const C8: Self = Self {
-        file: File::C,
-        rank: Rank::_8,
-    };
-    pub const D1: Self = Self {
-        file: File::D,
-        rank: Rank::_1,
-    };
-    pub const D2: Self = Self {
-        file: File::D,
-        rank: Rank::_2,
-    };
-    pub const D3: Self = Self {
-        file: File::D,
-        rank: Rank::_3,
-    };
-    pub const D4: Self = Self {
-        file: File::D,
-        rank: Rank::_4,
-    };
-    pub const D5: Self = Self {
-        file: File::D,
-        rank: Rank::_5,
-    };
-    pub const D6: Self = Self {
-        file: File::D,
-        rank: Rank::_6,
-    };
-    pub const D7: Self = Self {
-        file: File::D,
-        rank: Rank::_7,
-    };
-    pub const D8: Self = Self {
-        file: File::D,
-        rank: Rank::_8,
-    };
-    pub const E1: Self = Self {
-        file: File::E,
-        rank: Rank::_1,
-    };
-    pub const E2: Self = Self {
-        file: File::E,
-        rank: Rank::_2,
-    };
-    pub const E3: Self = Self {
-        file: File::E,
-        rank: Rank::_3,
-    };
-    pub const E4: Self = Self {
-        file: File::E,
-        rank: Rank::_4,
-    };
-    pub const E5: Self = Self {
-        file: File::E,
-        rank: Rank::_5,
-    };
-    pub const E6: Self = Self {
-        file: File::E,
-        rank: Rank::_6,
-    };
-    pub const E7: Self = Self {
-        file: File::E,
-        rank: Rank::_7,
-    };
-    pub const E8: Self = Self {
-        file: File::E,
-        rank: Rank::_8,
-    };
-    pub const F1: Self = Self {
-        file: File::F,
-        rank: Rank::_1,
-    };
-    pub const F2: Self = Self {
-        file: File::F,
-        rank: Rank::_2,
-    };
-    pub const F3: Self = Self {
-        file: File::F,
-        rank: Rank::_3,
-    };
-    pub const F4: Self = Self {
-        file: File::F,
-        rank: Rank::_4,
-    };
-    pub const F5: Self = Self {
-        file: File::F,
-        rank: Rank::_5,
-    };
-    pub const F6: Self = Self {
-        file: File::F,
-        rank: Rank::_6,
-    };
-    pub const F7: Self = Self {
-        file: File::F,
-        rank: Rank::_7,
-    };
-    pub const F8: Self = Self {
-        file: File::F,
-        rank: Rank::_8,
-    };
-    pub const G1: Self = Self {
-        file: File::G,
-        rank: Rank::_1,
-    };
-    pub const G2: Self = Self {
-        file: File::G,
-        rank: Rank::_2,
-    };
-    pub const G3: Self = Self {
-        file: File::G,
-        rank: Rank::_3,
-    };
-    pub const G4: Self = Self {
-        file: File::G,
-        rank: Rank::_4,
-    };
-    pub const G5: Self = Self {
-        file: File::G,
-        rank: Rank::_5,
-    };
-    pub const G6: Self = Self {
-        file: File::G,
-        rank: Rank::_6,
-    };
-    pub const G7: Self = Self {
-        file: File::G,
-        rank: Rank::_7,
-    };
-    pub const G8: Self = Self {
-        file: File::G,
-        rank: Rank::_8,
-    };
-    pub const H1: Self = Self {
-        file: File::H,
-        rank: Rank::_1,
-    };
-    pub const H2: Self = Self {
-        file: File::H,
-        rank: Rank::_2,
-    };
-    pub const H3: Self = Self {
-        file: File::H,
-        rank: Rank::_3,
-    };
-    pub const H4: Self = Self {
-        file: File::H,
-        rank: Rank::_4,
-    };
-    pub const H5: Self = Self {
-        file: File::H,
-        rank: Rank::_5,
-    };
-    pub const H6: Self = Self {
-        file: File::H,
-        rank: Rank::_6,
-    };
-    pub const H7: Self = Self {
-        file: File::H,
-        rank: Rank::_7,
-    };
-    pub const H8: Self = Self {
-        file: File::H,
-        rank: Rank::_8,
-    };
-
     pub fn new(file: File, rank: Rank) -> Self {
-        Self { file, rank }
+        let index = file.to_index() + rank.to_index() * File::VALUES.len();
+        Self::from_index(index)
     }
 
     #[inline]
-    pub fn from_index(index: u32) -> Self {
-        let index = index as usize;
-        let quot = index / 8;
-        let rem = index % 8;
-        Self::new(File::from_index(rem), Rank::from_index(quot))
+    pub fn from_index(index: usize) -> Self {
+        Enum::<usize>::from_usize(index)
     }
 
     #[inline]
     pub fn to_index(self) -> usize {
-        self.file.to_index() + self.rank.to_index() * File::VALUES.len()
+        self as usize
     }
 
     #[inline]
     pub fn file(self) -> File {
-        self.file
+        File::from_index(self.to_index() % 8)
     }
 
     #[inline]
     pub fn rank(self) -> Rank {
-        self.rank
+        Rank::from_index(self.to_index() / 8)
     }
 
     #[inline]
     pub fn shift_rank(self, offset: isize) -> Self {
-        Self {
-            rank: self.rank + offset,
-            file: self.file,
-        }
+        Self::from_index((self.to_index() as isize + offset * 8) as usize)
     }
 
     #[inline]
     pub fn shift_file(self, offset: isize) -> Self {
-        Self {
-            rank: self.rank,
-            file: self.file + offset,
-        }
+        Self::from_index((self.to_index() as isize + offset) as usize)
     }
 
     #[inline]
     pub fn color(self) -> SquareColor {
-        if (self.file.to_index() + self.rank.to_index()) % 2 == 0 {
+        // bitwise magic here
+        if ((9 * self.to_index()) & 8) == 0 {
             SquareColor::Black
         } else {
             SquareColor::White
@@ -323,13 +122,13 @@ impl Square {
 
 impl fmt::Debug for Square {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("Square::{:?}{}", self.file, self.rank))
+        f.write_fmt(format_args!("Square::{:?}{}", self.file(), self.rank()))
     }
 }
 
 impl fmt::Display for Square {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("{}{}", self.file, self.rank))
+        f.write_fmt(format_args!("{}{}", self.file(), self.rank()))
     }
 }
 
@@ -438,17 +237,5 @@ mod tests {
         assert_eq!(Square::C3.shift_file(-1), Square::B3);
         assert_eq!(Square::C3.shift_file(-2), Square::A3);
         assert_eq!(Square::C3.shift_file(5), Square::H3);
-    }
-
-    #[test]
-    #[should_panic]
-    fn can_not_shift_file_east_of_board() {
-        Square::C3.shift_file(-3);
-    }
-
-    #[test]
-    #[should_panic]
-    fn can_not_shift_file_west_of_board() {
-        Square::C3.shift_file(6);
     }
 }

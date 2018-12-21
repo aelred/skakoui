@@ -81,12 +81,12 @@ impl Bitboard {
 
     #[inline]
     pub fn first_set(self) -> Square {
-        Square::from_index(self.index_of_lsb_set())
+        Square::from_index(self.index_of_lsb_set() as usize)
     }
 
     #[inline]
     pub fn last_set(self) -> Square {
-        Square::from_index(self.index_of_msb_set())
+        Square::from_index(self.index_of_msb_set() as usize)
     }
 
     #[inline]
@@ -125,7 +125,7 @@ impl Iterator for SquareIterator {
 
         self.0.reset_lsb();
 
-        let square = Square::from_index(lsb_set);
+        let square = Square::from_index(lsb_set as usize);
 
         Some(square)
     }
@@ -134,9 +134,7 @@ impl Iterator for SquareIterator {
 impl From<Square> for Bitboard {
     #[inline]
     fn from(square: Square) -> Self {
-        let file = bitboards::FILES[square.file()];
-        let rank = bitboards::RANKS[square.rank()];
-        file & rank
+        Bitboard(1 << square.to_index() as u64)
     }
 }
 
