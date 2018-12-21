@@ -18,6 +18,7 @@ pub struct Board {
     bitboards: EnumMap<Player, EnumMap<PieceType, Bitboard>>,
     player: Player,
     pieces: SquareMap<Option<Piece>>,
+    piece_count: EnumMap<Player, EnumMap<PieceType, u8>>,
     occupancy_player: EnumMap<Player, Bitboard>,
     occupancy: Bitboard,
     board_states: Vec<BoardState>,
@@ -50,6 +51,10 @@ impl Board {
             }
         }
 
+        let piece_count = EnumMap::from(|player| {
+            EnumMap::from(|piece_type| bitboards[player][piece_type].count())
+        });
+
         let occupancy_player = EnumMap::from(|player| {
             bitboards[player]
                 .values()
@@ -64,6 +69,7 @@ impl Board {
             bitboards,
             player,
             pieces,
+            piece_count,
             occupancy_player,
             occupancy,
             board_states,
@@ -84,7 +90,8 @@ impl Board {
         let player = self.player();
         let from = mov.from();
         let to = mov.to();
-        let piece = Piece::new(player, mov.piece_type());
+        let piece_type = mov.piece_type();
+        let piece = Piece::new(player, piece_type);
 
         let captured_piece_type;
 
@@ -92,6 +99,7 @@ impl Board {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy_player[player.opponent()].reset(to);
             captured_piece_type = Some(captured_piece.piece_type());
+            self.piece_count[player.opponent()][captured_piece.piece_type()] -= 1;
         } else {
             captured_piece_type = None;
         }
@@ -106,6 +114,8 @@ impl Board {
             self.bitboard_piece_mut(promotion).set(to);
 
             self.pieces[to] = Some(promotion);
+            self.piece_count[player][piece_type] -= 1;
+            self.piece_count[player][promotion_type] += 1;
         } else {
             bitboard.move_bit(from, to);
 
@@ -129,7 +139,8 @@ impl Board {
         let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
-        let piece = Piece::new(player, mov.piece_type());
+        let piece_type = mov.piece_type();
+        let piece = Piece::new(player, piece_type);
 
         let BoardState {
             captured_piece_type,
@@ -140,6 +151,7 @@ impl Board {
             self.bitboard_piece_mut(captured_piece).set(to);
             self.occupancy_player[player.opponent()].set(to);
             self.pieces[to] = Some(captured_piece);
+            self.piece_count[player.opponent()][captured_piece_type] += 1;
         } else {
             self.occupancy.reset(to);
             self.pieces[to] = None;
@@ -151,6 +163,8 @@ impl Board {
             let promotion = Piece::new(player, promotion_type);
             bitboard.set(from);
             self.bitboard_piece_mut(promotion).reset(to);
+            self.piece_count[player][piece_type] += 1;
+            self.piece_count[player][promotion_type] -= 1;
         } else {
             bitboard.move_bit(to, from);
         }
@@ -202,7 +216,7 @@ impl Board {
 
     #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
-        i32::from(self.bitboard_piece(piece).count())
+        i32::from(self.piece_count[piece.player()][piece.piece_type()])
     }
 }
 
