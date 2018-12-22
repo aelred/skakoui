@@ -13,6 +13,7 @@ use crate::WhitePlayer;
 use std::marker::PhantomData;
 
 impl Board {
+    #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
         let pseudo_legal_moves = self.pseudo_legal_moves();
 
@@ -25,6 +26,7 @@ impl Board {
         })
     }
 
+    #[inline]
     pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
             Player::White => Box::new(self.moves_of_type::<AllMoves<WhitePlayer>>()),
@@ -32,6 +34,7 @@ impl Board {
         }
     }
 
+    #[inline]
     pub fn capturing_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
             Player::White => Box::new(self.moves_of_type::<CapturingMoves<WhitePlayer>>()),
@@ -39,6 +42,7 @@ impl Board {
         }
     }
 
+    #[inline]
     fn moves_of_type<M: Movement>(&self) -> AllPiecesIter<M::PawnIter> {
         AllPiecesIter {
             king: M::piece::<KingType>(self),
@@ -50,6 +54,7 @@ impl Board {
         }
     }
 
+    #[inline]
     fn can_take_king(&self) -> bool {
         let king = Piece::new(self.player().opponent(), PieceType::King);
 
@@ -85,6 +90,7 @@ struct AllPiecesIter<I> {
 impl<I: Iterator<Item = Move>> Iterator for AllPiecesIter<I> {
     type Item = Move;
 
+    #[inline]
     fn next(&mut self) -> Option<Move> {
         if let Some(mov) = self.king.next() {
             return Some(mov);
@@ -119,6 +125,7 @@ struct TargetIter {
 }
 
 impl<PT: PieceTypeT> MovesIter<PT> {
+    #[inline]
     fn new(board: &Board, mask: Bitboard) -> Self {
         let piece = Piece::new(board.player(), PT::PIECE_TYPE);
         MovesIter {
@@ -134,6 +141,7 @@ impl<PT: PieceTypeT> MovesIter<PT> {
 impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
     type Item = Move;
 
+    #[inline]
     fn next(&mut self) -> Option<Move> {
         loop {
             if self.target_iter.is_none() {
@@ -166,6 +174,7 @@ struct PawnMovesIter<P> {
 impl<P: PlayerType> Iterator for PawnMovesIter<P> {
     type Item = Move;
 
+    #[inline]
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.pushes.next() {
             let source = target.shift_rank(-P::DIRECTION);
@@ -190,6 +199,7 @@ struct PawnCapturesIter<P> {
 impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
     type Item = Move;
 
+    #[inline]
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.captures_east.next() {
             let source = target.shift_rank(-P::DIRECTION).shift_file(1);
@@ -221,6 +231,7 @@ struct AllMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
 
+    #[inline]
     fn pawn(board: &Board) -> PawnMovesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
 
@@ -242,6 +253,7 @@ impl<P: PlayerType> Movement for AllMoves<P> {
         }
     }
 
+    #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         !board.occupancy_player(P::PLAYER)
     }
@@ -251,6 +263,7 @@ struct CapturingMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
 
+    #[inline]
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
@@ -268,6 +281,7 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
         }
     }
 
+    #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         board.occupancy_player(P::Opp::PLAYER)
     }
@@ -331,6 +345,7 @@ impl PieceTypeT for QueenType {
     }
 }
 
+#[inline]
 fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
     let pos_movement = Dir::positive_bitboard(source);
     let mut blockers = pos_movement & occupancy;
