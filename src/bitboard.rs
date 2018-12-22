@@ -345,6 +345,12 @@ pub mod bitboards {
             let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
             rank_attacks | file_attacks
         });
+        pub static ref KING_MOVES: SquareMap<Bitboard> = SquareMap::from(|square| {
+            let king = Bitboard::from(square);
+            let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
+            let ranks = king | attacks;
+            attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
+        });
     }
 }
 

@@ -282,11 +282,9 @@ struct KingType;
 impl PieceTypeT for KingType {
     const PIECE_TYPE: PieceType = PieceType::King;
 
+    #[inline]
     fn movement(source: Square, _: Bitboard) -> Bitboard {
-        let king = Bitboard::from(source);
-        let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
-        let ranks = king | attacks;
-        attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
+        bitboards::KING_MOVES[source]
     }
 }
 
