@@ -9,6 +9,7 @@ enum-map = "0.4.1"
 lazy_static = "1.2.0"
 rand = "0.6.1"
 array-init = "0.0.4"
+chashmap = "2.2.0"
 
 [dev-dependencies]
 pretty_assertions = "0.5.1"
