@@ -17,3 +17,6 @@ pretty_assertions = "0.5.1"
 [features]
 # Makes warnings into errors
 strict = []
+
+[profile.release]
+debug = true

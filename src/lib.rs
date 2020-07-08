@@ -6,6 +6,7 @@ mod file;
 mod move_generation;
 mod moves;
 mod piece;
+mod piece_map;
 mod rank;
 mod square;
 
@@ -19,6 +20,7 @@ pub use crate::{
     file::File,
     moves::Move,
     piece::{Piece, PieceType},
+    piece_map::PieceMap,
     rank::{Rank, RankMap},
     square::{Square, SquareColor, SquareMap},
 };
@@ -59,7 +61,7 @@ pub trait PlayerType {
     const DIRECTION: i8;
     const PAWN_RANK: Rank;
 
-    fn advance_bitboard(bitboard: &Bitboard) -> Bitboard;
+    fn advance_bitboard(bitboard: Bitboard) -> Bitboard;
 }
 
 pub struct WhitePlayer;
@@ -72,7 +74,7 @@ impl PlayerType for WhitePlayer {
     const DIRECTION: i8 = 1;
     const PAWN_RANK: Rank = Rank::_2;
 
-    fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {
+    fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank(1)
     }
 }
@@ -84,7 +86,7 @@ impl PlayerType for BlackPlayer {
     const DIRECTION: i8 = -1;
     const PAWN_RANK: Rank = Rank::_7;
 
-    fn advance_bitboard(bitboard: &Bitboard) -> Bitboard {
+    fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank_neg(1)
     }
 }

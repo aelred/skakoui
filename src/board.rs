@@ -3,6 +3,7 @@ use crate::Bitboard;
 use crate::File;
 use crate::Move;
 use crate::Piece;
+use crate::PieceMap;
 use crate::PieceType;
 use crate::Player;
 use crate::Rank;
@@ -15,10 +16,10 @@ use std::ops::BitOr;
 
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct Board {
-    bitboards: EnumMap<Player, EnumMap<PieceType, Bitboard>>,
+    bitboards: PieceMap<Bitboard>,
     player: Player,
     pieces: SquareMap<Option<Piece>>,
-    piece_count: EnumMap<Player, EnumMap<PieceType, u8>>,
+    piece_count: PieceMap<u8>,
     occupancy_player: EnumMap<Player, Bitboard>,
     occupancy: Bitboard,
     board_states: Vec<BoardState>,
@@ -39,7 +40,7 @@ impl Board {
         player: Player,
         board_states: Vec<BoardState>,
     ) -> Self {
-        let mut bitboards = EnumMap::from(|_| EnumMap::from(|_| bitboards::EMPTY));
+        let mut bitboards = PieceMap::from(|_| bitboards::EMPTY);
 
         let pieces = SquareMap::from(|square: Square| {
             pieces_array[square.rank().to_index() as usize][square.file().to_index() as usize]
@@ -47,16 +48,15 @@ impl Board {
 
         for (square, optional_piece) in pieces.iter() {
             if let Some(piece) = optional_piece {
-                bitboards[piece.player()][piece.piece_type()].set(square);
+                bitboards[*piece].set(square);
             }
         }
 
-        let piece_count = EnumMap::from(|player| {
-            EnumMap::from(|piece_type| bitboards[player][piece_type].count())
-        });
+        let piece_count = PieceMap::from(|piece| bitboards[piece].count());
 
         let occupancy_player = EnumMap::from(|player| {
-            bitboards[player]
+            bitboards
+                .for_player(player)
                 .values()
                 .fold(bitboards::EMPTY, BitOr::bitor)
         });
@@ -99,7 +99,7 @@ impl Board {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy_player[player.opponent()].reset(to);
             captured_piece_type = Some(captured_piece.piece_type());
-            self.piece_count[player.opponent()][captured_piece.piece_type()] -= 1;
+            self.piece_count[captured_piece] -= 1;
         } else {
             captured_piece_type = None;
         }
@@ -114,8 +114,8 @@ impl Board {
             self.bitboard_piece_mut(promotion).set(to);
 
             self.pieces[to] = Some(promotion);
-            self.piece_count[player][piece_type] -= 1;
-            self.piece_count[player][promotion_type] += 1;
+            self.piece_count[piece] -= 1;
+            self.piece_count[promotion] += 1;
         } else {
             bitboard.move_bit(from, to);
 
@@ -151,7 +151,7 @@ impl Board {
             self.bitboard_piece_mut(captured_piece).set(to);
             self.occupancy_player[player.opponent()].set(to);
             self.pieces[to] = Some(captured_piece);
-            self.piece_count[player.opponent()][captured_piece_type] += 1;
+            self.piece_count[captured_piece] += 1;
         } else {
             self.occupancy.reset(to);
             self.pieces[to] = None;
@@ -163,8 +163,8 @@ impl Board {
             let promotion = Piece::new(player, promotion_type);
             bitboard.set(from);
             self.bitboard_piece_mut(promotion).reset(to);
-            self.piece_count[player][piece_type] += 1;
-            self.piece_count[player][promotion_type] -= 1;
+            self.piece_count[piece] += 1;
+            self.piece_count[promotion] -= 1;
         } else {
             bitboard.move_bit(to, from);
         }
@@ -178,18 +178,18 @@ impl Board {
     }
 
     #[inline]
-    pub fn bitboards(&self) -> &EnumMap<Player, EnumMap<PieceType, Bitboard>> {
+    pub fn bitboards(&self) -> &PieceMap<Bitboard> {
         &self.bitboards
     }
 
     #[inline]
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
-        &self.bitboards[piece.player()][piece.piece_type()]
+        &self.bitboards[piece]
     }
 
     #[inline]
     fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
-        &mut self.bitboards[piece.player()][piece.piece_type()]
+        &mut self.bitboards[piece]
     }
 
     #[inline]
@@ -216,7 +216,7 @@ impl Board {
 
     #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
-        i32::from(self.piece_count[piece.player()][piece.piece_type()])
+        i32::from(self.piece_count[piece])
     }
 }
 

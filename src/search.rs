@@ -1,8 +1,9 @@
+use crate::Bitboard;
 use crate::Board;
 use crate::Move;
+use crate::PieceMap;
 use crate::Player;
 use chashmap::CHashMap;
-use enum_map::EnumMap;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 use std::sync::mpsc::Receiver;
@@ -13,12 +14,10 @@ use std::thread;
 const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE;
 
-type Key = (
-    EnumMap<crate::Player, EnumMap<crate::PieceType, crate::Bitboard>>,
-    Player,
-);
-
+/// Table of moves, the key represents the game-state
 type TranspositionTable = Arc<CHashMap<Key, TranspositionEntry>>;
+
+type Key = (PieceMap<Bitboard>, Player);
 
 struct TranspositionEntry {
     depth: u32,
@@ -146,6 +145,7 @@ impl<'a> ThreadSearcher<'a> {
         let mut alpha = LOW_SCORE;
 
         for mov in moves {
+            println!("{}", mov);
             self.board.make_move(mov);
             if let Some(value) = self.search(DEPTH - 1, LOW_SCORE, -alpha) {
                 let value = -value;

@@ -238,12 +238,12 @@ impl<P: PlayerType> Movement for AllMoves<P> {
         let pawns = board.bitboard_piece(piece);
         let free_spaces = !board.occupancy();
 
-        let pawns_forward = P::advance_bitboard(pawns);
+        let pawns_forward = P::advance_bitboard(*pawns);
 
         let pushes = pawns_forward & free_spaces;
 
         let double_mask = bitboards::RANKS[P::PAWN_RANK + P::DIRECTION];
-        let double_pushes = P::advance_bitboard(&(pushes & double_mask)) & free_spaces;
+        let double_pushes = P::advance_bitboard(pushes & double_mask) & free_spaces;
 
         PawnMovesIter {
             pushes: pushes.squares(),
@@ -267,7 +267,7 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
-        let pawns_forward = P::advance_bitboard(pawns);
+        let pawns_forward = P::advance_bitboard(*pawns);
 
         let opponent_pieces = board.occupancy_player(P::Opp::PLAYER);
 
