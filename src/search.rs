@@ -214,7 +214,7 @@ impl<'a> ThreadSearcher<'a> {
         let mut moves = self.board.pseudo_legal_moves().peekable();
 
         if moves.peek().is_none() {
-            return Some(LOW_SCORE);
+            return Some(0); // Being unable to move is a tie
         }
 
         for mov in moves {
