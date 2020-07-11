@@ -798,4 +798,45 @@ mod tests {
 
         assert_eq!(capturing_moves, expected);
     }
+
+    /// Look up "perft" for more details (and bigger numbers!)
+    #[test]
+    fn number_of_moves_is_as_expected() {
+        // Expected number of moves at different depths
+        let expected_moves_at_depth = vec![
+            1, 20, 400, 8902, 197_281,
+            // 4_865_609 - TODO: fails
+        ];
+
+        let mut board = Board::default();
+
+        fn count_moves(board: &mut Board, depth: usize) -> usize {
+            if depth == 0 {
+                return 1;
+            }
+
+            let mut count = 0;
+
+            let moves: Vec<Move> = board.moves().collect();
+
+            // Optimisation - skip making and un-making last moves
+            if depth == 1 {
+                return moves.len();
+            }
+
+            for mov in moves {
+                board.make_move(mov);
+                count += count_moves(board, depth - 1);
+                board.unmake_move(mov);
+            }
+
+            count
+        }
+
+        for (depth, expected_moves) in expected_moves_at_depth.iter().enumerate() {
+            let mut actual_moves = count_moves(&mut board, depth);
+
+            assert_eq!(*expected_moves, actual_moves);
+        }
+    }
 }
