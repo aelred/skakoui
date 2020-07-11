@@ -321,7 +321,7 @@ impl<'a> LocalSearcher<'a> {
         let mut moves = self.board.pseudo_legal_moves().peekable();
 
         if moves.peek().is_none() {
-            return LOW_SCORE;
+            return 0; // Being unable to move is a tie
         }
 
         for mov in moves {
