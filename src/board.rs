@@ -93,16 +93,14 @@ impl Board {
         let piece_type = mov.piece_type();
         let piece = Piece::new(player, piece_type);
 
-        let captured_piece_type;
-
-        if let Some(captured_piece) = self.get(to) {
+        let captured_piece_type = if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy_player[player.opponent()].reset(to);
-            captured_piece_type = Some(captured_piece.piece_type());
             self.piece_count[captured_piece] -= 1;
+            Some(captured_piece.piece_type())
         } else {
-            captured_piece_type = None;
-        }
+            None
+        };
 
         self.pieces[from] = None;
 
