@@ -36,7 +36,7 @@ fn play<A: Agent>(agent: &mut A, board: &mut Board) {
         println!("{}", board);
     } else {
         println!("Game Over!");
-        panic!(); // TODO: don't just panic on game over ¯\_(ツ)_/¯
+        std::process::exit(0) // TODO: don't just exit on game over ¯\_(ツ)_/¯
     }
 }
 
