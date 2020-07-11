@@ -248,7 +248,7 @@ impl<'a> LocalSearcher<'a> {
     }
 
     fn run(&mut self) -> (Option<Move>, i32) {
-        let moves = self.board.pseudo_legal_moves();
+        let moves: Vec<Move> = self.board.moves().collect();
 
         let mut alpha = LOW_SCORE;
         let mut best_moves = vec![];
