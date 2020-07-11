@@ -341,6 +341,11 @@ impl<'a> LocalSearcher<'a> {
     }
 }
 
+/// Evaluate how "quiescent" (quiet or stable) a board is.
+///
+/// The idea is that a board with lots going on is worth investigating more deeply.
+/// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
+/// piece could be taken in the next turn.
 fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
     let stand_pat = board.eval();
 
