@@ -12,6 +12,15 @@ use crate::Square;
 use crate::WhitePlayer;
 use std::marker::PhantomData;
 
+mod piece_type;
+
+use self::piece_type::BishopType;
+use self::piece_type::KingType;
+use self::piece_type::KnightType;
+use self::piece_type::PieceTypeT;
+use self::piece_type::QueenType;
+use self::piece_type::RookType;
+
 impl Board {
     #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
@@ -146,8 +155,7 @@ impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
         loop {
             if self.target_iter.is_none() {
                 let source = self.sources.next()?;
-                let attacks = PT::movement(source, self.occupancy) & self.mask;
-                let targets = attacks.squares();
+                let targets = (PT::movement(source, self.occupancy) & self.mask).squares();
                 self.target_iter = Some(TargetIter { source, targets });
             }
 
@@ -287,140 +295,6 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
     #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         board.occupancy_player(P::Opp::PLAYER)
-    }
-}
-
-trait PieceTypeT {
-    const PIECE_TYPE: PieceType;
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard;
-}
-
-struct KingType;
-impl PieceTypeT for KingType {
-    const PIECE_TYPE: PieceType = PieceType::King;
-
-    #[inline]
-    fn movement(source: Square, _: Bitboard) -> Bitboard {
-        bitboards::KING_MOVES[source]
-    }
-}
-
-struct KnightType;
-impl PieceTypeT for KnightType {
-    const PIECE_TYPE: PieceType = PieceType::Knight;
-
-    #[inline]
-    fn movement(source: Square, _: Bitboard) -> Bitboard {
-        bitboards::KNIGHT_MOVES[source]
-    }
-}
-
-struct RookType;
-impl PieceTypeT for RookType {
-    const PIECE_TYPE: PieceType = PieceType::Rook;
-
-    #[inline]
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
-    }
-}
-
-struct BishopType;
-impl PieceTypeT for BishopType {
-    const PIECE_TYPE: PieceType = PieceType::Bishop;
-
-    #[inline]
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
-    }
-}
-
-struct QueenType;
-impl PieceTypeT for QueenType {
-    const PIECE_TYPE: PieceType = PieceType::Queen;
-
-    #[inline]
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<NorthSouth>(source, occupancy)
-            | slide::<EastWest>(source, occupancy)
-            | slide::<Diagonal>(source, occupancy)
-            | slide::<AntiDiagonal>(source, occupancy)
-    }
-}
-
-#[inline]
-fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
-    let pos_movement = Dir::positive_bitboard(source);
-    let mut blockers = pos_movement & occupancy;
-    // Set the last square so there is always a blocking square (no need to branch)
-    blockers.set(Square::H8);
-    let blocking_square = blockers.first_set();
-    let pos_movement = pos_movement ^ Dir::positive_bitboard(blocking_square);
-
-    let neg_movement = Dir::negative_bitboard(source);
-    let mut blockers = neg_movement & occupancy;
-    // Set the last square so there is always a blocking square (no need to branch)
-    blockers.set(Square::A1);
-    let blocking_square = blockers.last_set();
-    let neg_movement = neg_movement ^ Dir::negative_bitboard(blocking_square);
-
-    pos_movement | neg_movement
-}
-
-trait SlideDirection {
-    fn positive_bitboard(source: Square) -> Bitboard;
-    fn negative_bitboard(source: Square) -> Bitboard;
-}
-
-struct NorthSouth;
-impl SlideDirection for NorthSouth {
-    #[inline]
-    fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::NORTH[source]
-    }
-
-    #[inline]
-    fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::SOUTH[source]
-    }
-}
-
-struct EastWest;
-impl SlideDirection for EastWest {
-    #[inline]
-    fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::EAST[source]
-    }
-
-    #[inline]
-    fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::WEST[source]
-    }
-}
-
-struct Diagonal;
-impl SlideDirection for Diagonal {
-    #[inline]
-    fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::POSITIVE_DIAGONALS[source]
-    }
-
-    #[inline]
-    fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::NEGATIVE_DIAGONALS[source]
-    }
-}
-
-struct AntiDiagonal;
-impl SlideDirection for AntiDiagonal {
-    #[inline]
-    fn positive_bitboard(source: Square) -> Bitboard {
-        bitboards::POSITIVE_ANTIDIAGONALS[source]
-    }
-
-    #[inline]
-    fn negative_bitboard(source: Square) -> Bitboard {
-        bitboards::NEGATIVE_ANTIDIAGONALS[source]
     }
 }
 
