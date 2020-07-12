@@ -43,14 +43,14 @@ impl Board {
     }
 
     #[inline]
-    fn moves_of_type<M: Movement>(&self) -> AllPiecesIter<M::PawnIter> {
+    fn moves_of_type<M: Movement>(&self) -> impl Iterator<Item = Move> {
         AllPiecesIter {
             king: M::piece::<KingType>(self),
             queen: M::piece::<QueenType>(self),
             rook: M::piece::<RookType>(self),
             bishop: M::piece::<BishopType>(self),
             knight: M::piece::<KnightType>(self),
-            pawn: M::pawn(self),
+            pawn: M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>),
         }
     }
 
@@ -217,6 +217,7 @@ impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
 
 trait Movement {
     type PawnIter: Iterator<Item = Move>;
+    type Player: PlayerType;
 
     fn pawn(board: &Board) -> Self::PawnIter;
 
@@ -230,6 +231,7 @@ trait Movement {
 struct AllMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
+    type Player = P;
 
     #[inline]
     fn pawn(board: &Board) -> PawnMovesIter<P> {
@@ -262,6 +264,7 @@ impl<P: PlayerType> Movement for AllMoves<P> {
 struct CapturingMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
+    type Player = P;
 
     #[inline]
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
@@ -646,6 +649,44 @@ mod tests {
         board.make_move(mov!(Pa3a4));
 
         assert_moves!(board, []);
+    }
+
+    #[test]
+    fn pawn_can_be_promoted_at_end_of_board() {
+        let mut board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [WP, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(board, [Pa7a8N, Pa7a8B, Pa7a8R, Pa7a8Q]);
+    }
+
+    #[test]
+    fn pawn_can_capture_and_promote_at_end_of_board() {
+        let mut board = Board::new(
+            [
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [__, __, __, __, __, __, __, __],
+                [WP, __, __, __, __, __, __, __],
+                [BN, BQ, __, __, __, __, __, __],
+            ],
+            Player::White,
+        );
+
+        assert_moves!(board, [Pa7b8N, Pa7b8B, Pa7b8R, Pa7b8Q]);
     }
 
     #[test]

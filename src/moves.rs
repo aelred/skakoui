@@ -1,4 +1,5 @@
 use crate::PieceType;
+use crate::PlayerType;
 use crate::Square;
 use std::error::Error;
 use std::fmt;
@@ -51,6 +52,31 @@ impl Move {
     pub fn promoting(self) -> Option<PieceType> {
         self.promoting
     }
+
+    pub fn with_valid_promotions<P: PlayerType>(self) -> impl IntoIterator<Item = Move> {
+        if self.to.rank() == P::LAST_RANK {
+            vec![
+                Move {
+                    promoting: Some(PieceType::Queen),
+                    ..self
+                },
+                Move {
+                    promoting: Some(PieceType::Rook),
+                    ..self
+                },
+                Move {
+                    promoting: Some(PieceType::Bishop),
+                    ..self
+                },
+                Move {
+                    promoting: Some(PieceType::Knight),
+                    ..self
+                },
+            ]
+        } else {
+            vec![self]
+        }
+    }
 }
 
 impl fmt::Display for Move {
@@ -87,7 +113,7 @@ impl FromStr for Move {
             if promoting_str.is_empty() {
                 None
             } else {
-                Some(promoting_str.parse()?)
+                Some(promoting_str.parse::<PieceType>()?)
             }
         } else {
             None

@@ -60,6 +60,7 @@ pub trait PlayerType {
     const PLAYER: Player;
     const DIRECTION: i8;
     const PAWN_RANK: Rank;
+    const LAST_RANK: Rank;
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard;
 }
@@ -73,6 +74,7 @@ impl PlayerType for WhitePlayer {
     const PLAYER: Player = Player::White;
     const DIRECTION: i8 = 1;
     const PAWN_RANK: Rank = Rank::_2;
+    const LAST_RANK: Rank = Rank::_8;
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank(1)
@@ -85,6 +87,7 @@ impl PlayerType for BlackPlayer {
     const PLAYER: Player = Player::Black;
     const DIRECTION: i8 = -1;
     const PAWN_RANK: Rank = Rank::_7;
+    const LAST_RANK: Rank = Rank::_1;
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank_neg(1)
