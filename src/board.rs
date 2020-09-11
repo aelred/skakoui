@@ -14,14 +14,22 @@ use enum_map::EnumMap;
 use std::fmt;
 use std::ops::BitOr;
 
+/// Represents a game in-progress
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 pub struct Board {
+    /// Bitboards for every piece
     bitboards: PieceMap<Bitboard>,
+    /// The player whose turn it is
     player: Player,
+    /// Square-wise representation: lookup what piece is on a particular square
     pieces: SquareMap<Option<Piece>>,
+    /// Count for each piece
     piece_count: PieceMap<u8>,
+    /// Occupancy for white and black
     occupancy_player: EnumMap<Player, Bitboard>,
+    /// Occupancy for all pieces
     occupancy: Bitboard,
+    /// List of previous board states - used to "unmake" (undo) moves like captures
     board_states: Vec<BoardState>,
 }
 
@@ -31,6 +39,7 @@ struct BoardState {
 }
 
 impl Board {
+    /// Create a new board from piece positions and player turn
     pub fn new(pieces_array: [[Option<Piece>; 8]; 8], player: Player) -> Self {
         Self::with_states(pieces_array, player, vec![])
     }
@@ -76,16 +85,19 @@ impl Board {
         }
     }
 
+    /// Get the piece at a particular square
     #[inline]
     pub fn get(&self, square: Square) -> Option<Piece> {
         self.pieces[square]
     }
 
+    /// Get whose turn it is
     #[inline]
     pub fn player(&self) -> Player {
         self.player
     }
 
+    /// Perform a move on the board, mutating the board
     pub fn make_move(&mut self, mov: Move) {
         let player = self.player();
         let from = mov.from();
@@ -133,6 +145,7 @@ impl Board {
         self.board_states.push(new_board_state);
     }
 
+    /// Undo a move on the board - opposite of [make_move]
     pub fn unmake_move(&mut self, mov: Move) {
         let player = self.player().opponent();
         let from = mov.from();

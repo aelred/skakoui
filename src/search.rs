@@ -6,6 +6,7 @@ use crate::Player;
 use chashmap::CHashMap;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::cmp::Ordering;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -258,11 +259,13 @@ impl<'a> LocalSearcher<'a> {
             let value = -self.search(DEPTH, LOW_SCORE, -alpha);
             self.board.unmake_move(mov);
 
-            if value > alpha {
-                alpha = value;
-                best_moves = vec![mov];
-            } else if value == alpha {
-                best_moves.push(mov);
+            match value.cmp(&alpha) {
+                Ordering::Greater => {
+                    alpha = value;
+                    best_moves = vec![mov];
+                }
+                Ordering::Equal => best_moves.push(mov),
+                _ => (),
             }
         }
 

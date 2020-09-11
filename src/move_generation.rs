@@ -22,6 +22,7 @@ use self::piece_type::QueenType;
 use self::piece_type::RookType;
 
 impl Board {
+    /// Lazy iterator of all legal moves
     #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
         let pseudo_legal_moves = self.pseudo_legal_moves();
@@ -35,6 +36,7 @@ impl Board {
         })
     }
 
+    /// Lazy iterator of all pseudo-legal moves (moves ignoring check)
     #[inline]
     pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
@@ -43,6 +45,7 @@ impl Board {
         }
     }
 
+    /// Lazy iterator of all capturing moves
     #[inline]
     pub fn capturing_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         match self.player() {
