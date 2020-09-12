@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
+use std::time::Duration;
 use tee::TeeReader;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -17,57 +18,86 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Error> {
-    let mut searcher = Searcher::default();
-    let mut board = Board::default();
+struct UCI<W> {
+    output: W,
+    searcher: Searcher,
+}
 
-    for try_line in input.lines() {
-        let line = try_line?;
-        let words: Vec<&str> = line.split_whitespace().collect();
-        let command = words[0];
-        let mut args = &words[1..];
+impl<W: Write> UCI<W> {
+    fn run(&mut self, input: impl BufRead) -> Result<(), std::io::Error> {
+        let mut board = Board::default();
 
-        match command {
-            "uci" => {
-                writeln!(output, "id name skaki")?;
-                writeln!(output, "id author Felix Chapman")?;
-                writeln!(output, "uciok")?;
-            }
-            "isready" => {
-                writeln!(output, "readyok")?;
-            }
-            "quit" => break,
-            "position" => {
-                if args.get(0) == Some(&"startpos") {
-                    board = Board::default();
-                    args = &args[1..];
-                } else if args.get(0) == Some(&"fen") {
-                    board = Board::from_fen(args[1..7].join(" ")).unwrap();
-                    args = &args[7..];
+        for try_line in input.lines() {
+            let line = try_line?;
+            let words: Vec<&str> = line.split_whitespace().collect();
+            let mut args = words.into_iter().peekable();
+            let command = args.next().unwrap();
+
+            match command {
+                "uci" => {
+                    writeln!(self.output, "id name skaki")?;
+                    writeln!(self.output, "id author Felix Chapman")?;
+                    writeln!(self.output, "uciok")?;
                 }
+                "isready" => {
+                    writeln!(self.output, "readyok")?;
+                }
+                "quit" => break,
+                "position" => {
+                    if args.peek() == Some(&&"startpos") {
+                        args.next();
+                        board = Board::default();
+                    } else if args.peek() == Some(&&"fen") {
+                        args.next();
+                        let fen = args.clone().take(6).collect::<Vec<&str>>().join(" ");
+                        board = Board::from_fen(fen).unwrap();
+                        args.nth(5);
+                    }
 
-                if args.get(0) == Some(&"moves") {
-                    for arg in &args[1..] {
-                        let mov = Move::from_str(arg).unwrap();
-                        board.make_move(mov);
+                    if args.peek() == Some(&&"moves") {
+                        args.next();
+                        for arg in args {
+                            let mov = Move::from_str(arg).unwrap();
+                            board.make_move(mov);
+                        }
                     }
                 }
+                "go" => {
+                    self.searcher.go(&mut board);
+
+                    if args.peek() == Some(&&"movetime") {
+                        args.next();
+                        let movetime =
+                            Duration::from_millis(args.next().unwrap().parse::<u64>().unwrap());
+                        std::thread::sleep(movetime);
+                        self.stop()?;
+                    }
+                }
+                "stop" => {
+                    self.stop()?;
+                }
+                _ => (), // Ignore unknown commands
             }
-            "go" => {
-                searcher.go(&mut board);
-            }
-            "stop" => {
-                let (mov, _) = searcher.stop();
-                let mov_str = mov
-                    .map(|m| m.to_string())
-                    .unwrap_or_else(|| "0000".to_string());
-                writeln!(output, "bestmove {}", mov_str)?;
-            }
-            _ => (), // Ignore unknown commands
         }
+
+        Ok(())
     }
 
-    Ok(())
+    fn stop(&mut self) -> Result<(), std::io::Error> {
+        let (mov, _) = self.searcher.stop();
+        let mov_str = mov
+            .map(|m| m.to_string())
+            .unwrap_or_else(|| "0000".to_string());
+        writeln!(self.output, "bestmove {}", mov_str)
+    }
+}
+
+fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Error> {
+    UCI {
+        output,
+        searcher: Searcher::default(),
+    }
+    .run(input)
 }
 
 #[cfg(test)]
