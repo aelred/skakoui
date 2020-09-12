@@ -23,13 +23,7 @@ type Key = (PieceMap<Bitboard>, Player);
 struct TranspositionEntry {
     depth: u32,
     value: i32,
-    flag: Flag,
-}
-
-enum Flag {
-    Exact,
-    LowerBound,
-    UpperBound,
+    flag: Ordering,
 }
 
 impl Board {
@@ -196,13 +190,13 @@ impl<'a> ThreadSearcher<'a> {
         if let Some(entry) = self.transposition_table.get(&key) {
             if entry.depth >= depth {
                 match entry.flag {
-                    Flag::Exact => {
+                    Ordering::Equal => {
                         return entry.value;
                     }
-                    Flag::LowerBound => {
+                    Ordering::Greater => {
                         alpha = alpha.max(entry.value);
                     }
-                    Flag::UpperBound => {
+                    Ordering::Less => {
                         beta = beta.min(entry.value);
                     }
                 }
@@ -214,15 +208,7 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         let value = self.search_uncached(depth, alpha, beta);
-
-        let flag = if value <= alpha_orig {
-            Flag::UpperBound
-        } else if value >= beta {
-            Flag::LowerBound
-        } else {
-            Flag::Exact
-        };
-
+        let flag = value.cmp(&alpha_orig);
         let entry = TranspositionEntry { depth, value, flag };
 
         self.transposition_table.insert(key, entry);
