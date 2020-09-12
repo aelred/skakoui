@@ -347,8 +347,8 @@ mod tests {
         assert_moves!(
             board,
             [
-                Pa2a3, Pb2b3, Pc2c3, Pd2d3, Pe2e3, Pf2f3, Pg2g3, Ph2h3, Pa2a4, Pb2b4, Pc2c4, Pd2d4,
-                Pe2e4, Pf2f4, Pg2g4, Ph2h4, Nb1a3, Nb1c3, Ng1h3, Ng1f3
+                a2a3, b2b3, c2c3, d2d3, e2e3, f2f3, g2g3, h2h3, a2a4, b2b4, c2c4, d2d4, e2e4, f2f4,
+                g2g4, h2h4, b1a3, b1c3, g1h3, g1f3
             ]
         );
     }
@@ -356,13 +356,13 @@ mod tests {
     #[test]
     fn can_generate_all_possible_starting_moves_for_black() {
         let mut board = Board::default();
-        board.make_move(mov!(Pa2a3));
+        board.make_move(mov!(a2a3));
 
         assert_moves!(
             board,
             [
-                Pa7a6, Pb7b6, Pc7c6, Pd7d6, Pe7e6, Pf7f6, Pg7g6, Ph7h6, Pa7a5, Pb7b5, Pc7c5, Pd7d5,
-                Pe7e5, Pf7f5, Pg7g5, Ph7h5, Nb8a6, Nb8c6, Ng8h6, Ng8f6
+                a7a6, b7b6, c7c6, d7d6, e7e6, f7f6, g7g6, h7h6, a7a5, b7b5, c7c5, d7d5, e7e5, f7f5,
+                g7g5, h7h5, b8a6, b8c6, g8h6, g8f6
             ]
         );
     }
@@ -424,7 +424,7 @@ mod tests {
             Player::Black,
         );
 
-        assert_moves!(board, [Pd5c4, Pd5e4]);
+        assert_moves!(board, [d5c4, d5e4]);
     }
 
     #[test]
@@ -481,7 +481,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Pa3a4]);
+        assert_moves!(board, [a3a4]);
     }
 
     #[ignore]
@@ -501,9 +501,9 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(mov!(Pa2a4));
+        board.make_move(mov!(a2a4));
 
-        assert_moves!(board, [Pb4a3]);
+        assert_moves!(board, [b4a3]);
     }
 
     #[ignore]
@@ -523,7 +523,7 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(mov!(Pa3a4));
+        board.make_move(mov!(a3a4));
 
         assert_moves!(board, []);
     }
@@ -544,7 +544,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Pa7a8N, Pa7a8B, Pa7a8R, Pa7a8Q]);
+        assert_moves!(board, [a7a8N, a7a8B, a7a8R, a7a8Q]);
     }
 
     #[test]
@@ -563,7 +563,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Pa7b8N, Pa7b8B, Pa7b8R, Pa7b8Q]);
+        assert_moves!(board, [a7b8N, a7b8B, a7b8R, a7b8Q]);
     }
 
     #[test]
@@ -583,7 +583,7 @@ mod tests {
         );
 
         // Kb3b2 is missing because it puts the king in check
-        assert_moves!(board, [Kb3a2, Kb3a3, Kb3c3, Kb3a4, Kb3b4, Kb3c4,]);
+        assert_moves!(board, [b3a2, b3a3, b3c3, b3a4, b3b4, b3c4,]);
     }
 
     #[test]
@@ -602,7 +602,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Nb3a1, Nb3c1, Nb3d2, Nb3d4, Nb3a5,]);
+        assert_moves!(board, [b3a1, b3c1, b3d2, b3d4, b3a5,]);
     }
 
     #[test]
@@ -621,7 +621,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Rb3b1, Rb3b2, Rb3a3, Rb3c3, Rb3b4,]);
+        assert_moves!(board, [b3b1, b3b2, b3a3, b3c3, b3b4,]);
     }
 
     #[test]
@@ -640,7 +640,7 @@ mod tests {
             Player::White,
         );
 
-        assert_moves!(board, [Bb3d1, Bb3a2, Bb3c2, Bb3a4,]);
+        assert_moves!(board, [b3d1, b3a2, b3c2, b3a4,]);
     }
 
     #[test]
@@ -661,7 +661,7 @@ mod tests {
 
         assert_moves!(
             board,
-            [Qb3d1, Qb3a2, Qb3c2, Qb3a4, Qb3a3, Qb3b1, Qb3b2, Qb3b4, Qb3b5, Qb3b6,]
+            [b3d1, b3a2, b3c2, b3a4, b3a3, b3b1, b3b2, b3b4, b3b5, b3b6,]
         );
     }
 
@@ -682,7 +682,7 @@ mod tests {
         );
 
         // Note that the pawn is not allowed to move
-        assert_moves!(board, [Ka2a1, Ka2b1, Ka2a3, Ka2b3,]);
+        assert_moves!(board, [a2a1, a2b1, a2a3, a2b3,]);
     }
 
     #[test]

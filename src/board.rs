@@ -1,4 +1,5 @@
 use crate::bitboards;
+use crate::piece::PieceType::Pawn;
 use crate::Bitboard;
 use crate::File;
 use crate::Move;
@@ -10,6 +11,7 @@ use crate::Rank;
 use crate::Square;
 use crate::SquareColor;
 use crate::SquareMap;
+use arrayvec::ArrayVec;
 use enum_map::EnumMap;
 use std::fmt;
 use std::ops::BitOr;
@@ -42,6 +44,38 @@ impl Board {
     /// Create a new board from piece positions and player turn
     pub fn new(pieces_array: [[Option<Piece>; 8]; 8], player: Player) -> Self {
         Self::with_states(pieces_array, player, vec![])
+    }
+
+    /// Parse a board from
+    /// [Forsyth-Edwards notation](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
+    pub fn from_fen(fen: impl Into<String>) -> Option<Board> {
+        let fen_str = fen.into();
+        let mut fields = fen_str.split_whitespace();
+        let pieces_by_rank = fields.next()?.split('/');
+
+        let mut pieces_vec = ArrayVec::<[[Option<Piece>; 8]; 8]>::new();
+        for rank in pieces_by_rank {
+            let mut rank_vec = ArrayVec::<[Option<Piece>; 8]>::new();
+            for c in rank.chars() {
+                let s = c.to_string();
+                if let Ok(empties) = s.parse::<usize>() {
+                    for _ in 0..empties {
+                        rank_vec.push(None);
+                    }
+                } else if let Ok(piece) = s.parse::<Piece>() {
+                    rank_vec.push(Some(piece))
+                }
+            }
+            pieces_vec.push(rank_vec.into_inner().ok()?)
+        }
+        pieces_vec.reverse();
+        let pieces_array = pieces_vec.into_inner().ok()?;
+
+        let player = fields.next()?.parse::<Player>().ok()?;
+
+        // TODO: also parse castling, en passant and number of moves
+
+        Some(Self::with_states(pieces_array, player, vec![]))
     }
 
     fn with_states(
@@ -149,7 +183,11 @@ impl Board {
         let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
-        let piece = self.get(to).unwrap();
+        let piece = if mov.promoting().is_some() {
+            Piece::new(player, Pawn)
+        } else {
+            self.get(to).unwrap()
+        };
 
         let BoardState {
             captured_piece_type,
@@ -311,6 +349,13 @@ mod tests {
     #[test]
     fn can_create_default_chess_board() {
         Board::default();
+    }
+
+    #[test]
+    fn can_create_board_from_fen_notation() {
+        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        let board = Board::from_fen(fen).unwrap();
+        assert_eq!(board, Board::default());
     }
 
     #[test]

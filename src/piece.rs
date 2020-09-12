@@ -88,18 +88,18 @@ impl FromStr for Piece {
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
         let piece = match str {
-            "♔" => Self::WK,
-            "♕" => Self::WQ,
-            "♖" => Self::WR,
-            "♗" => Self::WB,
-            "♘" => Self::WN,
-            "♙" => Self::WP,
-            "♚" => Self::BK,
-            "♛" => Self::BQ,
-            "♜" => Self::BR,
-            "♝" => Self::BB,
-            "♞" => Self::BN,
-            "♟" => Self::BP,
+            "♔" | "K" => Self::WK,
+            "♕" | "Q" => Self::WQ,
+            "♖" | "R" => Self::WR,
+            "♗" | "B" => Self::WB,
+            "♘" | "N" => Self::WN,
+            "♙" | "P" => Self::WP,
+            "♚" | "k" => Self::BK,
+            "♛" | "q" => Self::BQ,
+            "♜" | "r" => Self::BR,
+            "♝" | "b" => Self::BB,
+            "♞" | "n" => Self::BN,
+            "♟" | "p" => Self::BP,
             _ => return Err(()),
         };
 
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn piece_parse_on_non_piece_string_is_none() {
-        assert_eq!("K".parse::<Piece>(), Err(()));
+        assert_eq!("g".parse::<Piece>(), Err(()));
     }
 
     #[test]

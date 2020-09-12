@@ -11,7 +11,6 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE;
@@ -128,6 +127,10 @@ impl Searcher {
         let moves = self.rxs.iter().map(|x| x.recv().unwrap());
         moves.max_by_key(|(_, score)| *score).unwrap()
     }
+
+    pub fn clear(&self) {
+        self.transposition_table.clear();
+    }
 }
 
 const DEPTH: u32 = 5;
@@ -166,11 +169,13 @@ impl<'a> ThreadSearcher<'a> {
             let value = -self.search(DEPTH - 1, LOW_SCORE, -alpha);
             self.board.unmake_move(mov);
 
-            if value > alpha {
-                alpha = value;
-                best_moves = vec![mov];
-            } else if value == alpha {
-                best_moves.push(mov);
+            match value.cmp(&alpha) {
+                Ordering::Greater => {
+                    alpha = value;
+                    best_moves = vec![mov];
+                }
+                Ordering::Equal => best_moves.push(mov),
+                Ordering::Less => (),
             }
         }
 

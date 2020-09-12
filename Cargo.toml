@@ -11,6 +11,7 @@ rand = "0.6.1"
 array-init = "0.0.4"
 chashmap = "2.2.0"
 tee = "0.1.0"
+arrayvec = "0.5.1"
 
 [dev-dependencies]
 pretty_assertions = "0.5.1"

@@ -24,6 +24,7 @@ pub use crate::{
     search::Searcher,
     square::{Square, SquareColor, SquareMap},
 };
+use std::str::FromStr;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
 pub enum Player {
@@ -51,6 +52,19 @@ impl Player {
             Player::White => 1,
             Player::Black => -1,
         }
+    }
+}
+
+impl FromStr for Player {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let player = match s {
+            "W" | "w" => Player::White,
+            "B" | "b" => Player::Black,
+            _ => return Err(()),
+        };
+        Ok(player)
     }
 }
 

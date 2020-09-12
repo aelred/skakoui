@@ -23,7 +23,7 @@ fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Er
 
     for try_line in input.lines() {
         let line = try_line?;
-        let words: Vec<&str> = line.split(" ").collect();
+        let words: Vec<&str> = line.split_whitespace().collect();
         let command = words[0];
         let mut args = &words[1..];
 
@@ -71,6 +71,7 @@ fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Er
 mod tests {
     use super::*;
     use spectral::prelude::*;
+    use std::borrow::Borrow;
     use std::io::BufReader;
 
     #[test]

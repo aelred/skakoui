@@ -90,7 +90,7 @@ impl FromStr for Move {
             .ok_or("couldn't index string")?
             .parse::<Square>()?;
 
-        let promoting = if let Some(promoting_str) = s.get(5..) {
+        let promoting = if let Some(promoting_str) = s.get(4..) {
             if promoting_str.is_empty() {
                 None
             } else {
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn displaying_a_move_returns_move_notation() {
         let mov = Move::new(Square::A2, Square::A3);
-        assert_eq!("Pa2a3", mov.to_string());
+        assert_eq!("a2a3", mov.to_string());
     }
 
     #[test]
@@ -140,7 +140,7 @@ mod tests {
         let mov = Move::new(Square::B1, Square::C3);
 
         assert_eq!(mov.to_string().parse::<Move>().unwrap(), mov);
-        assert_eq!("Pa7a8Q".parse::<Move>().unwrap().to_string(), "Pa7a8Q");
+        assert_eq!("a7a8Q".parse::<Move>().unwrap().to_string(), "a7a8Q");
     }
 
     #[test]
