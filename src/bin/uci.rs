@@ -41,6 +41,9 @@ fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Er
                 if args.get(0) == Some(&"startpos") {
                     board = Board::default();
                     args = &args[1..];
+                } else if args.get(0) == Some(&"fen") {
+                    board = Board::from_fen(args[1..7].join(" ")).unwrap();
+                    args = &args[7..];
                 }
 
                 if args.get(0) == Some(&"moves") {
@@ -126,6 +129,23 @@ mod tests {
             "stop",
         ]))
         .matching_contains(|out| white_openings().contains(&out))
+    }
+
+    #[test]
+    fn when_input_position_fen_then_set_board_as_specified() {
+        let valid_moves = vec![
+            "bestmove a1a2".to_string(),
+            "bestmove a1b1".to_string(),
+            "bestmove a1b2".to_string(),
+        ];
+
+        assert_that(&output_from(&[
+            "uci",
+            "position fen 7k/8/8/8/8/8/8/K7 w KQkq - 0 1",
+            "go",
+            "stop",
+        ]))
+        .matching_contains(|out| valid_moves.contains(&out))
     }
 
     fn white_openings() -> Vec<String> {
