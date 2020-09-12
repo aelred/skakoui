@@ -1,13 +1,15 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use chess::search::Searcher;
 use chess::Board;
 use chess::Move;
+use chess::Searcher;
 use std::collections::HashSet;
+use std::default::Default;
 use std::io;
 use std::io::BufRead;
 use std::io::Lines;
 use std::io::Write;
+use std::time::Duration;
 
 fn main() {
     let stdin = io::stdin();
@@ -55,7 +57,9 @@ impl Agent for Computer {
     const NAME: &'static str = "Computer";
 
     fn get_move(&mut self, board: &mut Board) -> Option<Move> {
-        let (mov, _) = self.searcher.run(board);
+        self.searcher.go(board);
+        std::thread::sleep(Duration::from_secs(1));
+        let (mov, _) = self.searcher.stop();
         mov
     }
 }

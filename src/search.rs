@@ -11,6 +11,7 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
+use std::time::Duration;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE;
@@ -38,7 +39,7 @@ impl Board {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum Message {
     StartSearch(Box<Board>),
     AbortSearch,
@@ -47,6 +48,7 @@ enum Message {
 
 pub struct Searcher {
     txs: Vec<Sender<Message>>,
+    rxs: Vec<Receiver<(Option<Move>, i32)>>,
     transposition_table: TranspositionTable,
 }
 
@@ -56,29 +58,38 @@ impl Default for Searcher {
     fn default() -> Self {
         let transposition_table = TranspositionTable::default();
         let mut txs = vec![];
+        let mut rxs = vec![];
 
         for _ in 0..NUM_THREADS {
             let transposition_table = transposition_table.clone();
-            let (tx, rx) = std::sync::mpsc::channel();
+            let (msg_tx, msg_rx) = std::sync::mpsc::channel();
+            let (moves_tx, moves_rx) = std::sync::mpsc::channel();
 
-            thread::spawn(move || worker_thread(&transposition_table, &rx));
+            thread::spawn(move || worker_thread(&transposition_table, &msg_rx, &moves_tx));
 
-            txs.push(tx);
+            txs.push(msg_tx);
+            rxs.push(moves_rx);
         }
 
         Self {
             txs,
+            rxs,
             transposition_table,
         }
     }
 }
 
-fn worker_thread(transposition_table: &TranspositionTable, rx: &Receiver<Message>) {
+fn worker_thread(
+    transposition_table: &TranspositionTable,
+    rx: &Receiver<Message>,
+    moves: &Sender<(Option<Move>, i32)>,
+) {
     loop {
         match rx.recv().unwrap() {
             Message::StartSearch(mut board) => {
                 let mut searcher = ThreadSearcher::new(&mut board, transposition_table, rx);
-                searcher.run();
+                let result = searcher.run();
+                moves.send(result).unwrap();
             }
             Message::AbortThread => {
                 return;
@@ -99,22 +110,23 @@ impl Drop for Searcher {
 }
 
 impl Searcher {
-    pub fn run(&mut self, board: &mut Board) -> (Option<Move>, i32) {
+    pub fn go(&mut self, board: &mut Board) {
         for tx in &self.txs {
             tx.send(Message::StartSearch(Box::new(board.clone())))
                 .unwrap();
         }
+    }
 
-        let transposition_table = self.transposition_table.clone();
-        let mut local_searcher = LocalSearcher::new(board, transposition_table);
-
-        let result = local_searcher.run();
-
+    pub fn stop(&mut self) -> (Option<Move>, i32) {
+        println!("info string stopping");
         for tx in &self.txs {
             tx.send(Message::AbortSearch).unwrap();
         }
+        println!("info string sent stop message to all threads");
 
-        result
+        println!("info string waiting for list of moves");
+        let moves = self.rxs.iter().map(|x| x.recv().unwrap());
+        moves.max_by_key(|(_, score)| *score).unwrap()
     }
 }
 
@@ -124,6 +136,7 @@ struct ThreadSearcher<'a> {
     board: &'a mut Board,
     transposition_table: &'a TranspositionTable,
     rx: &'a Receiver<Message>,
+    abort: bool,
 }
 
 impl<'a> ThreadSearcher<'a> {
@@ -136,145 +149,41 @@ impl<'a> ThreadSearcher<'a> {
             board,
             transposition_table,
             rx,
-        }
-    }
-
-    fn run(&mut self) {
-        let mut moves: Vec<Move> = self.board.pseudo_legal_moves().collect();
-        moves.shuffle(&mut thread_rng());
-
-        let mut alpha = LOW_SCORE;
-
-        for mov in moves {
-            println!("{}", mov);
-            self.board.make_move(mov);
-            if let Some(value) = self.search(DEPTH - 1, LOW_SCORE, -alpha) {
-                let value = -value;
-
-                if value > alpha {
-                    alpha = value;
-                }
-            } else {
-                return;
-            }
-            self.board.unmake_move(mov);
-        }
-    }
-
-    fn search(&mut self, depth: u32, mut alpha: i32, mut beta: i32) -> Option<i32> {
-        let alpha_orig = alpha;
-
-        let key = self.board.key();
-
-        if let Some(entry) = self.transposition_table.get(&key) {
-            if entry.depth >= depth {
-                match entry.flag {
-                    Flag::Exact => {
-                        return Some(entry.value);
-                    }
-                    Flag::LowerBound => {
-                        alpha = i32::max(alpha, entry.value);
-                    }
-                    Flag::UpperBound => {
-                        beta = i32::min(beta, entry.value);
-                    }
-                }
-
-                if alpha >= beta {
-                    return Some(entry.value);
-                }
-            }
-        }
-
-        let value = self.search_uncached(depth, alpha, beta)?;
-
-        let flag = if value <= alpha_orig {
-            Flag::UpperBound
-        } else if value >= beta {
-            Flag::LowerBound
-        } else {
-            Flag::Exact
-        };
-
-        let entry = TranspositionEntry { depth, value, flag };
-
-        self.transposition_table.insert(key, entry);
-
-        Some(value)
-    }
-
-    fn search_uncached(&mut self, depth: u32, mut alpha: i32, beta: i32) -> Option<i32> {
-        if depth == 0 {
-            if let Ok(Message::AbortSearch) = self.rx.try_recv() {
-                return None;
-            }
-
-            return Some(quiesce(&mut self.board, alpha, beta));
-        }
-
-        let mut moves = self.board.pseudo_legal_moves().peekable();
-
-        if moves.peek().is_none() {
-            return Some(0); // Being unable to move is a tie
-        }
-
-        for mov in moves {
-            self.board.make_move(mov);
-            let value = -self.search(depth - 1, -beta, -alpha)?;
-            self.board.unmake_move(mov);
-
-            if value >= beta {
-                return Some(beta);
-            }
-            if value > alpha {
-                alpha = value;
-            }
-        }
-
-        Some(alpha)
-    }
-}
-
-struct LocalSearcher<'a> {
-    board: &'a mut Board,
-    transposition_table: TranspositionTable,
-}
-
-impl<'a> LocalSearcher<'a> {
-    fn new(board: &'a mut Board, transposition_table: TranspositionTable) -> Self {
-        Self {
-            board,
-            transposition_table,
+            abort: false,
         }
     }
 
     fn run(&mut self) -> (Option<Move>, i32) {
-        let moves: Vec<Move> = self.board.moves().collect();
+        let mut moves: Vec<Move> = self.board.pseudo_legal_moves().collect();
+        let rng = &mut thread_rng();
+        moves.shuffle(rng);
 
         let mut alpha = LOW_SCORE;
         let mut best_moves = vec![];
 
         for mov in moves {
             self.board.make_move(mov);
-            let value = -self.search(DEPTH, LOW_SCORE, -alpha);
+            let value = -self.search(DEPTH - 1, LOW_SCORE, -alpha);
             self.board.unmake_move(mov);
 
-            match value.cmp(&alpha) {
-                Ordering::Greater => {
-                    alpha = value;
-                    best_moves = vec![mov];
-                }
-                Ordering::Equal => best_moves.push(mov),
-                _ => (),
+            if value > alpha {
+                alpha = value;
+                best_moves = vec![mov];
+            } else if value == alpha {
+                best_moves.push(mov);
             }
         }
 
-        let best_move = best_moves.choose(&mut rand::thread_rng()).cloned();
+        let best_move = best_moves.choose(rng).cloned();
 
         (best_move, alpha)
     }
 
     fn search(&mut self, depth: u32, mut alpha: i32, mut beta: i32) -> i32 {
+        if self.should_abort() {
+            return self.board.eval();
+        }
+
         let alpha_orig = alpha;
 
         let key = self.board.key();
@@ -286,10 +195,10 @@ impl<'a> LocalSearcher<'a> {
                         return entry.value;
                     }
                     Flag::LowerBound => {
-                        alpha = i32::max(alpha, entry.value);
+                        alpha = alpha.max(entry.value);
                     }
                     Flag::UpperBound => {
-                        beta = i32::min(beta, entry.value);
+                        beta = beta.min(entry.value);
                     }
                 }
 
@@ -318,7 +227,7 @@ impl<'a> LocalSearcher<'a> {
 
     fn search_uncached(&mut self, depth: u32, mut alpha: i32, beta: i32) -> i32 {
         if depth == 0 {
-            return quiesce(&mut self.board, alpha, beta);
+            return self.quiesce(alpha, beta);
         }
 
         let mut moves = self.board.pseudo_legal_moves().peekable();
@@ -342,36 +251,45 @@ impl<'a> LocalSearcher<'a> {
 
         alpha
     }
-}
 
-/// Evaluate how "quiescent" (quiet or stable) a board is.
-///
-/// The idea is that a board with lots going on is worth investigating more deeply.
-/// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
-/// piece could be taken in the next turn.
-fn quiesce(board: &mut Board, mut alpha: i32, beta: i32) -> i32 {
-    let stand_pat = board.eval();
+    /// Evaluate how "quiescent" (quiet or stable) a board is.
+    ///
+    /// The idea is that a board with lots going on is worth investigating more deeply.
+    /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
+    /// piece could be taken in the next turn.
+    fn quiesce(&mut self, mut alpha: i32, beta: i32) -> i32 {
+        let stand_pat = self.board.eval();
 
-    if stand_pat >= beta {
-        return beta;
-    }
+        if self.should_abort() {
+            return stand_pat;
+        }
 
-    if alpha < stand_pat {
-        alpha = stand_pat;
-    }
-
-    for mov in board.capturing_moves() {
-        board.make_move(mov);
-        let value = -quiesce(board, -beta, -alpha);
-        board.unmake_move(mov);
-
-        if value >= beta {
+        if stand_pat >= beta {
             return beta;
         }
-        if value > alpha {
-            alpha = value;
+
+        if alpha < stand_pat {
+            alpha = stand_pat;
         }
+
+        for mov in self.board.capturing_moves() {
+            self.board.make_move(mov);
+            let value = -self.quiesce(-beta, -alpha);
+            self.board.unmake_move(mov);
+
+            if value >= beta {
+                return beta;
+            }
+            if value > alpha {
+                alpha = value;
+            }
+        }
+
+        alpha
     }
 
-    alpha
+    fn should_abort(&mut self) -> bool {
+        self.abort = self.abort || self.rx.try_recv() == Ok(Message::AbortSearch);
+        self.abort
+    }
 }

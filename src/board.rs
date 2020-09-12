@@ -102,8 +102,7 @@ impl Board {
         let player = self.player();
         let from = mov.from();
         let to = mov.to();
-        let piece_type = mov.piece_type();
-        let piece = Piece::new(player, piece_type);
+        let piece = self.get(from).unwrap();
 
         let captured_piece_type = if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
@@ -150,8 +149,7 @@ impl Board {
         let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
-        let piece_type = mov.piece_type();
-        let piece = Piece::new(player, piece_type);
+        let piece = self.get(to).unwrap();
 
         let BoardState {
             captured_piece_type,
@@ -363,7 +361,7 @@ mod tests {
     fn can_make_a_move_on_board() {
         let mut board = Board::default();
 
-        let mov = Move::new(PieceType::Knight, Square::B1, Square::C3);
+        let mov = Move::new(Square::B1, Square::C3);
 
         board.make_move(mov);
 
@@ -403,7 +401,7 @@ mod tests {
             Player::White,
         );
 
-        let mov = Move::new(PieceType::Bishop, Square::B5, Square::D7);
+        let mov = Move::new(Square::B5, Square::D7);
 
         board.make_move(mov);
 
@@ -443,7 +441,7 @@ mod tests {
             Player::White,
         );
 
-        let mov = Move::new_promoting(PieceType::Pawn, Square::G7, Square::G8, PieceType::Queen);
+        let mov = Move::new_promoting(Square::G7, Square::G8, PieceType::Queen);
 
         board.make_move(mov);
 
@@ -485,9 +483,9 @@ mod tests {
 
         let expected_board = board.clone();
 
-        let mov1 = Move::new_promoting(PieceType::Pawn, Square::G7, Square::H8, PieceType::Queen);
-        let mov2 = Move::new(PieceType::Pawn, Square::H7, Square::H5);
-        let mov3 = Move::new(PieceType::Queen, Square::H8, Square::H5);
+        let mov1 = Move::new_promoting(Square::G7, Square::H8, PieceType::Queen);
+        let mov2 = Move::new(Square::H7, Square::H5);
+        let mov3 = Move::new(Square::H8, Square::H5);
 
         board.make_move(mov1);
         board.make_move(mov2);
@@ -516,9 +514,9 @@ mod tests {
             Player::White,
         );
 
-        board.make_move(Move::new(PieceType::Pawn, Square::A2, Square::A4));
+        board.make_move(Move::new(Square::A2, Square::A4));
 
-        let en_passant = Move::new(PieceType::Pawn, Square::B4, Square::A3);
+        let en_passant = Move::new(Square::B4, Square::A3);
         board.make_move(en_passant);
 
         let expected_board = Board::with_states(

@@ -8,11 +8,10 @@ mod moves;
 mod piece;
 mod piece_map;
 mod rank;
+mod search;
 mod square;
 
 use enum_map::Enum;
-
-pub mod search;
 
 pub use crate::{
     bitboard::{bitboards, Bitboard},
@@ -22,6 +21,7 @@ pub use crate::{
     piece::{Piece, PieceType},
     piece_map::PieceMap,
     rank::{Rank, RankMap},
+    search::Searcher,
     square::{Square, SquareColor, SquareMap},
 };
 

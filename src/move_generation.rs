@@ -167,7 +167,7 @@ impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
             let source = target_iter.source;
 
             if let Some(target) = target_iter.targets.next() {
-                return Some(Move::new(PT::PIECE_TYPE, source, target));
+                return Some(Move::new(source, target));
             } else {
                 self.target_iter = None;
             }
@@ -189,12 +189,12 @@ impl<P: PlayerType> Iterator for PawnMovesIter<P> {
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.pushes.next() {
             let source = target.shift_rank(-P::DIRECTION);
-            return Some(Move::new(PieceType::Pawn, source, target));
+            return Some(Move::new(source, target));
         }
 
         if let Some(target) = self.double_pushes.next() {
             let source = target.shift_rank(-P::DIRECTION * 2);
-            return Some(Move::new(PieceType::Pawn, source, target));
+            return Some(Move::new(source, target));
         }
 
         self.captures.next()
@@ -214,12 +214,12 @@ impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.captures_east.next() {
             let source = target.shift_rank(-P::DIRECTION).shift_file(1);
-            return Some(Move::new(PieceType::Pawn, source, target));
+            return Some(Move::new(source, target));
         }
 
         if let Some(target) = self.captures_west.next() {
             let source = target.shift_rank(-P::DIRECTION).shift_file(-1);
-            return Some(Move::new(PieceType::Pawn, source, target));
+            return Some(Move::new(source, target));
         }
 
         None
