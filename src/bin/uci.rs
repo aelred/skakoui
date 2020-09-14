@@ -84,7 +84,17 @@ impl<W: Write> UCI<W> {
     }
 
     fn stop(&mut self) -> Result<(), std::io::Error> {
-        let (mov, _) = self.searcher.stop();
+        self.searcher.stop();
+
+        let pv = self.searcher.principal_variation();
+        let pv_str = pv
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<String>>()
+            .join(" ");
+        writeln!(self.output, "info pv {}", pv_str)?;
+
+        let mov = pv.first();
         let mov_str = mov
             .map(|m| m.to_string())
             .unwrap_or_else(|| "0000".to_string());

@@ -4,9 +4,7 @@ use crate::Move;
 use crate::PieceMap;
 use crate::Player;
 use chashmap::CHashMap;
-use rand::seq::SliceRandom;
-use rand::thread_rng;
-use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -16,14 +14,25 @@ const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE;
 
 /// Table of moves, the key represents the game-state
-type TranspositionTable = Arc<CHashMap<Key, TranspositionEntry>>;
+type TranspositionTable = Arc<CHashMap<Key, Node>>;
 
 type Key = (PieceMap<Bitboard>, Player);
 
-struct TranspositionEntry {
+#[derive(Debug)]
+struct Node {
     depth: u32,
     value: i32,
-    flag: Ordering,
+    node_type: NodeType,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum NodeType {
+    /// Principal variation node, fully explored and value is exact
+    PV,
+    /// Cut node, or fail-high node, was beta-cutoff, value is a lower bound
+    Cut,
+    /// All-node, or fail-low node, no moves exceeded alpha, value is an upper bound
+    All,
 }
 
 impl Board {
@@ -41,8 +50,8 @@ enum Message {
 
 pub struct Searcher {
     txs: Vec<Sender<Message>>,
-    rxs: Vec<Receiver<(Option<Move>, i32)>>,
     transposition_table: TranspositionTable,
+    board: Board,
 }
 
 const NUM_THREADS: u32 = 4;
@@ -51,38 +60,30 @@ impl Default for Searcher {
     fn default() -> Self {
         let transposition_table = TranspositionTable::default();
         let mut txs = vec![];
-        let mut rxs = vec![];
 
         for _ in 0..NUM_THREADS {
             let transposition_table = transposition_table.clone();
             let (msg_tx, msg_rx) = std::sync::mpsc::channel();
-            let (moves_tx, moves_rx) = std::sync::mpsc::channel();
 
-            thread::spawn(move || worker_thread(&transposition_table, &msg_rx, &moves_tx));
+            thread::spawn(move || worker_thread(&transposition_table, &msg_rx));
 
             txs.push(msg_tx);
-            rxs.push(moves_rx);
         }
 
         Self {
             txs,
-            rxs,
             transposition_table,
+            board: Board::default(),
         }
     }
 }
 
-fn worker_thread(
-    transposition_table: &TranspositionTable,
-    rx: &Receiver<Message>,
-    moves: &Sender<(Option<Move>, i32)>,
-) {
+fn worker_thread(transposition_table: &TranspositionTable, rx: &Receiver<Message>) {
     loop {
         match rx.recv().unwrap() {
             Message::StartSearch(mut board) => {
                 let mut searcher = ThreadSearcher::new(&mut board, transposition_table, rx);
-                let result = searcher.run();
-                moves.send(result).unwrap();
+                searcher.run();
             }
             Message::AbortThread => {
                 return;
@@ -104,30 +105,77 @@ impl Drop for Searcher {
 
 impl Searcher {
     pub fn go(&mut self, board: &mut Board) {
+        self.board = board.clone();
+
         for tx in &self.txs {
             tx.send(Message::StartSearch(Box::new(board.clone())))
                 .unwrap();
         }
     }
 
-    pub fn stop(&mut self) -> (Option<Move>, i32) {
-        println!("info string stopping");
+    pub fn stop(&mut self) {
         for tx in &self.txs {
             tx.send(Message::AbortSearch).unwrap();
         }
-        println!("info string sent stop message to all threads");
+    }
 
-        println!("info string waiting for list of moves");
-        let moves = self.rxs.iter().map(|x| x.recv().unwrap());
-        moves.max_by_key(|(_, score)| *score).unwrap()
+    pub fn principal_variation(&self) -> Vec<Move> {
+        let mut board = self.board.clone();
+
+        let mut pv = vec![];
+
+        let mut key_set = HashSet::new();
+
+        loop {
+            let moves = board.pseudo_legal_moves();
+
+            let mut best_move = None;
+            let mut best_score = i32::MIN;
+
+            for mov in moves {
+                board.make_move(mov);
+                let key = board.key();
+                board.unmake_move(mov);
+
+                // Check for loop
+                if !key_set.insert(key) {
+                    break;
+                }
+
+                let entry = self.transposition_table.get(&key);
+
+                match entry {
+                    Some(e) if e.node_type == NodeType::PV && e.value > best_score => {
+                        best_move = Some(mov);
+                        best_score = e.value;
+                    }
+                    _ => (),
+                }
+            }
+
+            if let Some(best) = best_move {
+                pv.push(best);
+                board.make_move(best);
+            } else {
+                break;
+            }
+        }
+
+        // Return a totally random move if we couldn't find anything.
+        // This can happen if search is stopped very quickly.
+        if pv.is_empty() {
+            if let Some(mov) = board.pseudo_legal_moves().next() {
+                pv.push(mov);
+            }
+        }
+
+        pv
     }
 
     pub fn clear(&self) {
         self.transposition_table.clear();
     }
 }
-
-const DEPTH: u32 = 5;
 
 struct ThreadSearcher<'a> {
     board: &'a mut Board,
@@ -150,32 +198,13 @@ impl<'a> ThreadSearcher<'a> {
         }
     }
 
-    fn run(&mut self) -> (Option<Move>, i32) {
-        let mut moves: Vec<Move> = self.board.pseudo_legal_moves().collect();
-        let rng = &mut thread_rng();
-        moves.shuffle(rng);
+    fn run(&mut self) {
+        let mut depth = 1;
 
-        let mut alpha = LOW_SCORE;
-        let mut best_moves = vec![];
-
-        for mov in moves {
-            self.board.make_move(mov);
-            let value = -self.search(DEPTH - 1, LOW_SCORE, -alpha);
-            self.board.unmake_move(mov);
-
-            match value.cmp(&alpha) {
-                Ordering::Greater => {
-                    alpha = value;
-                    best_moves = vec![mov];
-                }
-                Ordering::Equal => best_moves.push(mov),
-                Ordering::Less => (),
-            }
+        while !self.should_abort() {
+            self.search(depth, LOW_SCORE, HIGH_SCORE);
+            depth += 1
         }
-
-        let best_move = best_moves.choose(rng).cloned();
-
-        (best_move, alpha)
     }
 
     fn search(&mut self, depth: u32, mut alpha: i32, mut beta: i32) -> i32 {
@@ -183,20 +212,18 @@ impl<'a> ThreadSearcher<'a> {
             return self.board.eval();
         }
 
-        let alpha_orig = alpha;
-
         let key = self.board.key();
 
         if let Some(entry) = self.transposition_table.get(&key) {
             if entry.depth >= depth {
-                match entry.flag {
-                    Ordering::Equal => {
+                match entry.node_type {
+                    NodeType::PV => {
                         return entry.value;
                     }
-                    Ordering::Greater => {
+                    NodeType::All => {
                         alpha = alpha.max(entry.value);
                     }
-                    Ordering::Less => {
+                    NodeType::Cut => {
                         beta = beta.min(entry.value);
                     }
                 }
@@ -208,8 +235,18 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         let value = self.search_uncached(depth, alpha, beta);
-        let flag = value.cmp(&alpha_orig);
-        let entry = TranspositionEntry { depth, value, flag };
+        let node_type = if value >= beta {
+            NodeType::Cut
+        } else if value <= alpha {
+            NodeType::All
+        } else {
+            NodeType::PV
+        };
+        let entry = Node {
+            depth,
+            value,
+            node_type,
+        };
 
         self.transposition_table.insert(key, entry);
 

@@ -59,8 +59,9 @@ impl Agent for Computer {
     fn get_move(&mut self, board: &mut Board) -> Option<Move> {
         self.searcher.go(board);
         std::thread::sleep(Duration::from_secs(1));
-        let (mov, _) = self.searcher.stop();
-        mov
+        self.searcher.stop();
+        let pv = self.searcher.principal_variation();
+        pv.first().copied()
     }
 }
 
