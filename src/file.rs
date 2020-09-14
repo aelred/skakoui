@@ -1,10 +1,11 @@
 use std::borrow::Borrow;
 use std::fmt;
+use std::fmt::Display;
 use std::ops::Add;
 use std::ops::Index;
 use std::str::FromStr;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct File(u8);
 
 impl File {
@@ -28,6 +29,8 @@ impl File {
         File::H,
     ];
 
+    const STRS: FileMap<&'static str> = FileMap::new(["a", "b", "c", "d", "e", "f", "g", "h"]);
+
     #[inline]
     pub fn from_index(index: u8) -> Self {
         File(index)
@@ -48,10 +51,15 @@ impl Add<i8> for File {
     }
 }
 
+impl fmt::Debug for File {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        f.write_str(&File::STRS[self].to_ascii_uppercase())
+    }
+}
+
 impl fmt::Display for File {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        const STRS: FileMap<&str> = FileMap::new(["a", "b", "c", "d", "e", "f", "g", "h"]);
-        f.write_str(STRS[self])
+        f.write_str(File::STRS[self])
     }
 }
 

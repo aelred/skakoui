@@ -127,7 +127,7 @@ impl Square {
 
 impl fmt::Debug for Square {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("Square::{:?}{}", self.file(), self.rank()))
+        f.write_fmt(format_args!("{:?}{}", self.file(), self.rank()))
     }
 }
 

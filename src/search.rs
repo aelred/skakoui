@@ -104,7 +104,7 @@ impl Drop for Searcher {
 }
 
 impl Searcher {
-    pub fn go(&mut self, board: &mut Board) {
+    pub fn go(&mut self, board: &Board) {
         self.board = board.clone();
 
         for tx in &self.txs {

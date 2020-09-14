@@ -67,26 +67,29 @@ impl Board {
     }
 
     #[inline]
-    fn can_take_king(&self) -> bool {
+    pub fn can_take_king(&self) -> bool {
         let king = Piece::new(self.player().opponent(), PieceType::King);
-
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
-            for mov in self.pseudo_legal_moves() {
-                if mov.to() != king_pos {
-                    continue;
-                }
-
-                let mut after_move = self.clone();
-                after_move.make_move(mov);
-                if after_move.count(king) == 0 {
-                    return true;
-                }
-            }
-
-            false
+            self.pseudo_legal_moves()
+                .find(|mov| mov.to() == king_pos)
+                .is_some()
         } else {
             false
         }
+    }
+
+    #[inline]
+    pub fn checkmate(&mut self) -> bool {
+        let moves: Vec<Move> = self.moves().collect();
+        for mov in moves {
+            self.make_move(mov);
+            let can_take_king = self.can_take_king();
+            self.unmake_move(mov);
+            if !can_take_king {
+                return false;
+            }
+        }
+        true
     }
 }
 

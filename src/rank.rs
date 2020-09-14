@@ -1,12 +1,13 @@
 use std::borrow::Borrow;
 use std::error::Error;
 use std::fmt;
+use std::fmt::{Display, Write};
 use std::ops::Add;
 use std::ops::Index;
 use std::ops::Sub;
 use std::str::FromStr;
 
-#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Debug, Hash)]
+#[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Hash)]
 pub struct Rank(u8);
 
 impl Rank {
@@ -56,6 +57,13 @@ impl Sub<i8> for Rank {
     #[inline]
     fn sub(self, offset: i8) -> Self {
         Rank((self.0 as i8 - offset) as u8)
+    }
+}
+
+impl fmt::Debug for Rank {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        f.write_char('_')?;
+        Display::fmt(self, f)
     }
 }
 

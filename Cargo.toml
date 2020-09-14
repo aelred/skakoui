@@ -16,6 +16,7 @@ arrayvec = "0.5.1"
 [dev-dependencies]
 pretty_assertions = "0.5.1"
 spectral = "0.6.0"
+proptest = "0.10.1"
 
 [features]
 # Makes warnings into errors
