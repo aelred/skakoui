@@ -172,7 +172,7 @@ impl Board {
     }
 
     /// Perform a move on the board, mutating the board
-    pub fn make_move(&mut self, mov: Move) {
+    pub fn make_move(&mut self, mov: Move) -> Option<PieceType> {
         let player = self.player();
         let from = mov.from();
         let to = mov.to();
@@ -216,6 +216,8 @@ impl Board {
         };
 
         self.board_states.push(new_board_state);
+
+        captured_piece_type
     }
 
     /// Undo a move on the board - opposite of [make_move]

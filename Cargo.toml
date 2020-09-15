@@ -21,6 +21,7 @@ proptest = "0.10.1"
 [features]
 # Makes warnings into errors
 strict = []
+log-search = []
 
 [profile.release]
 debug = true

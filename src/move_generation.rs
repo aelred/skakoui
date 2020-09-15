@@ -20,6 +20,7 @@ use self::piece_type::KnightType;
 use self::piece_type::PieceTypeT;
 use self::piece_type::QueenType;
 use self::piece_type::RookType;
+use crate::piece::PieceType::King;
 
 impl Board {
     /// Lazy iterator of all legal moves
@@ -29,10 +30,11 @@ impl Board {
 
         // TODO: this is a very inefficient way to confirm if in check
         pseudo_legal_moves.filter(move |mov| {
-            self.make_move(*mov);
+            let captured = self.make_move(*mov);
             let in_check = self.can_take_king();
+            let captured_king = captured == Some(King);
             self.unmake_move(*mov);
-            !in_check
+            !(in_check || captured_king)
         })
     }
 

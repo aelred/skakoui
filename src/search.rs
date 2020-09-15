@@ -1,17 +1,31 @@
-use crate::Bitboard;
+use crate::piece::PieceType::King;
 use crate::Board;
 use crate::Move;
 use crate::PieceMap;
 use crate::Player;
+use crate::{Bitboard, Piece, PieceType};
 use chashmap::CHashMap;
 use std::collections::HashSet;
+use std::io::Write;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
-const LOW_SCORE: i32 = -HIGH_SCORE;
+const WIN: i32 = HIGH_SCORE - 1; // Very high, but not the highest possible value
+const LOW_SCORE: i32 = -HIGH_SCORE; // Not std::i32::MIN or we get overflows on negation
+
+macro_rules! log_search {
+    ($depth:expr, $($arg:tt)*) => ({
+        if cfg!(feature = "log-search") {
+            let indent = std::iter::repeat(' ')
+                .take(10 - $depth as usize * 2)
+                .collect::<String>();
+            println!("{}- {} {}", indent, $depth, format_args!($($arg)*))
+        }
+    })
+}
 
 /// Table of moves, the key represents the game-state
 type TranspositionTable = Arc<CHashMap<Key, Node>>;
@@ -25,7 +39,7 @@ struct Node {
     node_type: NodeType,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum NodeType {
     /// Principal variation node, fully explored and value is exact
     PV,
@@ -54,7 +68,7 @@ pub struct Searcher {
     board: Board,
 }
 
-const NUM_THREADS: u32 = 4;
+const NUM_THREADS: u32 = 1;
 
 impl Default for Searcher {
     fn default() -> Self {
@@ -126,8 +140,13 @@ impl Searcher {
 
         let mut key_set = HashSet::new();
 
-        loop {
-            let moves = board.pseudo_legal_moves();
+        let mut adjust = 1;
+
+        'find_pv: loop {
+            // Negate score based on who is playing
+            adjust *= -1;
+
+            let moves: Vec<Move> = board.moves().collect();
 
             let mut best_move = None;
             let mut best_score = i32::MIN;
@@ -139,15 +158,16 @@ impl Searcher {
 
                 // Check for loop
                 if !key_set.insert(key) {
-                    break;
+                    break 'find_pv;
                 }
 
-                let entry = self.transposition_table.get(&key);
-
-                match entry {
-                    Some(e) if e.node_type == NodeType::PV && e.value > best_score => {
-                        best_move = Some(mov);
-                        best_score = e.value;
+                match self.transposition_table.get(&key) {
+                    Some(entry) => {
+                        let score = entry.value * adjust;
+                        if entry.node_type == NodeType::PV && score > best_score {
+                            best_move = Some(mov);
+                            best_score = score;
+                        }
                     }
                     _ => (),
                 }
@@ -164,7 +184,7 @@ impl Searcher {
         // Return a totally random move if we couldn't find anything.
         // This can happen if search is stopped very quickly.
         if pv.is_empty() {
-            if let Some(mov) = board.pseudo_legal_moves().next() {
+            if let Some(mov) = board.moves().next() {
                 pv.push(mov);
             }
         }
@@ -202,17 +222,21 @@ impl<'a> ThreadSearcher<'a> {
         let mut depth = 1;
 
         while !self.should_abort() {
+            log_search!(depth, "start search");
             self.search(depth, LOW_SCORE, HIGH_SCORE);
+            log_search!(depth, "end search");
             depth += 1
         }
     }
 
+    // alpha = lower bound for value of child nodes
+    // beta = upper bound for value of child nodes
     fn search(&mut self, depth: u32, mut alpha: i32, mut beta: i32) -> i32 {
-        if self.should_abort() {
-            return self.board.eval();
-        }
+        log_search!(depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
+
+        let alpha_orig = alpha;
 
         if let Some(entry) = self.transposition_table.get(&key) {
             if entry.depth >= depth {
@@ -234,14 +258,52 @@ impl<'a> ThreadSearcher<'a> {
             }
         }
 
-        let value = self.search_uncached(depth, alpha, beta);
-        let node_type = if value >= beta {
+        if depth == 0 {
+            return self.quiesce(alpha, beta);
+        }
+
+        let mut moves = self.board.pseudo_legal_moves().peekable();
+
+        if moves.peek().is_none() {
+            return 0; // In stalemate, so this is a tie
+        }
+
+        let mut value = LOW_SCORE;
+
+        for mov in moves {
+            log_search!(depth, "{}:", mov);
+
+            let rec_search = if self.board.make_move(mov) == Some(King) {
+                WIN
+            } else {
+                -self.search(depth - 1, -beta, -alpha)
+            };
+            self.board.unmake_move(mov);
+
+            if self.should_abort() {
+                return 0;
+            }
+
+            log_search!(depth, "{} = {}", mov, rec_search);
+
+            value = value.max(rec_search);
+
+            alpha = alpha.max(value);
+            if alpha >= beta {
+                break;
+            }
+        }
+
+        let node_type = if value <= alpha_orig {
             NodeType::Cut
-        } else if value <= alpha {
+        } else if value >= beta {
             NodeType::All
         } else {
             NodeType::PV
         };
+
+        log_search!(depth, "recording {:?} {:?}", value, node_type);
+
         let entry = Node {
             depth,
             value,
@@ -253,33 +315,6 @@ impl<'a> ThreadSearcher<'a> {
         value
     }
 
-    fn search_uncached(&mut self, depth: u32, mut alpha: i32, beta: i32) -> i32 {
-        if depth == 0 {
-            return self.quiesce(alpha, beta);
-        }
-
-        let mut moves = self.board.pseudo_legal_moves().peekable();
-
-        if moves.peek().is_none() {
-            return 0; // Being unable to move is a tie
-        }
-
-        for mov in moves {
-            self.board.make_move(mov);
-            let value = -self.search(depth - 1, -beta, -alpha);
-            self.board.unmake_move(mov);
-
-            if value >= beta {
-                return beta;
-            }
-            if value > alpha {
-                alpha = value;
-            }
-        }
-
-        alpha
-    }
-
     /// Evaluate how "quiescent" (quiet or stable) a board is.
     ///
     /// The idea is that a board with lots going on is worth investigating more deeply.
@@ -287,10 +322,6 @@ impl<'a> ThreadSearcher<'a> {
     /// piece could be taken in the next turn.
     fn quiesce(&mut self, mut alpha: i32, beta: i32) -> i32 {
         let stand_pat = self.board.eval();
-
-        if self.should_abort() {
-            return stand_pat;
-        }
 
         if stand_pat >= beta {
             return beta;
@@ -300,20 +331,27 @@ impl<'a> ThreadSearcher<'a> {
             alpha = stand_pat;
         }
 
+        let mut value = LOW_SCORE;
+
         for mov in self.board.capturing_moves() {
-            self.board.make_move(mov);
-            let value = -self.quiesce(-beta, -alpha);
+            value = if self.board.make_move(mov) == Some(King) {
+                WIN
+            } else {
+                value.max(-self.quiesce(-beta, -alpha))
+            };
             self.board.unmake_move(mov);
 
-            if value >= beta {
-                return beta;
+            if self.should_abort() {
+                return 0;
             }
-            if value > alpha {
-                alpha = value;
+
+            alpha = alpha.max(value);
+            if alpha >= beta {
+                break;
             }
         }
 
-        alpha
+        value
     }
 
     fn should_abort(&mut self) -> bool {
