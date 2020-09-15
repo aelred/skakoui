@@ -17,7 +17,7 @@ use std::fmt;
 use std::ops::BitOr;
 
 /// Represents a game in-progress
-#[derive(Debug, Eq, PartialEq, Clone, Hash)]
+#[derive(Eq, PartialEq, Clone, Hash)]
 pub struct Board {
     /// Bitboards for every piece
     bitboards: PieceMap<Bitboard>,
@@ -76,6 +76,43 @@ impl Board {
         // TODO: also parse castling, en passant and number of moves
 
         Some(Self::with_states(pieces_array, player, vec![]))
+    }
+
+    pub fn to_fen(&self) -> String {
+        let mut array: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
+
+        for (square, piece) in self.pieces.iter() {
+            array[square.rank().to_index() as usize][square.file().to_index() as usize] = *piece;
+        }
+
+        let mut fen = String::new();
+        let mut empty_count = 0;
+
+        fn push_empty_count(fen: &mut String, empty_count: &mut i32) {
+            if *empty_count != 0 {
+                fen.push_str(&empty_count.to_string());
+                *empty_count = 0;
+            }
+        }
+
+        for rank in array.iter().rev() {
+            if !fen.is_empty() {
+                fen.push('/');
+            }
+
+            for square in rank {
+                match square {
+                    Some(piece) => {
+                        push_empty_count(&mut fen, &mut empty_count);
+                        fen.push(piece.to_fen())
+                    }
+                    None => empty_count += 1,
+                }
+            }
+            push_empty_count(&mut fen, &mut empty_count);
+        }
+
+        fen
     }
 
     fn with_states(
@@ -296,6 +333,12 @@ impl Default for Board {
             ],
             Player::White,
         )
+    }
+}
+
+impl fmt::Debug for Board {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        write!(f, "Board::from_fen(\"{}\")", self.to_fen())
     }
 }
 

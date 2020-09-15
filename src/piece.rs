@@ -81,6 +81,15 @@ impl Piece {
     pub fn piece_type(self) -> PieceType {
         self.piece_type
     }
+
+    pub fn to_fen(&self) -> char {
+        let c = self.piece_type.as_char();
+        if self.player == Player::White {
+            c.to_ascii_uppercase()
+        } else {
+            c.to_ascii_lowercase()
+        }
+    }
 }
 
 impl FromStr for Piece {
