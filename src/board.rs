@@ -341,7 +341,13 @@ impl Default for Board {
 
 impl fmt::Debug for Board {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        write!(f, "Board::from_fen(\"{}\")", self.to_fen())
+        let fen = self.to_fen();
+        let fen_url = fen.replace(" ", "_");
+        write!(
+            f,
+            "Board::from_fen(\"{}\") /* https://lichess.org/analysis/{} */",
+            fen, fen_url
+        )
     }
 }
 
