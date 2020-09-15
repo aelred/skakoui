@@ -112,6 +112,9 @@ impl Board {
             push_empty_count(&mut fen, &mut empty_count);
         }
 
+        fen.push(' ');
+        fen.push(self.player.to_fen());
+
         fen
     }
 

@@ -47,6 +47,10 @@ impl Player {
         }
     }
 
+    fn to_fen(self) -> char {
+        self.as_char().to_ascii_lowercase()
+    }
+
     fn score_multiplier(self) -> i32 {
         match self {
             Player::White => 1,
