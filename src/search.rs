@@ -11,6 +11,9 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
+use ttable::{Key, Node, NodeType, TranspositionTable};
+
+mod ttable;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
 const WIN: i32 = HIGH_SCORE - 1; // Very high, but not the highest possible value
@@ -25,28 +28,6 @@ macro_rules! log_search {
             println!("{}- {} {}", indent, $depth, format_args!($($arg)*))
         }
     })
-}
-
-/// Table of moves, the key represents the game-state
-type TranspositionTable = Arc<CHashMap<Key, Node>>;
-
-type Key = (PieceMap<Bitboard>, Player);
-
-#[derive(Debug)]
-struct Node {
-    depth: u32,
-    value: i32,
-    node_type: NodeType,
-}
-
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-enum NodeType {
-    /// Principal variation node, fully explored and value is exact
-    PV,
-    /// Cut node, or fail-high node, was beta-cutoff, value is a lower bound
-    Cut,
-    /// All-node, or fail-low node, no moves exceeded alpha, value is an upper bound
-    All,
 }
 
 impl Board {
@@ -68,7 +49,7 @@ pub struct Searcher {
     board: Board,
 }
 
-const NUM_THREADS: u32 = 1;
+const NUM_THREADS: u32 = 4;
 
 impl Default for Searcher {
     fn default() -> Self {
@@ -190,10 +171,6 @@ impl Searcher {
         }
 
         pv
-    }
-
-    pub fn clear(&self) {
-        self.transposition_table.clear();
     }
 }
 
