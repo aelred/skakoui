@@ -45,7 +45,7 @@ enum Message {
 
 pub struct Searcher {
     txs: Vec<Sender<Message>>,
-    transposition_table: TranspositionTable,
+    transposition_table: Arc<TranspositionTable>,
     board: Board,
 }
 
@@ -53,7 +53,10 @@ const NUM_THREADS: u32 = 4;
 
 impl Default for Searcher {
     fn default() -> Self {
-        let transposition_table = TranspositionTable::default();
+        // Each entry is ~128 bytes, so this should be ~128MB
+        const TABLE_SIZE: usize = 1024 * 1024;
+
+        let transposition_table = Arc::new(TranspositionTable::new(TABLE_SIZE));
         let mut txs = vec![];
 
         for _ in 0..NUM_THREADS {
@@ -73,7 +76,7 @@ impl Default for Searcher {
     }
 }
 
-fn worker_thread(transposition_table: &TranspositionTable, rx: &Receiver<Message>) {
+fn worker_thread(transposition_table: &Arc<TranspositionTable>, rx: &Receiver<Message>) {
     loop {
         match rx.recv().unwrap() {
             Message::StartSearch(mut board) => {
@@ -176,7 +179,7 @@ impl Searcher {
 
 struct ThreadSearcher<'a> {
     board: &'a mut Board,
-    transposition_table: &'a TranspositionTable,
+    transposition_table: &'a Arc<TranspositionTable>,
     rx: &'a Receiver<Message>,
     abort: bool,
 }
@@ -184,7 +187,7 @@ struct ThreadSearcher<'a> {
 impl<'a> ThreadSearcher<'a> {
     fn new(
         board: &'a mut Board,
-        transposition_table: &'a TranspositionTable,
+        transposition_table: &'a Arc<TranspositionTable>,
         rx: &'a Receiver<Message>,
     ) -> Self {
         Self {

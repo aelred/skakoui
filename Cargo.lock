@@ -77,6 +77,7 @@ dependencies = [
  "chashmap 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "enum-map 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "plru 0.1.2",
  "pretty_assertions 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -257,6 +258,10 @@ dependencies = [
  "smallvec 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "plru"
+version = "0.1.2"
 
 [[package]]
 name = "ppv-lite86"

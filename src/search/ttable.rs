@@ -1,26 +1,46 @@
 use crate::search::ttable::NodeType::PV;
 use crate::{Bitboard, Board, PieceMap, Player};
 use chashmap::{CHashMap, ReadGuard};
+use std::ops::Deref;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 /// Table of moves, the key represents the game-state
-#[derive(Default, Clone)]
-pub struct TranspositionTable(Arc<CHashMap<Key, Node>>);
+pub struct TranspositionTable {
+    map: CHashMap<Key, (Node, usize)>,
+    cache_lines: plru::Cache<Box<[AtomicU64]>>,
+}
 
 impl TranspositionTable {
-    pub fn get(&self, key: &Key) -> Option<ReadGuard<Key, Node>> {
-        self.0.get(key)
+    pub fn new(size: usize) -> Self {
+        Self {
+            map: CHashMap::with_capacity(size),
+            cache_lines: plru::create(size),
+        }
+    }
+
+    pub fn get(&self, key: &Key) -> Option<Node> {
+        self.map.get(key).map(|guard| {
+            let (node, line) = guard.deref();
+            self.cache_lines.touch(*line);
+            *node
+        })
     }
 
     pub fn insert(&self, key: Key, node: Node) {
-        self.0.upsert(
+        self.map.upsert(
             key,
-            || node,
-            |current| {
+            || {
+                let line = self.cache_lines.replace();
+                self.cache_lines.touch(line);
+                (node, line)
+            },
+            |(current, line)| {
                 if current.depth > node.depth || (current.node_type == PV && node.node_type != PV) {
                     return;
                 }
 
+                self.cache_lines.touch(*line);
                 *current = node;
             },
         );
