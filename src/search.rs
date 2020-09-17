@@ -25,7 +25,7 @@ macro_rules! log_search {
             let indent = std::iter::repeat(' ')
                 .take(10 - $depth as usize * 2)
                 .collect::<String>();
-            println!("{}- {} {}", indent, $depth, format_args!($($arg)*))
+            println!("{}- {}. {}", indent, $depth, format_args!($($arg)*))
         }
     })
 }
@@ -37,19 +37,31 @@ impl Board {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum Message {
+enum Request {
     StartSearch(Box<Board>),
     AbortSearch,
     AbortThread,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum Response {
+    StoppedSearch,
+}
+
 pub struct Searcher {
-    txs: Vec<Sender<Message>>,
+    txs: Vec<Sender<Request>>,
+    rxs: Vec<Receiver<Response>>,
     transposition_table: Arc<TranspositionTable>,
     board: Board,
 }
 
-const NUM_THREADS: u32 = 4;
+fn num_threads() -> u32 {
+    if cfg!(feature = "log-search") {
+        1
+    } else {
+        4
+    }
+}
 
 impl Default for Searcher {
     fn default() -> Self {
@@ -58,37 +70,44 @@ impl Default for Searcher {
 
         let transposition_table = Arc::new(TranspositionTable::new(TABLE_SIZE));
         let mut txs = vec![];
+        let mut rxs = vec![];
 
-        for _ in 0..NUM_THREADS {
+        for _ in 0..num_threads() {
             let transposition_table = transposition_table.clone();
-            let (msg_tx, msg_rx) = std::sync::mpsc::channel();
+            let (req_tx, req_rx) = std::sync::mpsc::channel();
+            let (res_tx, res_rx) = std::sync::mpsc::channel();
 
-            thread::spawn(move || worker_thread(&transposition_table, &msg_rx));
+            thread::spawn(move || worker_thread(&transposition_table, &req_rx, &res_tx));
 
-            txs.push(msg_tx);
+            txs.push(req_tx);
+            rxs.push(res_rx);
         }
 
         Self {
             txs,
+            rxs,
             transposition_table,
             board: Board::default(),
         }
     }
 }
 
-fn worker_thread(transposition_table: &Arc<TranspositionTable>, rx: &Receiver<Message>) {
+fn worker_thread(
+    transposition_table: &Arc<TranspositionTable>,
+    rx: &Receiver<Request>,
+    tx: &Sender<Response>,
+) {
     loop {
         match rx.recv().unwrap() {
-            Message::StartSearch(mut board) => {
+            Request::StartSearch(mut board) => {
                 let mut searcher = ThreadSearcher::new(&mut board, transposition_table, rx);
                 searcher.run();
+                tx.send(Response::StoppedSearch).unwrap();
             }
-            Message::AbortThread => {
+            Request::AbortThread => {
                 return;
             }
-            Message::AbortSearch => {
-                // We're already done searching, so ignore
-            }
+            request => panic!("Received unexpected request {:?}", request),
         }
     }
 }
@@ -96,7 +115,7 @@ fn worker_thread(transposition_table: &Arc<TranspositionTable>, rx: &Receiver<Me
 impl Drop for Searcher {
     fn drop(&mut self) {
         for tx in &self.txs {
-            let _ = tx.send(Message::AbortThread);
+            let _ = tx.send(Request::AbortThread);
         }
     }
 }
@@ -106,14 +125,19 @@ impl Searcher {
         self.board = board.clone();
 
         for tx in &self.txs {
-            tx.send(Message::StartSearch(Box::new(board.clone())))
+            tx.send(Request::StartSearch(Box::new(board.clone())))
                 .unwrap();
         }
     }
 
     pub fn stop(&mut self) {
         for tx in &self.txs {
-            tx.send(Message::AbortSearch).unwrap();
+            tx.send(Request::AbortSearch).unwrap();
+        }
+        for rx in &self.rxs {
+            match rx.recv().unwrap() {
+                Response::StoppedSearch => {}
+            }
         }
     }
 
@@ -133,7 +157,7 @@ impl Searcher {
             let moves: Vec<Move> = board.moves().collect();
 
             let mut best_move = None;
-            let mut best_score = i32::MIN;
+            let mut best_score = LOW_SCORE;
 
             for mov in moves {
                 board.make_move(mov);
@@ -153,7 +177,7 @@ impl Searcher {
                             best_score = score;
                         }
                     }
-                    _ => (),
+                    _ => {}
                 }
             }
 
@@ -180,7 +204,7 @@ impl Searcher {
 struct ThreadSearcher<'a> {
     board: &'a mut Board,
     transposition_table: &'a Arc<TranspositionTable>,
-    rx: &'a Receiver<Message>,
+    rx: &'a Receiver<Request>,
     abort: bool,
 }
 
@@ -188,7 +212,7 @@ impl<'a> ThreadSearcher<'a> {
     fn new(
         board: &'a mut Board,
         transposition_table: &'a Arc<TranspositionTable>,
-        rx: &'a Receiver<Message>,
+        rx: &'a Receiver<Request>,
     ) -> Self {
         Self {
             board,
@@ -254,6 +278,7 @@ impl<'a> ThreadSearcher<'a> {
             log_search!(depth, "{}:", mov);
 
             let rec_search = if self.board.make_move(mov) == Some(King) {
+                log_search!(depth, "WIN");
                 WIN
             } else {
                 -self.search(depth - 1, -beta, -alpha)
@@ -270,6 +295,7 @@ impl<'a> ThreadSearcher<'a> {
 
             alpha = alpha.max(value);
             if alpha >= beta {
+                log_search!(depth, "cut-off, {} >= {}", alpha, beta);
                 break;
             }
         }
@@ -307,17 +333,13 @@ impl<'a> ThreadSearcher<'a> {
             return beta;
         }
 
-        if alpha < stand_pat {
-            alpha = stand_pat;
-        }
-
-        let mut value = LOW_SCORE;
+        alpha = alpha.min(stand_pat);
 
         for mov in self.board.capturing_moves() {
-            value = if self.board.make_move(mov) == Some(King) {
+            let score = if self.board.make_move(mov) == Some(King) {
                 WIN
             } else {
-                value.max(-self.quiesce(-beta, -alpha))
+                -self.quiesce(-beta, -alpha)
             };
             self.board.unmake_move(mov);
 
@@ -325,17 +347,17 @@ impl<'a> ThreadSearcher<'a> {
                 return 0;
             }
 
-            alpha = alpha.max(value);
+            alpha = alpha.max(score);
             if alpha >= beta {
                 break;
             }
         }
 
-        value
+        alpha
     }
 
     fn should_abort(&mut self) -> bool {
-        self.abort = self.abort || self.rx.try_recv() == Ok(Message::AbortSearch);
+        self.abort = self.abort || self.rx.try_recv() == Ok(Request::AbortSearch);
         self.abort
     }
 }

@@ -10,7 +10,7 @@ proptest! {
     fn searcher_can_find_mate_in_1_in_a_second((mut board, mating_move) in mate_in_1_board()) {
         let mut searcher = Searcher::default();
         searcher.go(&board);
-        std::thread::sleep(Duration::from_secs(1));
+        std::thread::sleep(Duration::from_secs(10));
         searcher.stop();
         let pv = searcher.principal_variation();
         let mov = *pv.first().unwrap();
