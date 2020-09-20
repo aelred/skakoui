@@ -26,10 +26,10 @@ impl TranspositionTable {
     pub fn get(&self, key: &Key) -> Option<Node> {
         self.key_to_line
             .get(key)
-            .and_then(|guard| {
-                let line = guard.deref();
-                self.cache_lines.touch(*line);
-                *self.values[*line].read().unwrap()
+            .map(|guard| *guard.deref())
+            .and_then(|line| {
+                self.cache_lines.touch(line);
+                *self.values[line].read().unwrap()
             })
             .map(|(_, node)| node)
     }

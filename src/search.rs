@@ -16,7 +16,6 @@ use ttable::{Key, Node, NodeType, TranspositionTable};
 mod ttable;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
-const WIN: i32 = HIGH_SCORE - 1; // Very high, but not the highest possible value
 const LOW_SCORE: i32 = -HIGH_SCORE; // Not std::i32::MIN or we get overflows on negation
 
 macro_rules! log_search {
@@ -169,19 +168,17 @@ impl Searcher {
                     break 'find_pv;
                 }
 
-                match self.transposition_table.get(&key) {
-                    Some(entry) => {
-                        let score = entry.value * adjust;
-                        if entry.node_type == NodeType::PV && score > best_score {
-                            best_move = Some(mov);
-                            best_score = score;
-                        }
+                if let Some(entry) = self.transposition_table.get(&key) {
+                    let score = entry.value * adjust;
+                    if entry.node_type == NodeType::PV && score > best_score {
+                        best_move = Some(mov);
+                        best_score = score;
                     }
-                    _ => {}
                 }
             }
 
             if let Some(best) = best_move {
+                dbg!(best);
                 pv.push(best);
                 board.make_move(best);
             } else {
@@ -279,7 +276,7 @@ impl<'a> ThreadSearcher<'a> {
 
             let rec_search = if self.board.make_move(mov) == Some(King) {
                 log_search!(depth, "WIN");
-                WIN
+                self.board.eval_win()
             } else {
                 -self.search(depth - 1, -beta, -alpha)
             };
@@ -337,7 +334,7 @@ impl<'a> ThreadSearcher<'a> {
 
         for mov in self.board.capturing_moves() {
             let score = if self.board.make_move(mov) == Some(King) {
-                WIN
+                self.board.eval_win()
             } else {
                 -self.quiesce(-beta, -alpha)
             };

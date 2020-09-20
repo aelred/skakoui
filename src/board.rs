@@ -171,6 +171,11 @@ impl Board {
         self.player
     }
 
+    /// Number of half-moves played in the game
+    pub fn plies(&self) -> usize {
+        self.board_states.len()
+    }
+
     /// Perform a move on the board, mutating the board
     pub fn make_move(&mut self, mov: Move) -> Option<PieceType> {
         let player = self.player();
@@ -291,6 +296,11 @@ impl Board {
         self.occupancy_player[player]
     }
 
+    pub fn eval_win(&self) -> i32 {
+        let delay_penalty = self.plies() as i32;
+        1_000_000 - delay_penalty
+    }
+
     pub fn eval(&self) -> i32 {
         let white_centric_score = 200 * (self.count(Piece::WK) - self.count(Piece::BK))
             + 9 * (self.count(Piece::WQ) - self.count(Piece::BQ))
@@ -299,7 +309,7 @@ impl Board {
             + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
             + (self.count(Piece::WP) - self.count(Piece::BP));
 
-        white_centric_score * self.player.score_multiplier()
+        white_centric_score * self.player.score_multiplier() * 100
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
