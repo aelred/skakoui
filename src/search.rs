@@ -4,7 +4,6 @@ use crate::Move;
 use crate::PieceMap;
 use crate::Player;
 use crate::{Bitboard, Piece, PieceType};
-use chashmap::CHashMap;
 use std::collections::HashSet;
 use std::io::Write;
 use std::sync::mpsc::Receiver;
@@ -232,7 +231,7 @@ impl<'a> ThreadSearcher<'a> {
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
-    fn search(&mut self, depth: u32, mut alpha: i32, mut beta: i32) -> i32 {
+    fn search(&mut self, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
         log_search!(depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
