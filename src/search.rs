@@ -1,16 +1,11 @@
 mod tree;
 
-use crate::piece::PieceType::King;
 use crate::search::tree::SearchTree;
 use crate::Board;
 use crate::Move;
-use crate::PieceMap;
-use crate::Player;
-use crate::{Bitboard, Piece, PieceType};
-use rand::seq::SliceRandom;
-use rand::thread_rng;
+
 use std::collections::HashSet;
-use std::io::Write;
+
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -169,7 +164,8 @@ impl Searcher {
             fs::write(
                 "search-tree.json",
                 serde_json::to_string_pretty(&tree).unwrap(),
-            );
+            )
+            .unwrap();
         }
 
         let mut pv = vec![];
@@ -298,7 +294,7 @@ impl<'a> ThreadSearcher<'a> {
             return self.quiesce(alpha, beta, 0);
         }
 
-        let mut moves: Vec<Move> = self.board.moves().collect();
+        let moves: Vec<Move> = self.board.moves().collect();
 
         let mut value = if moves.is_empty() {
             if self.board.checkmate() {

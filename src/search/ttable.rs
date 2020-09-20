@@ -61,7 +61,7 @@ impl Into<u64> for Node {
 }
 
 impl From<u64> for Node {
-    fn from(mut n: u64) -> Self {
+    fn from(n: u64) -> Self {
         Self {
             value: n as u32 as i32,
             depth: (n >> 32) as u16,

@@ -63,7 +63,7 @@ impl<W: Write> UCI<W> {
                     }
                 }
                 "go" => {
-                    self.searcher.go(&mut board, None);
+                    self.searcher.go(&board, None);
 
                     if args.peek() == Some(&&"movetime") {
                         args.next();

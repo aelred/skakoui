@@ -3,7 +3,7 @@ mod strategies;
 use chess::Searcher;
 use proptest::prelude::ProptestConfig;
 use proptest::prelude::*;
-use std::time::Duration;
+
 use strategies::mate_in_1_board;
 
 proptest! {

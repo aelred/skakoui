@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::fmt;
-use std::fmt::Display;
+
 use std::ops::Add;
 use std::ops::Index;
 use std::str::FromStr;

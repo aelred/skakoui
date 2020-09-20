@@ -79,8 +79,7 @@ impl Board {
         let king = Piece::new(king_player, PieceType::King);
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
             self.pseudo_legal_moves_for(king_player.opponent())
-                .find(|mov| mov.to() == king_pos)
-                .is_some()
+                .any(|mov| mov.to() == king_pos)
         } else {
             false
         }
@@ -764,7 +763,7 @@ mod tests {
         }
 
         for (depth, expected_moves) in expected_moves_at_depth.iter().enumerate() {
-            let mut actual_moves = count_moves(&mut board, depth);
+            let actual_moves = count_moves(&mut board, depth);
 
             assert_eq!(*expected_moves, actual_moves);
         }
