@@ -1,4 +1,5 @@
 use crate::{Bitboard, PieceMap, Player};
+use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::AtomicU64;
@@ -46,7 +47,7 @@ impl TranspositionTable {
 
 pub type Key = (PieceMap<Bitboard>, Player);
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Serialize)]
 pub struct Node {
     pub depth: u16,
     pub value: i32,
@@ -69,7 +70,7 @@ impl From<u64> for Node {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
 pub enum NodeType {
     /// Principal variation node, fully explored and value is exact
     PV = 0,

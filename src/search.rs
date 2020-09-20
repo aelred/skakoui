@@ -1,15 +1,20 @@
+mod tree;
+
 use crate::piece::PieceType::King;
+use crate::search::tree::SearchTree;
 use crate::Board;
 use crate::Move;
 use crate::PieceMap;
 use crate::Player;
 use crate::{Bitboard, Piece, PieceType};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use std::collections::HashSet;
 use std::io::Write;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
-use std::thread;
+use std::{fs, thread};
 use ttable::{Key, Node, NodeType, TranspositionTable};
 
 mod ttable;
@@ -18,10 +23,10 @@ const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE; // Not std::i32::MIN or we get overflows on negation
 
 macro_rules! log_search {
-    ($depth:expr, $($arg:tt)*) => ({
+    ($searcher:expr, $depth:expr, $($arg:tt)*) => ({
         if cfg!(feature = "log-search") {
             let indent = std::iter::repeat(' ')
-                .take(10 - $depth as usize * 2)
+                .take(($searcher.max_depth as i16 - $depth as i16) as usize * 2)
                 .collect::<String>();
             println!("{}- {}. {}", indent, $depth, format_args!($($arg)*))
         }
@@ -36,7 +41,10 @@ impl Board {
 
 #[derive(Debug, PartialEq, Eq)]
 enum Request {
-    StartSearch(Box<Board>),
+    StartSearch {
+        board: Box<Board>,
+        target_depth: Option<u16>,
+    },
     AbortSearch,
     AbortThread,
 }
@@ -63,8 +71,8 @@ fn num_threads() -> u32 {
 
 impl Default for Searcher {
     fn default() -> Self {
-        // Each entry is ~128 bytes, so this should be ~128MB
-        const TABLE_SIZE: usize = 1024 * 1024;
+        // Each table entry is 8 bytes
+        const TABLE_SIZE: usize = 100_000_000;
 
         let transposition_table = Arc::new(TranspositionTable::new(TABLE_SIZE));
         let mut txs = vec![];
@@ -97,8 +105,12 @@ fn worker_thread(
 ) {
     loop {
         match rx.recv().unwrap() {
-            Request::StartSearch(mut board) => {
-                let mut searcher = ThreadSearcher::new(&mut board, transposition_table, rx);
+            Request::StartSearch {
+                mut board,
+                target_depth,
+            } => {
+                let mut searcher =
+                    ThreadSearcher::new(&mut board, transposition_table, rx, target_depth);
                 searcher.run();
                 tx.send(Response::StoppedSearch).unwrap();
             }
@@ -119,12 +131,15 @@ impl Drop for Searcher {
 }
 
 impl Searcher {
-    pub fn go(&mut self, board: &Board) {
+    pub fn go(&mut self, board: &Board, target_depth: Option<u16>) {
         self.board = board.clone();
 
         for tx in &self.txs {
-            tx.send(Request::StartSearch(Box::new(board.clone())))
-                .unwrap();
+            let start_search = Request::StartSearch {
+                board: Box::new(board.clone()),
+                target_depth,
+            };
+            tx.send(start_search).unwrap();
         }
     }
 
@@ -132,6 +147,11 @@ impl Searcher {
         for tx in &self.txs {
             tx.send(Request::AbortSearch).unwrap();
         }
+        self.wait();
+    }
+
+    /// Wait to stop - only call this after `stop()` or if there is a stopping condition!
+    pub fn wait(&mut self) {
         for rx in &self.rxs {
             match rx.recv().unwrap() {
                 Response::StoppedSearch => {}
@@ -141,6 +161,16 @@ impl Searcher {
 
     pub fn principal_variation(&self) -> Vec<Move> {
         let mut board = self.board.clone();
+
+        if cfg!(feature = "log-search2") {
+            let tree = SearchTree::from_table(&mut board, &self.transposition_table);
+            println!("Rebuilding search tree");
+            println!("Dumping to file search-tree.json");
+            fs::write(
+                "search-tree.json",
+                serde_json::to_string_pretty(&tree).unwrap(),
+            );
+        }
 
         let mut pv = vec![];
 
@@ -177,7 +207,6 @@ impl Searcher {
             }
 
             if let Some(best) = best_move {
-                dbg!(best);
                 pv.push(best);
                 board.make_move(best);
             } else {
@@ -202,6 +231,8 @@ struct ThreadSearcher<'a> {
     transposition_table: &'a Arc<TranspositionTable>,
     rx: &'a Receiver<Request>,
     abort: bool,
+    target_depth: u16,
+    max_depth: u16,
 }
 
 impl<'a> ThreadSearcher<'a> {
@@ -209,30 +240,35 @@ impl<'a> ThreadSearcher<'a> {
         board: &'a mut Board,
         transposition_table: &'a Arc<TranspositionTable>,
         rx: &'a Receiver<Request>,
+        target_depth: Option<u16>,
     ) -> Self {
         Self {
             board,
             transposition_table,
             rx,
             abort: false,
+            target_depth: target_depth.unwrap_or(u16::MAX),
+            max_depth: 0,
         }
     }
 
     fn run(&mut self) {
-        let mut depth = 1;
+        self.max_depth = 1;
+        log_search!(self, self.max_depth, "start search");
 
         while !self.should_abort() {
-            log_search!(depth, "start search");
-            self.search(depth, LOW_SCORE, HIGH_SCORE);
-            log_search!(depth, "end search");
-            depth += 1
+            log_search!(self, self.max_depth, "search at depth");
+            self.search(self.max_depth, LOW_SCORE, HIGH_SCORE);
+            self.max_depth += 1;
         }
+
+        log_search!(self, self.max_depth, "end search");
     }
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
     fn search(&mut self, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
-        log_search!(depth, "search, alpha = {}, beta = {}", alpha, beta);
+        log_search!(self, depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
 
@@ -244,10 +280,10 @@ impl<'a> ThreadSearcher<'a> {
                     NodeType::PV => {
                         return entry.value;
                     }
-                    NodeType::All => {
+                    NodeType::Cut => {
                         alpha = alpha.max(entry.value);
                     }
-                    NodeType::Cut => {
+                    NodeType::All => {
                         beta = beta.min(entry.value);
                     }
                 }
@@ -259,52 +295,64 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         if depth == 0 {
-            return self.quiesce(alpha, beta);
+            return self.quiesce(alpha, beta, 0);
         }
 
-        let mut moves = self.board.pseudo_legal_moves().peekable();
+        let mut moves: Vec<Move> = self.board.moves().collect();
 
-        if moves.peek().is_none() {
-            return 0; // In stalemate, so this is a tie
-        }
-
-        let mut value = LOW_SCORE;
+        let mut value = if moves.is_empty() {
+            if self.board.checkmate() {
+                -self.board.eval_win()
+            } else {
+                0 // In stalemate, so this is a tie
+            }
+        } else {
+            LOW_SCORE
+        };
 
         for mov in moves {
-            log_search!(depth, "{}:", mov);
+            log_search!(self, depth, "{}:", mov);
 
-            let rec_search = if self.board.make_move(mov) == Some(King) {
-                log_search!(depth, "WIN");
-                self.board.eval_win()
-            } else {
-                -self.search(depth - 1, -beta, -alpha)
-            };
+            // Evaluate value of move for current player
+            self.board.make_move(mov);
+            let mov_value = -self.search(
+                depth - 1,
+                // If our maximum possible score is `x`, then the opponent is guaranteed to
+                // score at least `-x`
+                -beta,
+                // If we're guaranteed a score of `y` already, then the opponent can't possibly
+                // get more than `-y`
+                -alpha,
+            );
             self.board.unmake_move(mov);
 
             if self.should_abort() {
                 return 0;
             }
 
-            log_search!(depth, "{} = {}", mov, rec_search);
+            log_search!(self, depth, "{} = {}", mov, mov_value);
 
-            value = value.max(rec_search);
+            value = value.max(mov_value);
 
+            // If value exceeds the old lower-bound, then we can increase the lower-bound
             alpha = alpha.max(value);
+
             if alpha >= beta {
-                log_search!(depth, "cut-off, {} >= {}", alpha, beta);
+                // We've found a move that reaches our upper-bound, so no point searching further
+                log_search!(self, depth, "cut-off, {} >= {}", alpha, beta);
                 break;
             }
         }
 
         let node_type = if value <= alpha_orig {
-            NodeType::Cut
-        } else if value >= beta {
             NodeType::All
+        } else if value >= beta {
+            NodeType::Cut
         } else {
             NodeType::PV
         };
 
-        log_search!(depth, "recording {:?} {:?}", value, node_type);
+        log_search!(self, depth, "recording {:?} {:?}", value, node_type);
 
         let entry = Node {
             depth,
@@ -322,28 +370,67 @@ impl<'a> ThreadSearcher<'a> {
     /// The idea is that a board with lots going on is worth investigating more deeply.
     /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
     /// piece could be taken in the next turn.
-    fn quiesce(&mut self, mut alpha: i32, beta: i32) -> i32 {
-        let stand_pat = self.board.eval();
-
-        if stand_pat >= beta {
-            return beta;
+    fn quiesce(&mut self, mut alpha: i32, beta: i32, depth: i16) -> i32 {
+        // hard cut-off to depth of quiescent search
+        if depth <= -2 {
+            log_search!(self, depth, "woah that's deep enough");
+            return self.board.eval();
         }
 
-        alpha = alpha.min(stand_pat);
+        let moves: Vec<Move>;
 
-        for mov in self.board.capturing_moves() {
-            let score = if self.board.make_move(mov) == Some(King) {
-                self.board.eval_win()
-            } else {
-                -self.quiesce(-beta, -alpha)
-            };
+        if !self.board.check(self.board.player()) {
+            // "standing pat" is a heuristic based on current board state.
+            // It's assumed that there is always some move that will improve our position, so we use
+            // it as our lower-bound.
+            let stand_pat = self.board.eval();
+
+            log_search!(
+                self,
+                depth,
+                "quiesce: pat={}, alpha={}, beta={}",
+                stand_pat,
+                alpha,
+                beta
+            );
+
+            if stand_pat >= beta {
+                return beta;
+            }
+
+            alpha = alpha.max(stand_pat);
+            moves = self.board.capturing_moves().collect();
+        } else {
+            // We don't want to use the "standing pat" if we're in check, because it may well be
+            // that ANY move is worse than the current state.
+            log_search!(
+                self,
+                depth,
+                "quiesce: check, alpha={}, beta={}",
+                alpha,
+                beta
+            );
+            // When in check, assess all moves that get out of check, not just captures
+            moves = self.board.moves().collect();
+
+            if moves.is_empty() {
+                return -self.board.eval_win();
+            }
+        }
+
+        for mov in moves {
+            log_search!(self, depth, "trying {}", mov);
+            self.board.make_move(mov);
+            let mov_value = -self.quiesce(-beta, -alpha, depth - 1);
             self.board.unmake_move(mov);
+
+            log_search!(self, depth, "{} = {}", mov, mov_value);
 
             if self.should_abort() {
                 return 0;
             }
 
-            alpha = alpha.max(score);
+            alpha = alpha.max(mov_value);
             if alpha >= beta {
                 break;
             }
@@ -353,7 +440,9 @@ impl<'a> ThreadSearcher<'a> {
     }
 
     fn should_abort(&mut self) -> bool {
-        self.abort = self.abort || self.rx.try_recv() == Ok(Request::AbortSearch);
+        self.abort = self.abort
+            || self.max_depth > self.target_depth
+            || self.rx.try_recv() == Ok(Request::AbortSearch);
         self.abort
     }
 }

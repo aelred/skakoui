@@ -57,7 +57,7 @@ impl Agent for Computer {
     const NAME: &'static str = "Computer";
 
     fn get_move(&mut self, board: &mut Board) -> Option<Move> {
-        self.searcher.go(board);
+        self.searcher.go(board, None);
         std::thread::sleep(Duration::from_secs(1));
         self.searcher.stop();
         let pv = self.searcher.principal_variation();

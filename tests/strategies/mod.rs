@@ -1,9 +1,8 @@
 use chess::{Board, Move, Piece, PieceType, Player};
-use proptest::array::{uniform1, uniform8};
+use proptest::array::uniform8;
 use proptest::option;
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
-use proptest::strategy::Union;
 use rand::thread_rng;
 
 pub fn arb_player() -> impl Strategy<Value = Player> {

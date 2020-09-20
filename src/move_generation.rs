@@ -26,12 +26,12 @@ impl Board {
     /// Lazy iterator of all legal moves
     #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
-        let pseudo_legal_moves = self.pseudo_legal_moves();
+        let me = self.player();
 
         // TODO: this is a very inefficient way to confirm if in check
-        pseudo_legal_moves.filter(move |mov| {
+        self.pseudo_legal_moves().filter(move |mov| {
             let captured = self.make_move(*mov);
-            let in_check = self.can_take_king();
+            let in_check = self.check(me);
             let captured_king = captured == Some(King);
             self.unmake_move(*mov);
             !(in_check || captured_king)
@@ -41,7 +41,13 @@ impl Board {
     /// Lazy iterator of all pseudo-legal moves (moves ignoring check)
     #[inline]
     pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
-        match self.player() {
+        self.pseudo_legal_moves_for(self.player())
+    }
+
+    /// Lazy iterator of all pseudo-legal moves (moves ignoring check)
+    #[inline]
+    pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
+        match player {
             Player::White => Box::new(self.moves_of_type::<AllMoves<WhitePlayer>>()),
             Player::Black => Box::new(self.moves_of_type::<AllMoves<BlackPlayer>>()),
         }
@@ -69,10 +75,10 @@ impl Board {
     }
 
     #[inline]
-    pub fn can_take_king(&self) -> bool {
-        let king = Piece::new(self.player().opponent(), PieceType::King);
+    pub fn check(&self, king_player: Player) -> bool {
+        let king = Piece::new(king_player, PieceType::King);
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
-            self.pseudo_legal_moves()
+            self.pseudo_legal_moves_for(king_player.opponent())
                 .find(|mov| mov.to() == king_pos)
                 .is_some()
         } else {
@@ -82,12 +88,13 @@ impl Board {
 
     #[inline]
     pub fn checkmate(&mut self) -> bool {
+        let me = self.player();
         let moves: Vec<Move> = self.moves().collect();
         for mov in moves {
             self.make_move(mov);
-            let can_take_king = self.can_take_king();
+            let check = self.check(me);
             self.unmake_move(mov);
-            if !can_take_king {
+            if !check {
                 return false;
             }
         }

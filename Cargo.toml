@@ -11,6 +11,8 @@ rand = "0.6.1"
 array-init = "0.0.4"
 tee = "0.1.0"
 arrayvec = "0.5.1"
+serde_json = { version = "1.0" }
+serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]
 pretty_assertions = "0.5.1"
@@ -21,6 +23,7 @@ proptest = "0.10.1"
 # Makes warnings into errors
 strict = []
 log-search = []
+log-search2 = []
 
 [profile.release]
 debug = true
