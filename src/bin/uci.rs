@@ -1,18 +1,14 @@
-use chess::{Board, Move, Searcher};
+use chess::{Board, Move, Player, Searcher};
 use std::error::Error;
-use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
 use std::time::Duration;
-use tee::TeeReader;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let log_file = File::create("/Users/aelred/Desktop/chess.log")?;
-
     let stdin = std::io::stdin();
     let stdout = std::io::stdout();
 
-    let reader = BufReader::new(TeeReader::new(stdin.lock(), log_file));
+    let reader = BufReader::new(stdin.lock());
 
     run(reader, &mut stdout.lock())?;
     Ok(())
@@ -25,10 +21,14 @@ struct UCI<W> {
 
 impl<W: Write> UCI<W> {
     fn run(&mut self, input: impl BufRead) -> Result<(), std::io::Error> {
+        let stderr = std::io::stderr();
+        let mut stderr = stderr.lock();
+
         let mut board = Board::default();
 
         for try_line in input.lines() {
             let line = try_line?;
+            writeln!(stderr, "{}", line)?;
             let words: Vec<&str> = line.split_whitespace().collect();
             let mut args = words.into_iter().peekable();
             let command = args.next().unwrap();
@@ -63,13 +63,46 @@ impl<W: Write> UCI<W> {
                     }
                 }
                 "go" => {
+                    let mut movetime = None;
+                    let mut wtime = None;
+                    let mut btime = None;
+
+                    while let Some(arg) = args.next() {
+                        match arg {
+                            "movetime" => {
+                                movetime.replace(Duration::from_millis(
+                                    args.next().unwrap().parse::<u64>().unwrap(),
+                                ));
+                            }
+                            "wtime" => {
+                                wtime.replace(Duration::from_millis(
+                                    args.next().unwrap().parse::<u64>().unwrap(),
+                                ));
+                            }
+                            "btime" => {
+                                btime.replace(Duration::from_millis(
+                                    args.next().unwrap().parse::<u64>().unwrap(),
+                                ));
+                            }
+                            arg => writeln!(stderr, "Unrecognised arg: {}", arg)?,
+                        }
+                    }
+
                     self.searcher.go(&board, None);
 
-                    if args.peek() == Some(&&"movetime") {
-                        args.next();
-                        let movetime =
-                            Duration::from_millis(args.next().unwrap().parse::<u64>().unwrap());
+                    if let Some(movetime) = movetime {
                         std::thread::sleep(movetime);
+                        self.stop()?;
+                    }
+
+                    let clock = match board.player() {
+                        Player::White => wtime,
+                        Player::Black => btime,
+                    };
+
+                    if let Some(clock) = clock {
+                        // Naively assume there's 40 moves to go in the game
+                        std::thread::sleep(clock / 40);
                         self.stop()?;
                     }
                 }
