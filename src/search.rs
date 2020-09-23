@@ -67,7 +67,7 @@ fn num_threads() -> u32 {
 impl Default for Searcher {
     fn default() -> Self {
         // Each table entry is 8 bytes
-        const TABLE_SIZE: usize = 100_000_000;
+        const TABLE_SIZE: usize = 20_000_000;
 
         let transposition_table = Arc::new(TranspositionTable::new(TABLE_SIZE));
         let mut txs = vec![];
