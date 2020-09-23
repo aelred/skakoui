@@ -1,8 +1,8 @@
-use chess::{Board, Move, Piece, PieceType, Player};
 use proptest::array::uniform8;
 use proptest::option;
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
+use skakoui::{Board, Move, Piece, PieceType, Player};
 
 pub fn arb_player() -> impl Strategy<Value = Player> {
     select(vec![Player::White, Player::Black])

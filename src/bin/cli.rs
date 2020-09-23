@@ -1,8 +1,8 @@
 #![cfg_attr(feature = "strict", deny(warnings))]
 
-use chess::Board;
-use chess::Move;
-use chess::Searcher;
+use skakoui::Board;
+use skakoui::Move;
+use skakoui::Searcher;
 use std::collections::HashSet;
 use std::default::Default;
 use std::io;

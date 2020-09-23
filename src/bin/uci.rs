@@ -1,4 +1,4 @@
-use chess::{Board, Move, Player, Searcher};
+use skakoui::{Board, Move, Player, Searcher};
 use std::error::Error;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
@@ -35,7 +35,7 @@ impl<W: Write> UCI<W> {
 
             match command {
                 "uci" => {
-                    writeln!(self.output, "id name skaki")?;
+                    writeln!(self.output, "id name skakoui")?;
                     writeln!(self.output, "id author Felix Chapman")?;
                     writeln!(self.output, "uciok")?;
                 }
@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn when_input_uci_then_output_name() {
-        assert_that(&output_from(&["uci"])).contains("id name skaki".to_string());
+        assert_that(&output_from(&["uci"])).contains("id name skakoui".to_string());
     }
 
     #[test]

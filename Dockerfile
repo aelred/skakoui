@@ -1,5 +1,5 @@
-FROM rust:1.43 as chess-builder
-WORKDIR /usr/src/chess
+FROM rust:1.43 as skakoui-builder
+WORKDIR /usr/src/skakoui
 ENV USER docker
 RUN cargo init
 COPY Cargo.lock .
@@ -19,9 +19,9 @@ RUN git clone https://github.com/careless25/lichess-bot.git /lcbot
 WORKDIR /lcbot
 RUN pip install -r requirements.txt
 
-FROM python3-venv as skaki
+FROM python3-venv as skakoui
 COPY lcbot-config.yml /lcbot/config.yml
-COPY --from=chess-builder /usr/local/cargo/bin/uci /chess/bin/skaki
+COPY --from=skakoui-builder /usr/local/cargo/bin/uci /skakoui/bin/skakoui
 COPY --from=lichess-bot-builder /venv /venv
 COPY --from=lichess-bot-builder /lcbot /lcbot
 WORKDIR /lcbot

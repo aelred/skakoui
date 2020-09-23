@@ -1,8 +1,8 @@
 mod strategies;
 
-use chess::Searcher;
 use proptest::prelude::ProptestConfig;
 use proptest::prelude::*;
+use skakoui::Searcher;
 
 use strategies::mate_in_1_board;
 
