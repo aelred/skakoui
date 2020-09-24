@@ -64,14 +64,30 @@ impl Board {
 
     #[inline]
     fn moves_of_type<M: Movement>(&self) -> impl Iterator<Item = Move> {
-        AllPiecesIter {
-            king: M::piece::<KingType>(self),
-            queen: M::piece::<QueenType>(self),
-            rook: M::piece::<RookType>(self),
-            bishop: M::piece::<BishopType>(self),
-            knight: M::piece::<KnightType>(self),
-            pawn: M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>),
-        }
+        let mut king = M::piece::<KingType>(self);
+        let mut queen = M::piece::<QueenType>(self);
+        let mut rook = M::piece::<RookType>(self);
+        let mut bishop = M::piece::<BishopType>(self);
+        let mut knight = M::piece::<KnightType>(self);
+        let mut pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>);
+        std::iter::from_fn(move || {
+            if let Some(mov) = king.next() {
+                return Some(mov);
+            }
+            if let Some(mov) = queen.next() {
+                return Some(mov);
+            }
+            if let Some(mov) = rook.next() {
+                return Some(mov);
+            }
+            if let Some(mov) = bishop.next() {
+                return Some(mov);
+            }
+            if let Some(mov) = knight.next() {
+                return Some(mov);
+            }
+            pawn.next()
+        })
     }
 
     #[inline]
@@ -98,39 +114,6 @@ impl Board {
             }
         }
         true
-    }
-}
-
-struct AllPiecesIter<I> {
-    king: MovesIter<KingType>,
-    queen: MovesIter<QueenType>,
-    rook: MovesIter<RookType>,
-    bishop: MovesIter<BishopType>,
-    knight: MovesIter<KnightType>,
-    pawn: I,
-}
-
-impl<I: Iterator<Item = Move>> Iterator for AllPiecesIter<I> {
-    type Item = Move;
-
-    #[inline]
-    fn next(&mut self) -> Option<Move> {
-        if let Some(mov) = self.king.next() {
-            return Some(mov);
-        }
-        if let Some(mov) = self.queen.next() {
-            return Some(mov);
-        }
-        if let Some(mov) = self.rook.next() {
-            return Some(mov);
-        }
-        if let Some(mov) = self.bishop.next() {
-            return Some(mov);
-        }
-        if let Some(mov) = self.knight.next() {
-            return Some(mov);
-        }
-        self.pawn.next()
     }
 }
 
