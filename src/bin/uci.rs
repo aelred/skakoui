@@ -101,8 +101,9 @@ impl<W: Write> UCI<W> {
                     };
 
                     if let Some(clock) = clock {
+                        let max_wait = Duration::from_secs(5);
                         // Naively assume there's 40 moves to go in the game
-                        std::thread::sleep(clock / 40);
+                        std::thread::sleep((clock / 40).min(max_wait));
                         self.stop()?;
                     }
                 }
