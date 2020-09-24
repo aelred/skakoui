@@ -1,20 +1,20 @@
-FROM rust:1.43 as skakoui-builder
+FROM rust:1.43-slim as skakoui-builder
 WORKDIR /usr/src/skakoui
 ENV USER docker
 RUN cargo init
 COPY Cargo.lock .
 COPY Cargo.toml .
 RUN cargo build --release
+RUN rm src/main.rs
 COPY ./src src
 RUN cargo install --path .
 
-FROM python:3 as python3-venv
-RUN apt-get update &&\
-    apt-get install -y python3-venv
+FROM python:3-alpine as python3-venv
 RUN python3 -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
 FROM python3-venv as lichess-bot-builder
+RUN apk add git
 RUN git clone https://github.com/careless25/lichess-bot.git /lcbot
 WORKDIR /lcbot
 RUN pip install -r requirements.txt
