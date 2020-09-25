@@ -20,10 +20,10 @@ WORKDIR /lcbot
 RUN pip install -r requirements.txt
 
 FROM python3-venv as skakoui
-COPY lcbot-config.yml /lcbot/configtmp.yml
-COPY --from=skakoui-builder /usr/local/cargo/bin/uci /lcbot/engines/skakoui
 COPY --from=lichess-bot-builder /venv /venv
 COPY --from=lichess-bot-builder /lcbot /lcbot
+COPY lcbot-config.yml /lcbot/configtmp.yml
+COPY --from=skakoui-builder /usr/local/cargo/bin/uci /lcbot/engines/skakoui
 WORKDIR /lcbot
 ENTRYPOINT : ${LICHESS_API_TOKEN?"Need to set LICHESS_API_TOKEN"} &&\
     sed "s/LICHESS_API_TOKEN/$LICHESS_API_TOKEN/" configtmp.yml > config.yml &&\
