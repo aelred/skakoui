@@ -41,3 +41,6 @@ jobs:
         image_name: skakoui
         push_git_tag: true
     - run: make deploy-ecs
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
