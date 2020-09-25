@@ -27,4 +27,9 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
     - uses: actions/checkout@v2
-    - run: make deploy
+    - uses: whoan/docker-build-with-cache-action@v5
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        image_name: skakoui
+        push_git_tag: true
