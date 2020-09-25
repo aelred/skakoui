@@ -14,7 +14,7 @@ RUN python3 -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
 FROM python3-venv as lichess-bot-builder
-RUN git clone https://github.com/ShailChoksi/lichess-bot.git /lcbot
+RUN git clone --depth 1 --branch 1.1.3 https://github.com/ShailChoksi/lichess-bot.git /lcbot
 WORKDIR /lcbot
 RUN pip install -r requirements.txt
 
