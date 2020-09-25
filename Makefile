@@ -14,6 +14,11 @@ build:
 run: build
 	docker run -t -i -e LICHESS_API_TOKEN $(image)
 
-deploy: build
+deploy: deploy-docker deploy-ecs
+
+deploy-docker: build
 	docker push $(image)
 	docker push $(tagged)
+
+deploy-ecs:
+	aws ecs update-service --service skakoui-service --force-new-deployment

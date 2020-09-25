@@ -40,8 +40,4 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
         image_name: skakoui
         push_git_tag: true
-    - uses: donaldpiret/ecs-deploy@master
-      with:
-        cluster: default
-        target: skakoui
-        tag: latest
+    - run: make deploy-ecs
