@@ -2,8 +2,8 @@ token: "LICHESS_API_TOKEN"   # lichess OAuth2 Token
 url: "https://lichess.org/"  # lichess base URL
 
 engine:                      # engine settings
-  dir: "/skakoui/bin"          # dir containing engines
-  name: "skakoui"              # binary name of the engine to use
+  dir: "./engines/"          # dir containing engines, relative to this project
+  name: "skakoui"            # binary name of the engine to use
   protocol: "uci"
 engine_options:              # any custom command line params to pass to the engine
   silence_stderr: false      # some engines (yes you, leela) are very noisy
