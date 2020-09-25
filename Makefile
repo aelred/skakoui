@@ -21,4 +21,4 @@ deploy-docker: build
 	docker push $(tagged)
 
 deploy-ecs:
-	aws ecs update-service --service skakoui-service --force-new-deployment
+	aws ecs update-service --service skakoui-service --force-new-deployment --region us-east-2
