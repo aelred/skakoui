@@ -1,4 +1,6 @@
-mod strategies;
+#![cfg(feature = "expensive_tests")]
+
+pub mod strategies;
 
 use proptest::prelude::ProptestConfig;
 use proptest::prelude::*;
@@ -10,7 +12,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(10))]
     #[test]
     fn searcher_can_find_mate_in_1((mut board, mating_move) in mate_in_1_board()) {
-        println!("Testing board\n{}\nExpect: {}", board, mating_move);
+        println!("Testing board\n{}\nExpect: {}\n{:?}", board, mating_move, board);
         let mut searcher = Searcher::default();
         searcher.go(&board, Some(2));
         searcher.wait();

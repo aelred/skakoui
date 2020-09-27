@@ -10,6 +10,7 @@ use std::ops::BitXor;
 use std::ops::BitXorAssign;
 use std::ops::Not;
 
+// TODO: it would be nice if bitboards were in the same order as FEN
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Bitboard(u64);
 
@@ -40,8 +41,8 @@ impl Bitboard {
     /// the case, the result is undefined.
     #[inline]
     pub fn move_bit(&mut self, from: Square, to: Square) {
-        debug_assert!(self.get(from));
-        debug_assert!(!self.get(to));
+        debug_assert!(self.get(from), "{:?} should be set: \n{}", from, self);
+        debug_assert!(!self.get(to), "{:?} should be unset: \n{}", to, self);
 
         let move_board = Self::from(from) | Self::from(to);
         *self ^= move_board;
@@ -107,6 +108,16 @@ impl Bitboard {
     #[inline]
     fn reset_lsb(&mut self) {
         self.0 &= self.0 - 1;
+    }
+
+    #[inline]
+    pub const fn reverse(self) -> Self {
+        Self(self.0.swap_bytes())
+    }
+
+    #[inline]
+    pub const fn is_empty(self) -> bool {
+        self.0 == 0
     }
 }
 
@@ -292,6 +303,9 @@ pub mod bitboards {
 
     pub const ANTIDIAGONAL: Bitboard =
         Bitboard(0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000);
+
+    pub const CASTLE_KINGSIDE_CLEAR: Bitboard = Bitboard(0b_01100000);
+    pub const CASTLE_QUEENSIDE_CLEAR: Bitboard = Bitboard(0b_00001110);
 
     lazy_static! {
         pub static ref DIAGONALS: SquareMap<Bitboard> = {

@@ -11,11 +11,12 @@ mod rank;
 mod search;
 mod square;
 
+use anyhow::{anyhow, Error};
 use enum_map::Enum;
 
 pub use crate::{
     bitboard::{bitboards, Bitboard},
-    board::Board,
+    board::{Board, BoardFlags},
     file::File,
     moves::Move,
     piece::{Piece, PieceType},
@@ -24,6 +25,8 @@ pub use crate::{
     search::Searcher,
     square::{Square, SquareColor, SquareMap},
 };
+use std::fmt;
+use std::fmt::Write;
 use std::str::FromStr;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
@@ -57,18 +60,50 @@ impl Player {
             Player::Black => -1,
         }
     }
+
+    #[inline]
+    const fn back_rank(self) -> Rank {
+        match self {
+            Player::White => Rank::_1,
+            Player::Black => Rank::_8,
+        }
+    }
+
+    const fn castle_kingside_flag(self) -> u8 {
+        match self {
+            Player::White => 0b1000_0000,
+            Player::Black => 0b0010_0000,
+        }
+    }
+
+    const fn castle_queenside_flag(self) -> u8 {
+        match self {
+            Player::White => 0b0100_0000,
+            Player::Black => 0b0001_0000,
+        }
+    }
+
+    const fn castle_flags(self) -> u8 {
+        self.castle_kingside_flag() | self.castle_queenside_flag()
+    }
 }
 
 impl FromStr for Player {
-    type Err = ();
+    type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let player = match s {
             "W" | "w" => Player::White,
             "B" | "b" => Player::Black,
-            _ => return Err(()),
+            _ => return Err(anyhow!("Expected W, w, B or b")),
         };
         Ok(player)
+    }
+}
+
+impl fmt::Display for Player {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_char(self.to_fen())
     }
 }
 
@@ -78,7 +113,15 @@ pub trait PlayerType {
     const PLAYER: Player;
     const DIRECTION: i8;
     const PAWN_RANK: Rank;
-    const LAST_RANK: Rank;
+    const PROMOTING_RANK: Rank;
+
+    // Bitboards indicating which squares must be clear to allow castling
+    const CASTLE_KINGSIDE_CLEAR: Bitboard;
+    const CASTLE_QUEENSIDE_CLEAR: Bitboard;
+
+    // Masks to look-up flags [BitboardFlags]
+    const CASTLE_KINGSIDE_FLAG: u8 = Self::PLAYER.castle_kingside_flag();
+    const CASTLE_QUEENSIDE_FLAG: u8 = Self::PLAYER.castle_queenside_flag();
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard;
 }
@@ -92,7 +135,9 @@ impl PlayerType for WhitePlayer {
     const PLAYER: Player = Player::White;
     const DIRECTION: i8 = 1;
     const PAWN_RANK: Rank = Rank::_2;
-    const LAST_RANK: Rank = Rank::_8;
+    const PROMOTING_RANK: Rank = Rank::_8;
+    const CASTLE_KINGSIDE_CLEAR: Bitboard = bitboards::CASTLE_KINGSIDE_CLEAR;
+    const CASTLE_QUEENSIDE_CLEAR: Bitboard = bitboards::CASTLE_QUEENSIDE_CLEAR;
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank(1)
@@ -105,7 +150,9 @@ impl PlayerType for BlackPlayer {
     const PLAYER: Player = Player::Black;
     const DIRECTION: i8 = -1;
     const PAWN_RANK: Rank = Rank::_7;
-    const LAST_RANK: Rank = Rank::_1;
+    const PROMOTING_RANK: Rank = Rank::_1;
+    const CASTLE_KINGSIDE_CLEAR: Bitboard = bitboards::CASTLE_KINGSIDE_CLEAR.reverse();
+    const CASTLE_QUEENSIDE_CLEAR: Bitboard = bitboards::CASTLE_QUEENSIDE_CLEAR.reverse();
 
     fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank_neg(1)

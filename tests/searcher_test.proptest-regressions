@@ -4,6 +4,3 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc c5a8d708d3b4b72becf3f8ea76366781e51cdc4e9c49caffdd7281a2ae480f61 # shrinks to (mut board, mating_move) = (Board::from_fen("1B3bnr/4ppNp/5k2/1p1p3P/p5P1/3rpN2/1P2BP2/R2bK2R w") /* https://lichess.org/analysis/1B3bnr/4ppNp/5k2/1p1p3P/p5P1/3rpN2/1P2BP2/R2bK2R_w */, Move { from: B8, to: E5, promoting: None })
-cc 8a7044489ed2fa57b6cf205140abafcaa628c98eb77dec88c25c40ba5a92104c # shrinks to (mut board, mating_move) = (Board::from_fen("n1r1kb1r/4p2n/1p3p2/p1P3pp/q1P1B2P/2KQ1PPR/3P4/1R4N1 w") /* https://lichess.org/analysis/n1r1kb1r/4p2n/1p3p2/p1P3pp/q1P1B2P/2KQ1PPR/3P4/1R4N1_w */, Move { from: E4, to: G6, promoting: None })
-cc 60ada18f8c3b6e350e20afecf86574f7c0e22c2dd0cc4a4d701115b5420b4cbe # shrinks to (mut board, mating_move) = (Board::from_fen("3k2nr/7p/rq2p2b/1N1p1p2/p3P1p1/1PKP1PPb/1B1Q2RP/1R1B4 b") /* https://lichess.org/analysis/3k2nr/7p/rq2p2b/1N1p1p2/p3P1p1/1PKP1PPb/1B1Q2RP/1R1B4_b */, Move { from: B6, to: C5, promoting: None })

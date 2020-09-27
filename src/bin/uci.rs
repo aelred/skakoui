@@ -145,6 +145,7 @@ fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Er
 }
 
 #[cfg(test)]
+#[cfg(feature = "expensive-test")]
 mod tests {
     use super::*;
     use spectral::prelude::*;
@@ -215,7 +216,7 @@ mod tests {
 
         assert_that(&output_from(&[
             "uci",
-            "position fen 7k/8/8/8/8/8/8/K7 w KQkq - 0 1",
+            "position fen 7k/8/8/8/8/8/8/K7 w - - 0 1",
             "go",
             "stop",
         ]))

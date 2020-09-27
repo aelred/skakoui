@@ -8,6 +8,9 @@ lint:
 test:
 	cargo test
 
+test-all:
+	cargo test --features expensive_tests
+
 build:
 	docker build --tag $(image) --tag $(tagged) .
 

@@ -1,7 +1,4 @@
-use crate::bitboards;
 use crate::piece::PieceType::Pawn;
-use crate::Bitboard;
-use crate::File;
 use crate::Move;
 use crate::Piece;
 use crate::PieceMap;
@@ -11,10 +8,18 @@ use crate::Rank;
 use crate::Square;
 use crate::SquareColor;
 use crate::SquareMap;
+use crate::{bitboards, PlayerType};
+use crate::{Bitboard, WhitePlayer};
+use crate::{BlackPlayer, File};
+use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use enum_map::EnumMap;
+use serde::export::Formatter;
+use std::convert::TryFrom;
 use std::fmt;
+use std::fmt::Debug;
 use std::ops::BitOr;
+use std::str::FromStr;
 
 /// Represents a game in-progress
 #[derive(Eq, PartialEq, Clone, Hash)]
@@ -31,6 +36,8 @@ pub struct Board {
     occupancy_player: EnumMap<Player, Bitboard>,
     /// Occupancy for all pieces
     occupancy: Bitboard,
+    /// Castling rights
+    flags: BoardFlags,
     /// List of previous board states - used to "unmake" (undo) moves like captures
     board_states: Vec<BoardState>,
 }
@@ -38,20 +45,42 @@ pub struct Board {
 #[derive(Debug, Eq, PartialEq, Clone, Hash)]
 struct BoardState {
     captured_piece_type: Option<PieceType>,
+    flags: BoardFlags,
 }
 
 impl Board {
     /// Create a new board from piece positions and player turn
-    pub fn new(pieces_array: [[Option<Piece>; 8]; 8], player: Player) -> Self {
-        Self::with_states(pieces_array, player, vec![])
+    pub fn new(pieces: [[Option<Piece>; 8]; 8], player: Player, mut flags: BoardFlags) -> Self {
+        let pieces = SquareMap::from(|square: Square| {
+            pieces[square.rank().to_index() as usize][square.file().to_index() as usize]
+        });
+
+        let mut unset_flags = 0;
+        // Remove any impossible castling options
+        if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::H1] != Some(Piece::WR) {
+            unset_flags |= WhitePlayer::CASTLE_KINGSIDE_FLAG;
+        }
+        if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::A1] != Some(Piece::WR) {
+            unset_flags |= WhitePlayer::CASTLE_QUEENSIDE_FLAG;
+        }
+        if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::H8] != Some(Piece::BR) {
+            unset_flags |= BlackPlayer::CASTLE_KINGSIDE_FLAG;
+        }
+        if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::A8] != Some(Piece::BR) {
+            unset_flags |= BlackPlayer::CASTLE_QUEENSIDE_FLAG;
+        }
+        flags.unset(unset_flags);
+
+        Self::with_states(pieces, player, flags, vec![])
     }
 
     /// Parse a board from
     /// [Forsyth-Edwards notation](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
-    pub fn from_fen(fen: impl Into<String>) -> Option<Board> {
+    pub fn from_fen(fen: impl Into<String>) -> Result<Board, Error> {
         let fen_str = fen.into();
         let mut fields = fen_str.split_whitespace();
-        let pieces_by_rank = fields.next()?.split('/');
+        let pieces_str = fields.next().context("Expected pieces")?;
+        let pieces_by_rank = pieces_str.split('/');
 
         let mut pieces_vec = ArrayVec::<[[Option<Piece>; 8]; 8]>::new();
         for rank in pieces_by_rank {
@@ -60,22 +89,54 @@ impl Board {
                 let s = c.to_string();
                 if let Ok(empties) = s.parse::<usize>() {
                     for _ in 0..empties {
-                        rank_vec.push(None);
+                        rank_vec
+                            .try_push(None)
+                            .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
                     }
                 } else if let Ok(piece) = s.parse::<Piece>() {
-                    rank_vec.push(Some(piece))
+                    rank_vec
+                        .try_push(Some(piece))
+                        .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
                 }
             }
-            pieces_vec.push(rank_vec.into_inner().ok()?)
+            pieces_vec
+                .try_push(
+                    rank_vec
+                        .into_inner()
+                        .map_err(|_| anyhow!("Less than 8 squares in rank: {}", rank))?,
+                )
+                .with_context(|| anyhow!("More than 8 ranks: {}", pieces_str))?;
         }
         pieces_vec.reverse();
-        let pieces_array = pieces_vec.into_inner().ok()?;
+        let pieces_array = pieces_vec
+            .into_inner()
+            .map_err(|_| anyhow!("Less than 8 ranks: {}", pieces_str))?;
 
-        let player = fields.next()?.parse::<Player>().ok()?;
+        let player = fields
+            .next()
+            .context("Expected player after pieces")?
+            .parse::<Player>()?;
 
-        // TODO: also parse castling, en passant and number of moves
+        let flags = fields.next().map(|castling| {
+            let mut set_flags = 0u8;
+            if castling.contains('K') {
+                set_flags |= WhitePlayer::CASTLE_KINGSIDE_FLAG;
+            }
+            if castling.contains('Q') {
+                set_flags |= WhitePlayer::CASTLE_QUEENSIDE_FLAG;
+            }
+            if castling.contains('k') {
+                set_flags |= BlackPlayer::CASTLE_KINGSIDE_FLAG;
+            }
+            if castling.contains('q') {
+                set_flags |= BlackPlayer::CASTLE_QUEENSIDE_FLAG;
+            }
+            BoardFlags(set_flags)
+        });
 
-        Some(Self::with_states(pieces_array, player, vec![]))
+        // TODO: also parse en passant and number of moves
+
+        Ok(Self::new(pieces_array, player, flags.unwrap_or_default()))
     }
 
     pub fn to_fen(&self) -> String {
@@ -115,19 +176,38 @@ impl Board {
         fen.push(' ');
         fen.push(self.player.to_fen());
 
+        fen.push(' ');
+        let mut can_castle = false;
+        if self.flags.is_set(WhitePlayer::CASTLE_KINGSIDE_FLAG) {
+            fen.push('K');
+            can_castle = true;
+        }
+        if self.flags.is_set(WhitePlayer::CASTLE_QUEENSIDE_FLAG) {
+            fen.push('Q');
+            can_castle = true;
+        }
+        if self.flags.is_set(BlackPlayer::CASTLE_KINGSIDE_FLAG) {
+            fen.push('k');
+            can_castle = true;
+        }
+        if self.flags.is_set(BlackPlayer::CASTLE_QUEENSIDE_FLAG) {
+            fen.push('q');
+            can_castle = true;
+        }
+        if !can_castle {
+            fen.push('-');
+        }
+
         fen
     }
 
     fn with_states(
-        pieces_array: [[Option<Piece>; 8]; 8],
+        pieces: SquareMap<Option<Piece>>,
         player: Player,
+        flags: BoardFlags,
         board_states: Vec<BoardState>,
     ) -> Self {
         let mut bitboards = PieceMap::from(|_| bitboards::EMPTY);
-
-        let pieces = SquareMap::from(|square: Square| {
-            pieces_array[square.rank().to_index() as usize][square.file().to_index() as usize]
-        });
 
         for (square, optional_piece) in pieces.iter() {
             if let Some(piece) = optional_piece {
@@ -155,6 +235,7 @@ impl Board {
             piece_count,
             occupancy_player,
             occupancy,
+            flags,
             board_states,
         }
     }
@@ -178,9 +259,14 @@ impl Board {
 
     /// Perform a move on the board, mutating the board
     pub fn make_move(&mut self, mov: Move) -> Option<PieceType> {
+        let prev_flags = self.flags;
+
         let player = self.player();
         let from = mov.from();
         let to = mov.to();
+
+        self.assert_can_move(player, from, to);
+
         let piece = self.get(from).unwrap();
 
         let captured_piece_type = if let Some(captured_piece) = self.get(to) {
@@ -214,13 +300,69 @@ impl Board {
         self.occupancy.set(to);
         self.occupancy_player[player].move_bit(from, to);
 
+        fn castle_flags(player: Player, square: Square) -> u8 {
+            if player.back_rank() == square.rank() {
+                match square.file() {
+                    File::E => player.castle_flags(),
+                    File::H => player.castle_kingside_flag(),
+                    File::A => player.castle_queenside_flag(),
+                    _ => 0,
+                }
+            } else {
+                0
+            }
+        }
+
+        let unset_flags = castle_flags(player, from) | castle_flags(player.opponent(), to);
+        self.flags.unset(unset_flags);
+
+        if piece.piece_type() == PieceType::King && from.file() == File::E {
+            let kingside_castling = to.file() == File::G;
+            let queenside_castling = to.file() == File::C;
+
+            if kingside_castling || queenside_castling {
+                let (rook_from_file, rook_to_file, flag) = if kingside_castling {
+                    (File::H, File::F, player.castle_kingside_flag())
+                } else {
+                    (File::A, File::D, player.castle_queenside_flag())
+                };
+                self.flags.unset(flag);
+
+                let rook_from = Square::new(rook_from_file, from.rank());
+                let rook_to = Square::new(rook_to_file, to.rank());
+
+                let rook = Piece::new(player, PieceType::Rook);
+                debug_assert_eq!(
+                    self.pieces[rook_from],
+                    Some(rook),
+                    "Expected {} at {}",
+                    rook,
+                    rook_from
+                );
+                debug_assert_eq!(
+                    self.pieces[rook_to], None,
+                    "Expected {} to be empty",
+                    rook_to
+                );
+
+                self.pieces[rook_from] = None;
+                self.pieces[rook_to] = Some(rook);
+                self.bitboard_piece_mut(rook).move_bit(rook_from, rook_to);
+                self.occupancy.move_bit(rook_from, rook_to);
+                self.occupancy_player[player].move_bit(rook_from, rook_to);
+            }
+        }
+
         self.player = self.player.opponent();
 
         let new_board_state = BoardState {
             captured_piece_type,
+            flags: prev_flags,
         };
 
         self.board_states.push(new_board_state);
+
+        self.assert_invariants();
 
         captured_piece_type
     }
@@ -230,6 +372,9 @@ impl Board {
         let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
+
+        self.assert_can_move(player, to, from);
+
         let piece = if mov.promoting().is_some() {
             Piece::new(player, Pawn)
         } else {
@@ -238,7 +383,10 @@ impl Board {
 
         let BoardState {
             captured_piece_type,
+            flags,
         } = self.board_states.pop().expect("No move to undo");
+
+        self.flags = flags;
 
         if let Some(captured_piece_type) = captured_piece_type {
             let captured_piece = Piece::new(player.opponent(), captured_piece_type);
@@ -269,6 +417,51 @@ impl Board {
         self.occupancy_player[player].move_bit(to, from);
 
         self.player = player;
+
+        let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
+
+        if maybe_castling {
+            let kingside_castling = to.file() == File::G;
+            let queenside_castling = to.file() == File::C;
+
+            if kingside_castling || queenside_castling {
+                let (rook_from_file, rook_to_file) = if kingside_castling {
+                    (File::H, File::F)
+                } else {
+                    (File::A, File::D)
+                };
+
+                let rook_from = Square::new(rook_from_file, from.rank());
+                let rook_to = Square::new(rook_to_file, to.rank());
+
+                let rook = Piece::new(player, PieceType::Rook);
+                debug_assert_eq!(
+                    self.pieces[rook_to],
+                    Some(rook),
+                    "Expected {} at {}",
+                    rook,
+                    rook_to
+                );
+                debug_assert_eq!(
+                    self.pieces[rook_from], None,
+                    "Expected {} to be empty",
+                    rook_from
+                );
+
+                self.pieces[rook_from] = Some(rook);
+                self.pieces[rook_to] = None;
+                self.bitboard_piece_mut(rook).move_bit(rook_to, rook_from);
+                self.occupancy.move_bit(rook_to, rook_from);
+                self.occupancy_player[player].move_bit(rook_to, rook_from);
+            }
+        }
+
+        self.assert_invariants();
+    }
+
+    #[inline]
+    pub fn pieces(&self) -> &SquareMap<Option<Piece>> {
+        &self.pieces
     }
 
     #[inline]
@@ -296,6 +489,11 @@ impl Board {
         self.occupancy_player[player]
     }
 
+    #[inline]
+    pub fn flags(&self) -> BoardFlags {
+        self.flags
+    }
+
     pub fn eval_win(&self) -> i32 {
         let delay_penalty = self.plies() as i32;
         1_000_000 - delay_penalty
@@ -316,6 +514,59 @@ impl Board {
     #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
         i32::from(self.piece_count[piece])
+    }
+
+    /// Check this move is possible - not legal - just that it moves a piece of the right colour
+    /// to a space without a friendly piece
+    fn assert_can_move(&self, player: Player, from: Square, to: Square) {
+        if cfg!(debug_assertions) {
+            assert_eq!(
+                self.pieces[from].map(Piece::player),
+                Some(player),
+                "{} should have a {} piece, but was {:?}",
+                from,
+                player,
+                self.pieces[from]
+            );
+            assert_ne!(
+                self.pieces[to].map(Piece::player),
+                Some(player),
+                "{} should not have a {} piece, but was {:?}",
+                to,
+                player,
+                self.pieces[to]
+            );
+        }
+    }
+
+    /// Check invariants for internal redundant board state (only enabled in debug).
+    fn assert_invariants(&self) {
+        if cfg!(debug_assertions) {
+            let mut expected_piece_count = PieceMap::from(|_| 0u8);
+
+            // Use `pieces` as the source-of-truth
+            for (square, piece) in self.pieces.iter() {
+                for (bb_piece, bitboard) in self.bitboards.iter() {
+                    assert_eq!(bitboard.get(square), *piece == Some(bb_piece));
+                }
+
+                if let Some(piece) = piece {
+                    expected_piece_count[*piece] += 1;
+                }
+
+                assert_eq!(self.occupancy.get(square), piece.is_some());
+
+                let player_at_square = piece.map(Piece::player);
+                for (player, occupancy_player) in self.occupancy_player.iter() {
+                    assert_eq!(
+                        occupancy_player.get(square),
+                        player_at_square == Some(player)
+                    );
+                }
+            }
+
+            assert_eq!(self.piece_count, expected_piece_count);
+        }
     }
 }
 
@@ -347,6 +598,7 @@ impl Default for Board {
                 [BR, BN, BB, BQ, BK, BB, BN, BR],
             ],
             Player::White,
+            BoardFlags::default(),
         )
     }
 }
@@ -391,24 +643,66 @@ impl fmt::Display for Board {
     }
 }
 
+impl FromStr for Board {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Board::from_fen(s)
+    }
+}
+
+impl TryFrom<&str> for Board {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Board::from_fen(value)
+    }
+}
+
+/// Bits: 0bKQkq_xxxx
+///
+/// K = White can castle kingside
+/// Q = White can castle queenside
+/// k = Black can castle kingside
+/// q = Black can castle queenside
+/// x = unused
+#[derive(Eq, PartialEq, Hash, Copy, Clone)]
+pub struct BoardFlags(u8);
+
+impl Default for BoardFlags {
+    fn default() -> Self {
+        BoardFlags(0b1111_0000)
+    }
+}
+
+impl fmt::Debug for BoardFlags {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "BoardFlags({:#010b})", self.0)
+    }
+}
+
+impl BoardFlags {
+    pub fn new(x: u8) -> Self {
+        BoardFlags(x)
+    }
+
+    pub fn is_set(self, mask: u8) -> bool {
+        self.0 & mask != 0
+    }
+
+    pub fn set(&mut self, mask: u8) {
+        self.0 |= mask;
+    }
+
+    pub fn unset(&mut self, mask: u8) {
+        self.0 &= !mask;
+    }
+}
+
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
-
-    const __: Option<Piece> = None;
-    const WK: Option<Piece> = Some(Piece::WK);
-    const WQ: Option<Piece> = Some(Piece::WQ);
-    const WR: Option<Piece> = Some(Piece::WR);
-    const WB: Option<Piece> = Some(Piece::WB);
-    const WN: Option<Piece> = Some(Piece::WN);
-    const WP: Option<Piece> = Some(Piece::WP);
-    const BK: Option<Piece> = Some(Piece::BK);
-    const BQ: Option<Piece> = Some(Piece::BQ);
-    const BR: Option<Piece> = Some(Piece::BR);
-    const BB: Option<Piece> = Some(Piece::BB);
-    const BN: Option<Piece> = Some(Piece::BN);
-    const BP: Option<Piece> = Some(Piece::BP);
 
     #[test]
     fn can_create_default_chess_board() {
@@ -426,26 +720,10 @@ mod tests {
     fn default_chess_board_has_pieces_in_position() {
         let board = Board::default();
 
-        let expected_board = Board::new(
-            [
-                [WR, WN, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, WP, WP, WP],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, BP, BP, BP],
-                [BR, BN, BB, BQ, BK, BB, BN, BR],
-            ],
-            Player::White,
-        );
-
-        assert_eq!(board, expected_board);
-
-        // The above grid is fiddly to get right, so check some known piece positions are right
-        assert_eq!(board.get(Square::A1), WR);
-        assert_eq!(board.get(Square::A2), WP);
-        assert_eq!(board.get(Square::E8), BK);
+        // Check some known piece positions are right
+        assert_eq!(board.get(Square::A1), Some(Piece::WR));
+        assert_eq!(board.get(Square::A2), Some(Piece::WP));
+        assert_eq!(board.get(Square::E8), Some(Piece::BK));
     }
 
     #[test]
@@ -474,121 +752,40 @@ mod tests {
 
         board.make_move(mov);
 
-        let expected_board = Board::with_states(
-            [
-                [WR, __, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, WP, WP, WP],
-                [__, __, WN, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, BP, BP, BP],
-                [BR, BN, BB, BQ, BK, BB, BN, BR],
-            ],
-            Player::Black,
-            vec![BoardState {
-                captured_piece_type: None,
-            }],
-        );
-
-        assert_eq!(board, expected_board);
+        let expect = fen("rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b");
+        board.board_states.clear();
+        assert_eq!(board, expect);
     }
 
     #[test]
     fn can_make_a_capturing_move_on_board() {
-        let mut board = Board::new(
-            [
-                [WR, WN, WB, WQ, WK, __, WN, WR],
-                [WP, WP, WP, WP, __, WP, WP, WP],
-                [__, __, __, __, WP, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WB, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, __, BP, BP],
-                [BR, BN, BB, BQ, BK, BB, BN, BR],
-            ],
-            Player::White,
-        );
+        let mut board = fen("rnbqkbnr/ppppp1pp/8/1B3p2/8/4P3/PPPP1PPP/RNBQK1NR w");
 
         let mov = Move::new(Square::B5, Square::D7);
 
         board.make_move(mov);
 
-        let expected_board = Board::with_states(
-            [
-                [WR, WN, WB, WQ, WK, __, WN, WR],
-                [WP, WP, WP, WP, __, WP, WP, WP],
-                [__, __, __, __, WP, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, WB, BP, __, BP, BP],
-                [BR, BN, BB, BQ, BK, BB, BN, BR],
-            ],
-            Player::Black,
-            vec![BoardState {
-                captured_piece_type: Some(PieceType::Pawn),
-            }],
-        );
-
+        let expected_board = fen("rnbqkbnr/pppBp1pp/8/5p2/8/4P3/PPPP1PPP/RNBQK1NR b");
+        board.board_states.clear();
         assert_eq!(board, expected_board);
     }
 
     #[test]
     fn can_make_a_promoting_move_on_board() {
-        let mut board = Board::new(
-            [
-                [WR, WN, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, __, WP, WP],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, BN, __],
-                [__, __, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, __, WP, BP],
-                [BR, BN, BB, BQ, BK, BB, __, BR],
-            ],
-            Player::White,
-        );
+        let mut board = fen("rnbqkb1r/ppppp1Pp/8/5p2/6n1/8/PPPPP1PP/RNBQKBNR w");
 
         let mov = Move::new_promoting(Square::G7, Square::G8, PieceType::Queen);
 
         board.make_move(mov);
 
-        let expected_board = Board::with_states(
-            [
-                [WR, WN, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, __, WP, WP],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, BN, __],
-                [__, __, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, __, __, BP],
-                [BR, BN, BB, BQ, BK, BB, WQ, BR],
-            ],
-            Player::Black,
-            vec![BoardState {
-                captured_piece_type: None,
-            }],
-        );
-
+        let expected_board = fen("rnbqkbQr/ppppp2p/8/5p2/6n1/8/PPPPP1PP/RNBQKBNR b");
+        board.board_states.clear();
         assert_eq!(board, expected_board);
     }
 
     #[test]
     fn can_unmake_a_move_on_board() {
-        let mut board = Board::new(
-            [
-                [WR, WN, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, __, WP, WP],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, BN, __],
-                [__, __, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, __, WP, BP],
-                [BR, BN, BB, BQ, BK, BB, __, BR],
-            ],
-            Player::White,
-        );
+        let mut board = fen("rnbqkb1r/ppppp1Pp/8/5p2/6n1/8/PPPPP1PP/RNBQKBNR w");
 
         let expected_board = board.clone();
 
@@ -606,45 +803,107 @@ mod tests {
         assert_eq!(board, expected_board);
     }
 
+    #[test]
+    fn white_can_castle_kingside() {
+        let mut board = fen("8/8/8/8/8/8/8/4K2R w K");
+        board.make_move(Move::castle_kingside::<WhitePlayer>());
+
+        let expect = fen("8/8/8/8/8/8/8/5RK1 b -");
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn black_can_castle_kingside() {
+        let mut board = fen("4k2r/8/8/8/8/8/8/8 b k");
+        board.make_move(Move::castle_kingside::<BlackPlayer>());
+
+        let expect = fen("5rk1/8/8/8/8/8/8/8 w -");
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn white_can_castle_queenside() {
+        let mut board = fen("8/8/8/8/8/8/8/R3K3 w Q");
+        board.make_move(Move::castle_queenside::<WhitePlayer>());
+
+        let expect = fen("8/8/8/8/8/8/8/2KR4 b -");
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn black_can_castle_queenside() {
+        let mut board = fen("r3k3/8/8/8/8/8/8/8 b q");
+        board.make_move(Move::castle_queenside::<BlackPlayer>());
+
+        let expect = fen("2kr4/8/8/8/8/8/8/8 w -");
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn moving_king_removes_castling_right() {
+        let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
+        let expect = fen("r4k1r/8/8/8/8/8/8/8 w -");
+        board.make_move(Move::new(Square::E8, Square::F8));
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn moving_kingside_rook_removes_castling_right_kingside() {
+        let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
+        let expect = fen("r3k1r1/8/8/8/8/8/8/8 w q");
+        board.make_move(Move::new(Square::H8, Square::G8));
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn moving_queenside_rook_removes_castling_right_queenside() {
+        let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
+        let expect = fen("1r2k2r/8/8/8/8/8/8/8 w k");
+        board.make_move(Move::new(Square::A8, Square::B8));
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn capturing_kingside_rook_removes_castling_right_kingside() {
+        let mut board = fen("r3k2r/7Q/8/8/8/8/8/8 w kq");
+        let expect = fen("r3k2Q/8/8/8/8/8/8/8 b q");
+        board.make_move(Move::new(Square::H7, Square::H8));
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn capturing_queenside_rook_removes_castling_right_queenside() {
+        let mut board = fen("r3k2r/Q7/8/8/8/8/8/8 w kq");
+        let expect = fen("Q3k2r/8/8/8/8/8/8/8 b k");
+        board.make_move(Move::new(Square::A7, Square::A8));
+        board.board_states.clear();
+        assert_eq!(board, expect);
+    }
+
     #[ignore]
     #[test]
     fn when_making_an_en_passant_move_the_pawn_is_taken() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, BP, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
+        let mut board = fen("8/8/8/8/1p6/8/P7/8 w");
 
         board.make_move(Move::new(Square::A2, Square::A4));
 
         let en_passant = Move::new(Square::B4, Square::A3);
         board.make_move(en_passant);
 
-        let expected_board = Board::with_states(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [BP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-            vec![BoardState {
-                captured_piece_type: Some(PieceType::Pawn),
-            }],
-        );
-
+        let expected_board = fen("8/8/8/8/8/p7/8/8 w");
+        board.board_states.clear();
         assert_eq!(board, expected_board);
+    }
+
+    pub fn fen(fen: &str) -> Board {
+        Board::from_fen(fen).unwrap()
     }
 }

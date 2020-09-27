@@ -1,6 +1,6 @@
-use crate::PieceType;
 use crate::PlayerType;
 use crate::Square;
+use crate::{File, PieceType};
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
@@ -29,6 +29,24 @@ impl Move {
         }
     }
 
+    #[inline]
+    pub fn castle_kingside<P: PlayerType>() -> Self {
+        Self {
+            from: Square::new(File::E, P::PLAYER.back_rank()),
+            to: Square::new(File::G, P::PLAYER.back_rank()),
+            promoting: None,
+        }
+    }
+
+    #[inline]
+    pub fn castle_queenside<P: PlayerType>() -> Self {
+        Self {
+            from: Square::new(File::E, P::PLAYER.back_rank()),
+            to: Square::new(File::C, P::PLAYER.back_rank()),
+            promoting: None,
+        }
+    }
+
     pub fn from(self) -> Square {
         self.from
     }
@@ -42,7 +60,7 @@ impl Move {
     }
 
     pub fn with_valid_promotions<P: PlayerType>(self) -> impl IntoIterator<Item = Move> {
-        if self.to.rank() == P::LAST_RANK {
+        if self.to.rank() == P::PROMOTING_RANK {
             vec![
                 Move {
                     promoting: Some(PieceType::Queen),

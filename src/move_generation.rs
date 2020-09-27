@@ -1,5 +1,4 @@
 use crate::bitboard::SquareIterator;
-use crate::bitboards;
 use crate::Bitboard;
 use crate::BlackPlayer;
 use crate::Board;
@@ -10,6 +9,7 @@ use crate::Player;
 use crate::PlayerType;
 use crate::Square;
 use crate::WhitePlayer;
+use crate::{bitboards, BoardFlags};
 use std::marker::PhantomData;
 
 mod piece_type;
@@ -29,6 +29,7 @@ impl Board {
         let me = self.player();
 
         // TODO: this is a very inefficient way to confirm if in check
+        // TODO: disallow castling when in check or through check
         self.pseudo_legal_moves().filter(move |mov| {
             let captured = self.make_move(*mov);
             let in_check = self.check(me);
@@ -38,13 +39,16 @@ impl Board {
         })
     }
 
-    /// Lazy iterator of all pseudo-legal moves (moves ignoring check)
+    /// See [pseudo_legal_moves_for]
     #[inline]
     pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         self.pseudo_legal_moves_for(self.player())
     }
 
-    /// Lazy iterator of all pseudo-legal moves (moves ignoring check)
+    /// Lazy iterator of all pseudo-legal moves. Pseudo-legal means they ignore:
+    /// 1. Check
+    /// 2. King captures
+    /// 3. Castling through check
     #[inline]
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
@@ -64,30 +68,20 @@ impl Board {
 
     #[inline]
     fn moves_of_type<M: Movement>(&self) -> impl Iterator<Item = Move> {
-        let mut king = M::piece::<KingType>(self);
-        let mut queen = M::piece::<QueenType>(self);
-        let mut rook = M::piece::<RookType>(self);
-        let mut bishop = M::piece::<BishopType>(self);
-        let mut knight = M::piece::<KnightType>(self);
-        let mut pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>);
-        std::iter::from_fn(move || {
-            if let Some(mov) = king.next() {
-                return Some(mov);
-            }
-            if let Some(mov) = queen.next() {
-                return Some(mov);
-            }
-            if let Some(mov) = rook.next() {
-                return Some(mov);
-            }
-            if let Some(mov) = bishop.next() {
-                return Some(mov);
-            }
-            if let Some(mov) = knight.next() {
-                return Some(mov);
-            }
-            pawn.next()
-        })
+        let king = M::piece::<KingType>(self);
+        let queen = M::piece::<QueenType>(self);
+        let rook = M::piece::<RookType>(self);
+        let bishop = M::piece::<BishopType>(self);
+        let knight = M::piece::<KnightType>(self);
+        let pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>);
+        let castle = M::castling(&self);
+
+        king.chain(queen)
+            .chain(rook)
+            .chain(bishop)
+            .chain(knight)
+            .chain(pawn)
+            .chain(castle)
     }
 
     #[inline]
@@ -220,22 +214,78 @@ impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
     }
 }
 
+struct CastlingIter<P> {
+    checked_kingside: bool,
+    checked_queenside: bool,
+    occupancy: Bitboard,
+    flags: BoardFlags,
+    _phantom: PhantomData<P>,
+}
+
+impl<P> CastlingIter<P> {
+    fn new(board: &Board) -> Self {
+        Self {
+            checked_kingside: false,
+            checked_queenside: false,
+            occupancy: board.occupancy(),
+            flags: board.flags(),
+            _phantom: PhantomData::default(),
+        }
+    }
+}
+
+impl<P: PlayerType> Iterator for CastlingIter<P> {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Move> {
+        if !self.checked_kingside {
+            self.checked_kingside = true;
+            if self.flags.is_set(P::CASTLE_KINGSIDE_FLAG)
+                && (P::CASTLE_KINGSIDE_CLEAR & self.occupancy).is_empty()
+            {
+                return Some(Move::castle_kingside::<P>());
+            }
+        }
+
+        if !self.checked_queenside {
+            self.checked_queenside = true;
+            if self.flags.is_set(P::CASTLE_QUEENSIDE_FLAG)
+                && (P::CASTLE_QUEENSIDE_CLEAR & self.occupancy).is_empty()
+            {
+                return Some(Move::castle_queenside::<P>());
+            }
+        }
+
+        None
+    }
+}
+
 trait Movement {
     type PawnIter: Iterator<Item = Move>;
+    type Castling: Iterator<Item = Move>;
     type Player: PlayerType;
 
+    /// Iterator of pawn moves
     fn pawn(board: &Board) -> Self::PawnIter;
 
+    /// Iterator of moves for a given piece
     fn piece<PT: PieceTypeT>(board: &Board) -> MovesIter<PT> {
         MovesIter::new(board, Self::movement_mask(board))
     }
 
+    /// Iterator of pseudo-legal castling moves
+    fn castling(board: &Board) -> Self::Castling;
+
+    /// Mask of valid target squares to control what moves are generated.
+    /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
+    /// pieces" (except for en-passant but screw en-passant).
     fn movement_mask(board: &Board) -> Bitboard;
 }
 
 struct AllMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
+    type Castling = CastlingIter<P>;
     type Player = P;
 
     #[inline]
@@ -260,6 +310,10 @@ impl<P: PlayerType> Movement for AllMoves<P> {
         }
     }
 
+    fn castling(board: &Board) -> Self::Castling {
+        CastlingIter::new(board)
+    }
+
     #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         !board.occupancy_player(P::PLAYER)
@@ -269,6 +323,7 @@ impl<P: PlayerType> Movement for AllMoves<P> {
 struct CapturingMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
+    type Castling = std::iter::Empty<Move>;
     type Player = P;
 
     #[inline]
@@ -289,6 +344,10 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
         }
     }
 
+    fn castling(_: &Board) -> Self::Castling {
+        std::iter::empty()
+    }
+
     #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         board.occupancy_player(P::Opp::PLAYER)
@@ -298,21 +357,9 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::board::tests::fen;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
-
-    const __: Option<Piece> = None;
-    const WK: Option<Piece> = Some(Piece::WK);
-    const WQ: Option<Piece> = Some(Piece::WQ);
-    const WR: Option<Piece> = Some(Piece::WR);
-    const WB: Option<Piece> = Some(Piece::WB);
-    const WN: Option<Piece> = Some(Piece::WN);
-    const WP: Option<Piece> = Some(Piece::WP);
-    const BQ: Option<Piece> = Some(Piece::BQ);
-    const BR: Option<Piece> = Some(Piece::BR);
-    const BB: Option<Piece> = Some(Piece::BB);
-    const BN: Option<Piece> = Some(Piece::BN);
-    const BP: Option<Piece> = Some(Piece::BP);
 
     macro_rules! mov {
         ($mov:expr) => {
@@ -365,294 +412,110 @@ mod tests {
     fn pawn_cannot_move_at_end_of_board() {
         // Such a situation is impossible in normal chess, but it's an edge case that could cause
         // something to go out of bounds.
-
-        let mut board = Board::new(
-            [
-                [BP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::Black,
-        );
-
+        let mut board = fen("8/8/8/8/8/8/8/p7 b");
         assert_moves!(board, []);
     }
 
     #[test]
     fn pawn_cannot_capture_piece_directly_in_front_of_it() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, WQ, __, __, __, __],
-                [__, __, __, BP, __, WN, __, __],
-                [__, __, __, __, __, WN, __, __],
-                [__, __, __, __, __, BP, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::Black,
-        );
-
+        let mut board = fen("8/5p2/5N2/3p1N2/3Q4/8/8/8 b");
         assert_moves!(board, []);
     }
 
     #[test]
     fn pawn_can_capture_pieces_on_diagonal() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, WN, WP, WN, __, __, __],
-                [__, __, __, BP, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::Black,
-        );
-
+        let mut board = fen("8/8/8/3p4/2NPN3/8/8/8 b");
         assert_moves!(board, [d5c4, d5e4]);
     }
 
     #[test]
     fn pawn_cannot_capture_same_player_pieces() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, WP, __, __, __],
-                [__, __, __, WP, BP, __, __, __],
-                [__, __, __, BP, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::Black,
-        );
-
+        let mut board = fen("8/8/8/3p4/3Pp3/4P3/8/8 b");
         assert_moves!(board, []);
     }
 
     #[test]
     fn pawn_cannot_double_push_if_blocked() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [BP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/8/p7/P7/8 w");
         assert_moves!(board, []);
     }
 
     #[test]
     fn pawn_cannot_double_push_when_not_at_initial_position() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/8/P7/8/8 w");
         assert_moves!(board, [a3a4]);
     }
 
     #[ignore]
     #[test]
     fn pawn_can_take_another_pawn_en_passant_immediately_after_double_push() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [__, WN, __, __, __, __, __, __],
-                [__, BP, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/1p6/1N6/P7/8 w");
         board.make_move(mov!(a2a4));
-
         assert_moves!(board, [b4a3]);
     }
 
     #[ignore]
     #[test]
     fn pawn_cannot_take_another_pawn_en_passant_in_other_situations() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [WP, WN, __, __, __, __, __, __],
-                [__, BP, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/1p6/PN6/8/8 w");
         board.make_move(mov!(a3a4));
-
         assert_moves!(board, []);
     }
 
     #[test]
     fn pawn_can_be_promoted_at_end_of_board() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/P7/8/8/8/8/8/8 w");
         assert_moves!(board, [a7a8N, a7a8B, a7a8R, a7a8Q]);
     }
 
     #[test]
     fn pawn_can_capture_and_promote_at_end_of_board() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [WP, __, __, __, __, __, __, __],
-                [BN, BQ, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("nq6/P7/8/8/8/8/8/8 w");
         assert_moves!(board, [a7b8N, a7b8B, a7b8R, a7b8Q]);
     }
 
     #[test]
     fn king_can_move_and_capture_one_square_in_any_direction() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, WP, __, __, __, __, __],
-                [__, WK, BP, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
-        // Kb3b2 is missing because it puts the king in check
+        let mut board = fen("8/8/8/8/8/1Kp5/2P5/8 w");
+        // b3b2 is missing because it puts the king in check
         assert_moves!(board, [b3a2, b3a3, b3c3, b3a4, b3b4, b3c4,]);
     }
 
     #[test]
-    fn knight_can_move_and_capture_in_its_weird_way() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WN, __, __, __, __, __, __],
-                [__, __, __, BP, __, __, __, __],
-                [__, __, WP, __, __, __, __, __],
-                [__, __, BP, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
+    fn king_can_castle() {
+        let mut board = fen("8/8/8/8/8/8/r6r/R3K2R w");
+        assert_moves!(
+            board,
+            [e1c1, e1g1, e1d1, e1f1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
         );
+        let mut board = fen("r3k2r/R6R/8/8/8/8/8/8 b");
+        assert_moves!(
+            board,
+            [e8c8, e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
+        );
+    }
 
+    #[test]
+    fn knight_can_move_and_capture_in_its_weird_way() {
+        let mut board = fen("8/8/2p5/2P5/3p4/1N6/8/8 w");
         assert_moves!(board, [b3a1, b3c1, b3d2, b3d4, b3a5,]);
     }
 
     #[test]
     fn rook_can_move_and_capture_along_rank_and_file() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WR, BQ, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WP, __, __, __, __, __, __],
-                [__, BP, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/1p6/1P6/8/1Rq5/8/8 w");
         assert_moves!(board, [b3b1, b3b2, b3a3, b3c3, b3b4,]);
     }
 
     #[test]
     fn bishop_can_move_and_capture_diagonally() {
-        let mut board = Board::new(
-            [
-                [__, __, __, BB, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WB, __, __, __, __, __, __],
-                [__, __, WP, __, __, __, __, __],
-                [__, __, BP, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/2p5/2P5/1B6/8/3b4 w");
         assert_moves!(board, [b3d1, b3a2, b3c2, b3a4,]);
     }
 
     #[test]
     fn queen_can_move_and_capture_in_all_directions() {
-        let mut board = Board::new(
-            [
-                [__, __, __, BB, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, WQ, WP, __, __, __, __, __],
-                [__, __, WP, __, __, __, __, __],
-                [__, __, BP, __, __, __, __, __],
-                [__, BP, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/1p6/2p5/2P5/1QP5/8/3b4 w");
         assert_moves!(
             board,
             [b3d1, b3a2, b3c2, b3a4, b3a3, b3b1, b3b2, b3b4, b3b5, b3b6,]
@@ -661,40 +524,14 @@ mod tests {
 
     #[test]
     fn cannot_make_a_move_that_leaves_king_in_check() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [WK, WP, __, __, __, __, __, BR],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/8/8/KP5r/8 w");
         // Note that the pawn is not allowed to move
         assert_moves!(board, [a2a1, a2b1, a2a3, a2b3,]);
     }
 
     #[test]
     fn capturing_moves_are_all_pseudo_legal_moves_that_capture_a_piece() {
-        let mut board = Board::new(
-            [
-                [__, __, __, __, __, __, __, __],
-                [BP, __, __, __, BN, __, __, __],
-                [__, WQ, __, __, __, __, __, __],
-                [__, BB, __, WN, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-                [__, __, __, __, __, __, __, __],
-            ],
-            Player::White,
-        );
-
+        let mut board = fen("8/8/8/8/1b1N4/1Q6/p3n3/8 w");
         let capturing_moves: HashSet<Move> = board.capturing_moves().collect();
 
         let expected: HashSet<Move> = board
@@ -709,46 +546,5 @@ mod tests {
             .collect();
 
         assert_eq!(capturing_moves, expected);
-    }
-
-    /// Look up "perft" for more details (and bigger numbers!)
-    #[test]
-    fn number_of_moves_is_as_expected() {
-        // Expected number of moves at different depths
-        let expected_moves_at_depth = vec![
-            1, 20, 400, 8902, 197_281,
-            // 4_865_609 - TODO: fails
-        ];
-
-        let mut board = Board::default();
-
-        fn count_moves(board: &mut Board, depth: usize) -> usize {
-            if depth == 0 {
-                return 1;
-            }
-
-            let mut count = 0;
-
-            let moves: Vec<Move> = board.moves().collect();
-
-            // Optimisation - skip making and un-making last moves
-            if depth == 1 {
-                return moves.len();
-            }
-
-            for mov in moves {
-                board.make_move(mov);
-                count += count_moves(board, depth - 1);
-                board.unmake_move(mov);
-            }
-
-            count
-        }
-
-        for (depth, expected_moves) in expected_moves_at_depth.iter().enumerate() {
-            let actual_moves = count_moves(&mut board, depth);
-
-            assert_eq!(*expected_moves, actual_moves);
-        }
     }
 }
