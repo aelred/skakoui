@@ -163,5 +163,5 @@ pub fn mate_in_1_board() -> impl Strategy<Value = (Board, Move)> {
 
 pub fn arb_board() -> impl Strategy<Value = Board> {
     (arb_pieces(), arb_player(), arb_flags())
-        .prop_flat_map(|(pieces, player, flags)| Board::new(pieces, player, flags))
+        .prop_map(|(pieces, player, flags)| Board::new(pieces, player, flags))
 }
