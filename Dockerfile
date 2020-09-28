@@ -1,4 +1,4 @@
-FROM rust:1.43-slim as skakoui-builder
+FROM rust:1.46-slim as skakoui-builder
 WORKDIR /usr/src/skakoui
 ENV USER docker
 RUN cargo init
