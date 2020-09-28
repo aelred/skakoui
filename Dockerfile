@@ -1,4 +1,5 @@
 FROM rust:1.46-alpine as skakoui-builder
+RUN akp add musl-dev
 WORKDIR /usr/src/skakoui
 ENV USER docker
 RUN cargo init
