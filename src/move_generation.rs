@@ -31,10 +31,10 @@ impl Board {
         // TODO: this is a very inefficient way to confirm if in check
         // TODO: disallow castling when in check or through check
         self.pseudo_legal_moves().filter(move |mov| {
-            let captured = self.make_move(*mov);
+            let pmov = self.make_move(*mov);
             let in_check = self.check(me);
-            let captured_king = captured == Some(King);
-            self.unmake_move(*mov);
+            let captured_king = pmov.capture() == Some(King);
+            self.unmake_move(pmov);
             !(in_check || captured_king)
         })
     }
@@ -100,9 +100,9 @@ impl Board {
         let me = self.player();
         let moves: Vec<Move> = self.moves().collect();
         for mov in moves {
-            self.make_move(mov);
+            let pmov = self.make_move(mov);
             let check = self.check(me);
-            self.unmake_move(mov);
+            self.unmake_move(pmov);
             if !check {
                 return false;
             }
@@ -538,9 +538,9 @@ mod tests {
             .pseudo_legal_moves()
             .filter(|mov| {
                 let pieces_before = board.occupancy().count();
-                board.make_move(*mov);
+                let pmov = board.make_move(*mov);
                 let pieces_after = board.occupancy().count();
-                board.unmake_move(*mov);
+                board.unmake_move(pmov);
                 pieces_before != pieces_after
             })
             .collect();

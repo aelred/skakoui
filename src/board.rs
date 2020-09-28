@@ -1,3 +1,4 @@
+use crate::moves::PlayedMove;
 use crate::piece::PieceType::Pawn;
 use crate::Move;
 use crate::Piece;
@@ -17,7 +18,6 @@ use enum_map::EnumMap;
 use serde::export::Formatter;
 use std::convert::TryFrom;
 use std::fmt;
-use std::fmt::Debug;
 use std::ops::BitOr;
 use std::str::FromStr;
 
@@ -38,14 +38,8 @@ pub struct Board {
     occupancy: Bitboard,
     /// Castling rights
     flags: BoardFlags,
-    /// List of previous board states - used to "unmake" (undo) moves like captures
-    board_states: Vec<BoardState>,
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Hash)]
-struct BoardState {
-    captured_piece_type: Option<PieceType>,
-    flags: BoardFlags,
+    /// Number of moves into the game
+    plies: u32,
 }
 
 impl Board {
@@ -71,7 +65,7 @@ impl Board {
         }
         flags.unset(unset_flags);
 
-        Self::with_states(pieces, player, flags, vec![])
+        Self::with_states(pieces, player, flags)
     }
 
     /// Parse a board from
@@ -201,12 +195,7 @@ impl Board {
         fen
     }
 
-    fn with_states(
-        pieces: SquareMap<Option<Piece>>,
-        player: Player,
-        flags: BoardFlags,
-        board_states: Vec<BoardState>,
-    ) -> Self {
+    fn with_states(pieces: SquareMap<Option<Piece>>, player: Player, flags: BoardFlags) -> Self {
         let mut bitboards = PieceMap::from(|_| bitboards::EMPTY);
 
         for (square, optional_piece) in pieces.iter() {
@@ -236,7 +225,7 @@ impl Board {
             occupancy_player,
             occupancy,
             flags,
-            board_states,
+            plies: 0,
         }
     }
 
@@ -253,12 +242,12 @@ impl Board {
     }
 
     /// Number of half-moves played in the game
-    pub fn plies(&self) -> usize {
-        self.board_states.len()
+    pub fn plies(&self) -> u32 {
+        self.plies
     }
 
     /// Perform a move on the board, mutating the board
-    pub fn make_move(&mut self, mov: Move) -> Option<PieceType> {
+    pub fn make_move(&mut self, mov: Move) -> PlayedMove {
         let prev_flags = self.flags;
 
         let player = self.player();
@@ -354,21 +343,21 @@ impl Board {
         }
 
         self.player = self.player.opponent();
-
-        let new_board_state = BoardState {
-            captured_piece_type,
-            flags: prev_flags,
-        };
-
-        self.board_states.push(new_board_state);
+        self.plies += 1;
 
         self.assert_invariants();
 
-        captured_piece_type
+        PlayedMove::new(mov, captured_piece_type, prev_flags)
     }
 
     /// Undo a move on the board - opposite of [make_move]
-    pub fn unmake_move(&mut self, mov: Move) {
+    pub fn unmake_move(&mut self, pmov: PlayedMove) {
+        let PlayedMove {
+            mov,
+            capture,
+            flags,
+        } = pmov;
+
         let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
@@ -381,14 +370,9 @@ impl Board {
             self.get(to).unwrap()
         };
 
-        let BoardState {
-            captured_piece_type,
-            flags,
-        } = self.board_states.pop().expect("No move to undo");
-
         self.flags = flags;
 
-        if let Some(captured_piece_type) = captured_piece_type {
+        if let Some(captured_piece_type) = capture {
             let captured_piece = Piece::new(player.opponent(), captured_piece_type);
             self.bitboard_piece_mut(captured_piece).set(to);
             self.occupancy_player[player.opponent()].set(to);
@@ -455,6 +439,8 @@ impl Board {
                 self.occupancy_player[player].move_bit(rook_to, rook_from);
             }
         }
+
+        self.plies -= 1;
 
         self.assert_invariants();
     }
@@ -753,7 +739,6 @@ pub mod tests {
         board.make_move(mov);
 
         let expect = fen("rnbqkbnr/pppppppp/8/8/8/2N5/PPPPPPPP/R1BQKBNR b");
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -766,7 +751,6 @@ pub mod tests {
         board.make_move(mov);
 
         let expected_board = fen("rnbqkbnr/pppBp1pp/8/5p2/8/4P3/PPPP1PPP/RNBQK1NR b");
-        board.board_states.clear();
         assert_eq!(board, expected_board);
     }
 
@@ -779,7 +763,6 @@ pub mod tests {
         board.make_move(mov);
 
         let expected_board = fen("rnbqkbQr/ppppp2p/8/5p2/6n1/8/PPPPP1PP/RNBQKBNR b");
-        board.board_states.clear();
         assert_eq!(board, expected_board);
     }
 
@@ -793,12 +776,12 @@ pub mod tests {
         let mov2 = Move::new(Square::H7, Square::H5);
         let mov3 = Move::new(Square::H8, Square::H5);
 
-        board.make_move(mov1);
-        board.make_move(mov2);
-        board.make_move(mov3);
-        board.unmake_move(mov3);
-        board.unmake_move(mov2);
-        board.unmake_move(mov1);
+        let pmov1 = board.make_move(mov1);
+        let pmov2 = board.make_move(mov2);
+        let pmov3 = board.make_move(mov3);
+        board.unmake_move(pmov3);
+        board.unmake_move(pmov2);
+        board.unmake_move(pmov1);
 
         assert_eq!(board, expected_board);
     }
@@ -809,7 +792,6 @@ pub mod tests {
         board.make_move(Move::castle_kingside::<WhitePlayer>());
 
         let expect = fen("8/8/8/8/8/8/8/5RK1 b -");
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -819,7 +801,6 @@ pub mod tests {
         board.make_move(Move::castle_kingside::<BlackPlayer>());
 
         let expect = fen("5rk1/8/8/8/8/8/8/8 w -");
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -829,7 +810,6 @@ pub mod tests {
         board.make_move(Move::castle_queenside::<WhitePlayer>());
 
         let expect = fen("8/8/8/8/8/8/8/2KR4 b -");
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -839,7 +819,6 @@ pub mod tests {
         board.make_move(Move::castle_queenside::<BlackPlayer>());
 
         let expect = fen("2kr4/8/8/8/8/8/8/8 w -");
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -848,7 +827,6 @@ pub mod tests {
         let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
         let expect = fen("r4k1r/8/8/8/8/8/8/8 w -");
         board.make_move(Move::new(Square::E8, Square::F8));
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -857,7 +835,6 @@ pub mod tests {
         let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
         let expect = fen("r3k1r1/8/8/8/8/8/8/8 w q");
         board.make_move(Move::new(Square::H8, Square::G8));
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -866,7 +843,6 @@ pub mod tests {
         let mut board = fen("r3k2r/8/8/8/8/8/8/8 b kq");
         let expect = fen("1r2k2r/8/8/8/8/8/8/8 w k");
         board.make_move(Move::new(Square::A8, Square::B8));
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -875,7 +851,6 @@ pub mod tests {
         let mut board = fen("r3k2r/7Q/8/8/8/8/8/8 w kq");
         let expect = fen("r3k2Q/8/8/8/8/8/8/8 b q");
         board.make_move(Move::new(Square::H7, Square::H8));
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -884,7 +859,6 @@ pub mod tests {
         let mut board = fen("r3k2r/Q7/8/8/8/8/8/8 w kq");
         let expect = fen("Q3k2r/8/8/8/8/8/8/8 b k");
         board.make_move(Move::new(Square::A7, Square::A8));
-        board.board_states.clear();
         assert_eq!(board, expect);
     }
 
@@ -899,7 +873,6 @@ pub mod tests {
         board.make_move(en_passant);
 
         let expected_board = fen("8/8/8/8/8/p7/8/8 w");
-        board.board_states.clear();
         assert_eq!(board, expected_board);
     }
 

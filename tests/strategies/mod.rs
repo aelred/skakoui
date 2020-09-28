@@ -5,7 +5,7 @@ use proptest::collection::{vec, SizeRange};
 use proptest::option;
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
-use skakoui::{Board, BoardFlags, Move, Piece, PieceType, Player};
+use skakoui::{Board, BoardFlags, Move, Piece, PieceType, PlayedMove, Player};
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
@@ -14,7 +14,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone, Default)]
 struct GameState {
     board: Board,
-    moves: Vec<Move>,
+    moves: Vec<PlayedMove>,
 }
 
 impl GameState {
@@ -26,19 +26,19 @@ impl GameState {
     }
 
     fn push_move(&mut self, mov: Move) {
-        self.board.make_move(mov);
-        self.moves.push(mov);
+        let pmov = self.board.make_move(mov);
+        self.moves.push(pmov);
     }
 
     fn pop(&mut self) -> Option<Move> {
-        self.moves.pop().map(|mov| {
-            self.board.unmake_move(mov);
-            mov
+        self.moves.pop().map(|pmov| {
+            self.board.unmake_move(pmov);
+            pmov.mov
         })
     }
 
     fn moves(&self) -> impl Iterator<Item = &Move> {
-        self.moves.iter()
+        self.moves.iter().map(|pm| &pm.mov)
     }
 }
 
@@ -149,10 +149,11 @@ pub fn board_and_move(
 }
 
 pub fn mate_in_1_board() -> impl Strategy<Value = (Board, Move)> {
-    board_and_move(arb_board()).prop_filter_map("not a mate-in-1", |(mut board, mov)| {
-        board.make_move(mov);
+    board_and_move(legal_board(3..40)).prop_filter_map("not a mate-in-1", |(mut board, mov)| {
+        dbg!(&board);
+        let pmov = board.make_move(mov);
         let checkmate = board.checkmate();
-        board.unmake_move(mov);
+        board.unmake_move(pmov);
         if checkmate {
             Some((board, mov))
         } else {

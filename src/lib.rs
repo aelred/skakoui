@@ -18,7 +18,7 @@ pub use crate::{
     bitboard::{bitboards, Bitboard},
     board::{Board, BoardFlags},
     file::File,
-    moves::Move,
+    moves::{Move, PlayedMove},
     piece::{Piece, PieceType},
     piece_map::PieceMap,
     rank::{Rank, RankMap},

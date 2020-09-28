@@ -19,9 +19,9 @@ proptest! {
         let pv = searcher.principal_variation();
         let mov = *pv.first().unwrap();
 
-        board.make_move(mov);
+        let pmov = board.make_move(mov);
         let checkmate = board.checkmate();
-        board.unmake_move(mov);
+        board.unmake_move(pmov);
 
         assert!(checkmate, "{}\nExpect: {}\nActual: {}\nPV: {:?}", board, mating_move, mov, pv);
     }

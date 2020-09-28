@@ -184,9 +184,9 @@ impl Searcher {
             let mut best_score = LOW_SCORE;
 
             for mov in moves {
-                board.make_move(mov);
+                let pmov = board.make_move(mov);
                 let key = board.key();
-                board.unmake_move(mov);
+                board.unmake_move(pmov);
 
                 // Check for loop
                 if !key_set.insert(key) {
@@ -310,7 +310,7 @@ impl<'a> ThreadSearcher<'a> {
             log_search!(self, depth, "{}:", mov);
 
             // Evaluate value of move for current player
-            self.board.make_move(mov);
+            let pmov = self.board.make_move(mov);
             let mov_value = -self.search(
                 depth - 1,
                 // If our maximum possible score is `x`, then the opponent is guaranteed to
@@ -320,7 +320,7 @@ impl<'a> ThreadSearcher<'a> {
                 // get more than `-y`
                 -alpha,
             );
-            self.board.unmake_move(mov);
+            self.board.unmake_move(pmov);
 
             if self.should_abort() {
                 return 0;
@@ -416,9 +416,9 @@ impl<'a> ThreadSearcher<'a> {
 
         for mov in moves {
             log_search!(self, depth, "trying {}", mov);
-            self.board.make_move(mov);
+            let pmov = self.board.make_move(mov);
             let mov_value = -self.quiesce(-beta, -alpha, depth - 1);
-            self.board.unmake_move(mov);
+            self.board.unmake_move(pmov);
 
             log_search!(self, depth, "{} = {}", mov, mov_value);
 

@@ -47,10 +47,10 @@ fn expect_moves(board: &mut Board, depth: usize, expected_moves: usize) {
             let moves: Vec<Move> = board.moves().collect();
             let mut move_counts = String::new();
             for mov in moves {
-                board.make_move(mov);
+                let pmov = board.make_move(mov);
                 let num_moves = count_moves(board, depth - 1);
                 move_counts.push_str(&format!("{}: {}\n", mov, num_moves));
-                board.unmake_move(mov);
+                board.unmake_move(pmov);
             }
             move_counts
         },
@@ -73,9 +73,9 @@ fn count_moves(board: &mut Board, depth: usize) -> usize {
     }
 
     for mov in moves {
-        board.make_move(mov);
+        let pmov = board.make_move(mov);
         count += count_moves(board, depth - 1);
-        board.unmake_move(mov);
+        board.unmake_move(pmov);
     }
 
     count

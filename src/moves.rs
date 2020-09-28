@@ -1,5 +1,5 @@
-use crate::PlayerType;
 use crate::Square;
+use crate::{BoardFlags, PlayerType};
 use crate::{File, PieceType};
 use std::error::Error;
 use std::fmt;
@@ -123,6 +123,32 @@ impl FromStr for Move {
             to,
             promoting,
         })
+    }
+}
+
+/// Move that has been played with extra information so it can be un-done.
+#[derive(Debug, Copy, Clone)]
+pub struct PlayedMove {
+    pub mov: Move,
+    pub capture: Option<PieceType>,
+    pub flags: BoardFlags,
+}
+
+impl PlayedMove {
+    pub fn new(mov: Move, capture: Option<PieceType>, flags: BoardFlags) -> Self {
+        Self {
+            mov,
+            capture,
+            flags,
+        }
+    }
+
+    pub fn mov(&self) -> Move {
+        self.mov
+    }
+
+    pub fn capture(&self) -> Option<PieceType> {
+        self.capture
     }
 }
 

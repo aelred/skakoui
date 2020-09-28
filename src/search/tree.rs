@@ -19,9 +19,9 @@ impl SearchTree {
             let moves: Vec<Move> = board.moves().collect();
 
             for mov in moves {
-                board.make_move(mov);
+                let pmov = board.make_move(mov);
                 let child = SearchTree::from_table(board, table);
-                board.unmake_move(mov);
+                board.unmake_move(pmov);
 
                 children.insert(mov.to_string(), child);
             }
