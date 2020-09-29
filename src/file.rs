@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::fmt;
 
+use anyhow::{anyhow, Error};
 use std::ops::Add;
 use std::ops::Index;
 use std::str::FromStr;
@@ -64,9 +65,9 @@ impl fmt::Display for File {
 }
 
 impl FromStr for File {
-    type Err = String;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, String> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let file = match s {
             "a" => File::A,
             "b" => File::B,
@@ -76,7 +77,7 @@ impl FromStr for File {
             "f" => File::F,
             "g" => File::G,
             "h" => File::H,
-            _ => return Err("unrecognised file".to_string()),
+            x => return Err(anyhow!("unrecognised file '{}'", x)),
         };
         Ok(file)
     }

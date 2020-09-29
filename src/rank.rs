@@ -1,5 +1,5 @@
+use anyhow::{anyhow, Error};
 use std::borrow::Borrow;
-use std::error::Error;
 use std::fmt;
 use std::fmt::{Display, Write};
 use std::ops::Add;
@@ -74,12 +74,12 @@ impl fmt::Display for Rank {
 }
 
 impl FromStr for Rank {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let num: u8 = s.parse()?;
         if num < 1 || num > 9 {
-            Err("unrecognised rank".to_string().into())
+            Err(anyhow!("unrecognised rank"))
         } else {
             Ok(Rank::from_index(num - 1))
         }

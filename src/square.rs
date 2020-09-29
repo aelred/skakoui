@@ -1,7 +1,7 @@
 use crate::file::File;
 use crate::Rank;
+use anyhow::anyhow;
 use std::borrow::Borrow;
-use std::error::Error;
 use std::fmt;
 use std::hash::Hash;
 use std::hash::Hasher;
@@ -138,11 +138,17 @@ impl fmt::Display for Square {
 }
 
 impl FromStr for Square {
-    type Err = Box<dyn Error>;
+    type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
-        let file = s.get(..1).ok_or("couldn't index string")?.parse()?;
-        let rank = s.get(1..).ok_or("coudln't index string")?.parse()?;
+    fn from_str(s: &str) -> Result<Self, anyhow::Error> {
+        let file = s
+            .get(..1)
+            .ok_or_else(|| anyhow!("couldn't index string"))?
+            .parse()?;
+        let rank = s
+            .get(1..)
+            .ok_or_else(|| anyhow!("couldn't index string"))?
+            .parse()?;
         Ok(Square::new(file, rank))
     }
 }
