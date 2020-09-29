@@ -789,7 +789,7 @@ pub mod tests {
     #[test]
     fn white_can_castle_kingside() {
         let mut board = fen("8/8/8/8/8/8/8/4K2R w K");
-        board.make_move(Move::castle_kingside::<WhitePlayer>());
+        board.make_move(Move::castle_kingside(Player::White));
 
         let expect = fen("8/8/8/8/8/8/8/5RK1 b -");
         assert_eq!(board, expect);
@@ -798,7 +798,7 @@ pub mod tests {
     #[test]
     fn black_can_castle_kingside() {
         let mut board = fen("4k2r/8/8/8/8/8/8/8 b k");
-        board.make_move(Move::castle_kingside::<BlackPlayer>());
+        board.make_move(Move::castle_kingside(Player::Black));
 
         let expect = fen("5rk1/8/8/8/8/8/8/8 w -");
         assert_eq!(board, expect);
@@ -807,7 +807,7 @@ pub mod tests {
     #[test]
     fn white_can_castle_queenside() {
         let mut board = fen("8/8/8/8/8/8/8/R3K3 w Q");
-        board.make_move(Move::castle_queenside::<WhitePlayer>());
+        board.make_move(Move::castle_queenside(Player::White));
 
         let expect = fen("8/8/8/8/8/8/8/2KR4 b -");
         assert_eq!(board, expect);
@@ -816,7 +816,7 @@ pub mod tests {
     #[test]
     fn black_can_castle_queenside() {
         let mut board = fen("r3k3/8/8/8/8/8/8/8 b q");
-        board.make_move(Move::castle_queenside::<BlackPlayer>());
+        board.make_move(Move::castle_queenside(Player::Black));
 
         let expect = fen("2kr4/8/8/8/8/8/8/8 w -");
         assert_eq!(board, expect);

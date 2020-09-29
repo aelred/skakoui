@@ -243,7 +243,7 @@ impl<P: PlayerType> Iterator for CastlingIter<P> {
             if self.flags.is_set(P::CASTLE_KINGSIDE_FLAG)
                 && (P::CASTLE_KINGSIDE_CLEAR & self.occupancy).is_empty()
             {
-                return Some(Move::castle_kingside::<P>());
+                return Some(Move::castle_kingside(P::PLAYER));
             }
         }
 
@@ -252,7 +252,7 @@ impl<P: PlayerType> Iterator for CastlingIter<P> {
             if self.flags.is_set(P::CASTLE_QUEENSIDE_FLAG)
                 && (P::CASTLE_QUEENSIDE_CLEAR & self.occupancy).is_empty()
             {
-                return Some(Move::castle_queenside::<P>());
+                return Some(Move::castle_queenside(P::PLAYER));
             }
         }
 

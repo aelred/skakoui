@@ -1,6 +1,6 @@
-use crate::Square;
 use crate::{BoardFlags, PlayerType};
 use crate::{File, PieceType};
+use crate::{Player, Square};
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
@@ -30,19 +30,19 @@ impl Move {
     }
 
     #[inline]
-    pub fn castle_kingside<P: PlayerType>() -> Self {
+    pub fn castle_kingside(player: Player) -> Self {
         Self {
-            from: Square::new(File::E, P::PLAYER.back_rank()),
-            to: Square::new(File::G, P::PLAYER.back_rank()),
+            from: Square::new(File::E, player.back_rank()),
+            to: Square::new(File::G, player.back_rank()),
             promoting: None,
         }
     }
 
     #[inline]
-    pub fn castle_queenside<P: PlayerType>() -> Self {
+    pub fn castle_queenside(player: Player) -> Self {
         Self {
-            from: Square::new(File::E, P::PLAYER.back_rank()),
-            to: Square::new(File::C, P::PLAYER.back_rank()),
+            from: Square::new(File::E, player.back_rank()),
+            to: Square::new(File::C, player.back_rank()),
             promoting: None,
         }
     }
