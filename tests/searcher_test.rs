@@ -66,7 +66,7 @@ fn mate_in_2s() -> impl Iterator<Item = (Board, Vec<Move>)> {
     })
     .filter_map(|(mut board, mstr)| {
         let mstr = mstr.split_whitespace();
-        let amoves = mstr.map(|m| m.parse::<Algebraic>().ok()?);
+        let amoves = mstr.map(|m| m.parse::<Algebraic>().unwrap());
 
         let mut moves: Vec<Move> = vec![];
         let mut undo: Vec<PlayedMove> = vec![];
