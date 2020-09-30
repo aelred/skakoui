@@ -5,6 +5,7 @@ mod board;
 mod file;
 mod move_generation;
 mod moves;
+pub mod pgn;
 mod piece;
 mod piece_map;
 mod rank;
