@@ -1,4 +1,4 @@
-use crate::{Bitboard, PieceMap, Player};
+use crate::{Bitboard, BoardFlags, PieceMap, Player};
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -45,7 +45,7 @@ impl TranspositionTable {
     }
 }
 
-pub type Key = (PieceMap<Bitboard>, Player);
+pub type Key = (PieceMap<Bitboard>, Player, BoardFlags);
 
 #[derive(Debug, Copy, Clone, Serialize)]
 pub struct Node {

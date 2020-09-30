@@ -30,7 +30,7 @@ macro_rules! log_search {
 
 impl Board {
     fn key(&self) -> Key {
-        (*self.bitboards(), self.player())
+        (*self.bitboards(), self.player(), self.flags())
     }
 }
 
@@ -368,7 +368,7 @@ impl<'a> ThreadSearcher<'a> {
     /// piece could be taken in the next turn.
     fn quiesce(&mut self, mut alpha: i32, beta: i32, depth: i16) -> i32 {
         // hard cut-off to depth of quiescent search
-        if depth <= -3 {
+        if depth <= -1 {
             log_search!(self, depth, "woah that's deep enough");
             return self.board.eval();
         }
