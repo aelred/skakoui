@@ -1,6 +1,7 @@
 use crate::Player;
 use core::fmt::Write;
 use enum_map::Enum;
+use std::borrow::Borrow;
 use std::fmt;
 use std::str::FromStr;
 
@@ -172,7 +173,7 @@ impl FromStr for PieceType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, String> {
-        let piece_type = match s {
+        let piece_type = match s.to_ascii_uppercase().borrow() {
             "K" => PieceType::King,
             "Q" => PieceType::Queen,
             "R" => PieceType::Rook,
