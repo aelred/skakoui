@@ -72,7 +72,7 @@ pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
                 .chunks(8)
                 .map(|slice| {
                     let mut arrvec = ArrayVec::<[Option<Piece>; 8]>::new();
-                    arrvec.try_extend_from_slice(slice);
+                    arrvec.try_extend_from_slice(slice).unwrap();
                     arrvec.into_inner().unwrap()
                 })
                 .collect();
