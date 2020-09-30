@@ -38,8 +38,6 @@ pub struct Board {
     occupancy: Bitboard,
     /// Castling rights
     flags: BoardFlags,
-    /// Number of moves into the game
-    plies: u32,
 }
 
 impl Board {
@@ -225,7 +223,6 @@ impl Board {
             occupancy_player,
             occupancy,
             flags,
-            plies: 0,
         }
     }
 
@@ -239,11 +236,6 @@ impl Board {
     #[inline]
     pub fn player(&self) -> Player {
         self.player
-    }
-
-    /// Number of half-moves played in the game
-    pub fn plies(&self) -> u32 {
-        self.plies
     }
 
     /// Perform a move on the board, mutating the board
@@ -343,7 +335,6 @@ impl Board {
         }
 
         self.player = self.player.opponent();
-        self.plies += 1;
 
         self.assert_invariants();
 
@@ -440,8 +431,6 @@ impl Board {
             }
         }
 
-        self.plies -= 1;
-
         self.assert_invariants();
     }
 
@@ -481,8 +470,7 @@ impl Board {
     }
 
     pub fn eval_win(&self) -> i32 {
-        let delay_penalty = self.plies() as i32;
-        1_000_000 - delay_penalty
+        1_000_000
     }
 
     pub fn eval(&self) -> i32 {
