@@ -16,6 +16,7 @@ mod ttable;
 
 const HIGH_SCORE: i32 = std::i32::MAX;
 const LOW_SCORE: i32 = -HIGH_SCORE; // Not std::i32::MIN or we get overflows on negation
+const WIN: i32 = 1_000_000;
 
 macro_rules! log_search {
     ($searcher:expr, $depth:expr, $($arg:tt)*) => ({
@@ -298,7 +299,7 @@ impl<'a> ThreadSearcher<'a> {
 
         let mut value = if moves.is_empty() {
             if self.board.checkmate() {
-                -self.board.eval_win()
+                -WIN
             } else {
                 0 // In stalemate, so this is a tie
             }
@@ -410,7 +411,7 @@ impl<'a> ThreadSearcher<'a> {
             moves = self.board.moves().collect();
 
             if moves.is_empty() {
-                return -self.board.eval_win();
+                return -WIN;
             }
         }
 

@@ -469,10 +469,6 @@ impl Board {
         self.flags
     }
 
-    pub fn eval_win(&self) -> i32 {
-        1_000_000
-    }
-
     pub fn eval(&self) -> i32 {
         let white_centric_score = 200 * (self.count(Piece::WK) - self.count(Piece::BK))
             + 9 * (self.count(Piece::WQ) - self.count(Piece::BQ))
