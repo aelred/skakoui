@@ -1,7 +1,6 @@
 use crate::Player;
-use core::fmt::Write;
+use anyhow::Error;
 use enum_map::Enum;
-use std::borrow::Borrow;
 use std::fmt;
 use std::str::FromStr;
 
@@ -82,45 +81,20 @@ impl Piece {
     pub fn piece_type(self) -> PieceType {
         self.piece_type
     }
-
-    pub fn to_fen(&self) -> char {
-        let c = self.piece_type.as_char();
-        if self.player == Player::White {
-            c.to_ascii_uppercase()
-        } else {
-            c.to_ascii_lowercase()
-        }
-    }
 }
 
 impl FromStr for Piece {
-    type Err = ();
+    type Err = Error;
 
     fn from_str(str: &str) -> Result<Self, Self::Err> {
-        let piece = match str {
-            "♔" | "K" => Self::WK,
-            "♕" | "Q" => Self::WQ,
-            "♖" | "R" => Self::WR,
-            "♗" | "B" => Self::WB,
-            "♘" | "N" => Self::WN,
-            "♙" | "P" => Self::WP,
-            "♚" | "k" => Self::BK,
-            "♛" | "q" => Self::BQ,
-            "♜" | "r" => Self::BR,
-            "♝" | "b" => Self::BB,
-            "♞" | "n" => Self::BN,
-            "♟" | "p" => Self::BP,
-            _ => return Err(()),
-        };
-
-        Ok(piece)
+        Self::from_fen(str)
     }
 }
 
 impl fmt::Debug for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let player_char = self.player.as_char();
-        let piece_char = self.piece_type.as_char();
+        let piece_char = self.piece_type.to_char();
         f.write_fmt(format_args!("Piece::{}{}", player_char, piece_char))
     }
 }
@@ -151,7 +125,7 @@ impl fmt::Display for Piece {
 }
 
 impl PieceType {
-    fn as_char(self) -> char {
+    pub fn to_char(self) -> char {
         match self {
             PieceType::King => 'K',
             PieceType::Queen => 'Q',
@@ -165,25 +139,15 @@ impl PieceType {
 
 impl fmt::Display for PieceType {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_char(self.as_char())
+        f.write_str(&self.to_fen())
     }
 }
 
 impl FromStr for PieceType {
-    type Err = String;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, String> {
-        let piece_type = match s.to_ascii_uppercase().borrow() {
-            "K" => PieceType::King,
-            "Q" => PieceType::Queen,
-            "R" => PieceType::Rook,
-            "B" => PieceType::Bishop,
-            "N" => PieceType::Knight,
-            "P" => PieceType::Pawn,
-            _ => return Err("couldn't recognise piece".to_string()),
-        };
-
-        Ok(piece_type)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_fen(s)
     }
 }
 
@@ -199,13 +163,13 @@ mod tests {
 
     #[test]
     fn piece_to_string_is_inverse_of_parse() {
-        assert_eq!(Piece::BQ.to_string().parse(), Ok(Piece::BQ));
+        assert_eq!(Piece::BQ.to_string().parse::<Piece>().unwrap(), Piece::BQ);
         assert_eq!("♖".parse::<Piece>().unwrap().to_string(), "♖");
     }
 
     #[test]
     fn piece_parse_on_non_piece_string_is_none() {
-        assert_eq!("g".parse::<Piece>(), Err(()));
+        assert!("g".parse::<Piece>().is_err());
     }
 
     #[test]

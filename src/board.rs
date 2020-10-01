@@ -12,8 +12,7 @@ use crate::SquareMap;
 use crate::{bitboards, PlayerType};
 use crate::{Bitboard, WhitePlayer};
 use crate::{BlackPlayer, File};
-use anyhow::{anyhow, Context, Error};
-use arrayvec::ArrayVec;
+use anyhow::Error;
 use enum_map::EnumMap;
 use serde::export::Formatter;
 use std::convert::TryFrom;
@@ -64,133 +63,6 @@ impl Board {
         flags.unset(unset_flags);
 
         Self::with_states(pieces, player, flags)
-    }
-
-    /// Parse a board from
-    /// [Forsyth-Edwards notation](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation).
-    pub fn from_fen(fen: impl Into<String>) -> Result<Board, Error> {
-        let fen_str = fen.into();
-        let mut fields = fen_str.split_whitespace();
-        let pieces_str = fields.next().context("Expected pieces")?;
-        let pieces_by_rank = pieces_str.split('/');
-
-        let mut pieces_vec = ArrayVec::<[[Option<Piece>; 8]; 8]>::new();
-        for rank in pieces_by_rank {
-            let mut rank_vec = ArrayVec::<[Option<Piece>; 8]>::new();
-            for c in rank.chars() {
-                let s = c.to_string();
-                if let Ok(empties) = s.parse::<usize>() {
-                    for _ in 0..empties {
-                        rank_vec
-                            .try_push(None)
-                            .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
-                    }
-                } else if let Ok(piece) = s.parse::<Piece>() {
-                    rank_vec
-                        .try_push(Some(piece))
-                        .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
-                }
-            }
-            pieces_vec
-                .try_push(
-                    rank_vec
-                        .into_inner()
-                        .map_err(|_| anyhow!("Less than 8 squares in rank: {}", rank))?,
-                )
-                .with_context(|| anyhow!("More than 8 ranks: {}", pieces_str))?;
-        }
-        pieces_vec.reverse();
-        let pieces_array = pieces_vec
-            .into_inner()
-            .map_err(|_| anyhow!("Less than 8 ranks: {}", pieces_str))?;
-
-        let player = fields
-            .next()
-            .context("Expected player after pieces")?
-            .parse::<Player>()?;
-
-        let flags = fields.next().map(|castling| {
-            let mut set_flags = 0u8;
-            if castling.contains('K') {
-                set_flags |= WhitePlayer::CASTLE_KINGSIDE_FLAG;
-            }
-            if castling.contains('Q') {
-                set_flags |= WhitePlayer::CASTLE_QUEENSIDE_FLAG;
-            }
-            if castling.contains('k') {
-                set_flags |= BlackPlayer::CASTLE_KINGSIDE_FLAG;
-            }
-            if castling.contains('q') {
-                set_flags |= BlackPlayer::CASTLE_QUEENSIDE_FLAG;
-            }
-            BoardFlags(set_flags)
-        });
-
-        // TODO: also parse en passant and number of moves
-
-        Ok(Self::new(pieces_array, player, flags.unwrap_or_default()))
-    }
-
-    pub fn to_fen(&self) -> String {
-        let mut array: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
-
-        for (square, piece) in self.pieces.iter() {
-            array[square.rank().to_index() as usize][square.file().to_index() as usize] = *piece;
-        }
-
-        let mut fen = String::new();
-        let mut empty_count = 0;
-
-        fn push_empty_count(fen: &mut String, empty_count: &mut i32) {
-            if *empty_count != 0 {
-                fen.push_str(&empty_count.to_string());
-                *empty_count = 0;
-            }
-        }
-
-        for rank in array.iter().rev() {
-            if !fen.is_empty() {
-                fen.push('/');
-            }
-
-            for square in rank {
-                match square {
-                    Some(piece) => {
-                        push_empty_count(&mut fen, &mut empty_count);
-                        fen.push(piece.to_fen())
-                    }
-                    None => empty_count += 1,
-                }
-            }
-            push_empty_count(&mut fen, &mut empty_count);
-        }
-
-        fen.push(' ');
-        fen.push(self.player.to_fen());
-
-        fen.push(' ');
-        let mut can_castle = false;
-        if self.flags.is_set(WhitePlayer::CASTLE_KINGSIDE_FLAG) {
-            fen.push('K');
-            can_castle = true;
-        }
-        if self.flags.is_set(WhitePlayer::CASTLE_QUEENSIDE_FLAG) {
-            fen.push('Q');
-            can_castle = true;
-        }
-        if self.flags.is_set(BlackPlayer::CASTLE_KINGSIDE_FLAG) {
-            fen.push('k');
-            can_castle = true;
-        }
-        if self.flags.is_set(BlackPlayer::CASTLE_QUEENSIDE_FLAG) {
-            fen.push('q');
-            can_castle = true;
-        }
-        if !can_castle {
-            fen.push('-');
-        }
-
-        fen
     }
 
     fn with_states(pieces: SquareMap<Option<Piece>>, player: Player, flags: BoardFlags) -> Self {
@@ -677,13 +549,6 @@ pub mod tests {
     #[test]
     fn can_create_default_chess_board() {
         Board::default();
-    }
-
-    #[test]
-    fn can_create_board_from_fen_notation() {
-        let fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-        let board = Board::from_fen(fen).unwrap();
-        assert_eq!(board, Board::default());
     }
 
     #[test]

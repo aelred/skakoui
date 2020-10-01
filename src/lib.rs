@@ -2,6 +2,7 @@
 
 mod bitboard;
 mod board;
+mod fen;
 mod file;
 mod move_generation;
 mod moves;
@@ -12,7 +13,7 @@ mod rank;
 mod search;
 mod square;
 
-use anyhow::{anyhow, Error};
+use anyhow::Error;
 use enum_map::Enum;
 
 pub use crate::{
@@ -27,7 +28,6 @@ pub use crate::{
     square::{Square, SquareColor, SquareMap},
 };
 use std::fmt;
-use std::fmt::Write;
 use std::str::FromStr;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
@@ -49,10 +49,6 @@ impl Player {
             Player::White => 'W',
             Player::Black => 'B',
         }
-    }
-
-    fn to_fen(self) -> char {
-        self.as_char().to_ascii_lowercase()
     }
 
     fn score_multiplier(self) -> i32 {
@@ -93,18 +89,13 @@ impl FromStr for Player {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let player = match s {
-            "W" | "w" => Player::White,
-            "B" | "b" => Player::Black,
-            _ => return Err(anyhow!("Expected W, w, B or b")),
-        };
-        Ok(player)
+        Player::from_fen(s)
     }
 }
 
 impl fmt::Display for Player {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_char(self.to_fen())
+        f.write_str(&self.to_fen())
     }
 }
 
