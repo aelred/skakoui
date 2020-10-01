@@ -1,8 +1,8 @@
 mod tree;
 
 use crate::search::tree::SearchTree;
-use crate::Board;
-use crate::Move;
+use crate::{BlackPlayer, Board, PlayerType};
+use crate::{Move, Player, WhitePlayer};
 
 use std::collections::HashSet;
 
@@ -255,7 +255,11 @@ impl<'a> ThreadSearcher<'a> {
 
         while !self.should_abort() {
             log_search!(self, self.max_depth, "search at depth");
-            self.search(self.max_depth, LOW_SCORE, HIGH_SCORE);
+
+            match self.board.player() {
+                Player::White => self.search::<WhitePlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
+                Player::Black => self.search::<BlackPlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
+            };
             self.max_depth += 1;
         }
 
@@ -264,7 +268,7 @@ impl<'a> ThreadSearcher<'a> {
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
-    fn search(&mut self, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
+    fn search<P: PlayerType>(&mut self, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
         log_search!(self, depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
@@ -292,12 +296,12 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         if depth == 0 {
-            return self.quiesce(alpha, beta, 0);
+            return self.quiesce::<P>(alpha, beta, 0);
         }
 
         let mut value = LOW_SCORE;
 
-        for mov in self.board.pseudo_legal_moves() {
+        for mov in self.board.pseudo_legal_moves_for_typed::<P>() {
             if !self.board.check_legal(mov) {
                 continue;
             }
@@ -306,7 +310,7 @@ impl<'a> ThreadSearcher<'a> {
 
             // Evaluate value of move for current player
             let pmov = self.board.make_move(mov);
-            let mov_value = -self.search(
+            let mov_value = -self.search::<P::Opp>(
                 depth - 1,
                 // If our maximum possible score is `x`, then the opponent is guaranteed to
                 // score at least `-x`
@@ -370,14 +374,14 @@ impl<'a> ThreadSearcher<'a> {
     /// The idea is that a board with lots going on is worth investigating more deeply.
     /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
     /// piece could be taken in the next turn.
-    fn quiesce(&mut self, mut alpha: i32, beta: i32, depth: i16) -> i32 {
+    fn quiesce<P: PlayerType>(&mut self, mut alpha: i32, beta: i32, depth: i16) -> i32 {
         // hard cut-off to depth of quiescent search
         if depth <= -1 {
             log_search!(self, depth, "woah that's deep enough");
             return self.board.eval();
         }
 
-        let moves;
+        let moves: Vec<Move>;
 
         if !self.board.check(self.board.player()) {
             // "standing pat" is a heuristic based on current board state.
@@ -399,7 +403,7 @@ impl<'a> ThreadSearcher<'a> {
             }
 
             alpha = alpha.max(stand_pat);
-            moves = self.board.capturing_moves();
+            moves = self.board.capturing_moves::<P>().collect();
         } else {
             // We don't want to use the "standing pat" if we're in check, because it may well be
             // that ANY move is worse than the current state.
@@ -411,7 +415,7 @@ impl<'a> ThreadSearcher<'a> {
                 beta
             );
             // When in check, assess all moves that get out of check, not just captures
-            moves = self.board.pseudo_legal_moves();
+            moves = self.board.pseudo_legal_moves_for_typed::<P>().collect();
         }
 
         let mut no_legal_moves = true;
@@ -424,7 +428,7 @@ impl<'a> ThreadSearcher<'a> {
 
             log_search!(self, depth, "trying {}", mov);
             let pmov = self.board.make_move(mov);
-            let mov_value = -self.quiesce(-beta, -alpha, depth - 1);
+            let mov_value = -self.quiesce::<P::Opp>(-beta, -alpha, depth - 1);
             self.board.unmake_move(pmov);
 
             log_search!(self, depth, "{} = {}", mov, mov_value);

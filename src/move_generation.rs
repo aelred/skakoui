@@ -50,13 +50,19 @@ impl Board {
         }
     }
 
+    /// Lazy iterator of all pseudo-legal moves. Pseudo-legal means they ignore:
+    /// 1. Check
+    /// 2. King captures
+    /// 3. Castling through check
+    #[inline]
+    pub fn pseudo_legal_moves_for_typed<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        self.moves_of_type::<AllMoves<P>>()
+    }
+
     /// Lazy iterator of all capturing moves
     #[inline]
-    pub fn capturing_moves(&self) -> Box<dyn Iterator<Item = Move>> {
-        match self.player() {
-            Player::White => Box::new(self.moves_of_type::<CapturingMoves<WhitePlayer>>()),
-            Player::Black => Box::new(self.moves_of_type::<CapturingMoves<BlackPlayer>>()),
-        }
+    pub fn capturing_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
+        self.moves_of_type::<CapturingMoves<P>>()
     }
 
     #[inline]
@@ -535,7 +541,7 @@ mod tests {
     #[test]
     fn capturing_moves_are_all_pseudo_legal_moves_that_capture_a_piece() {
         let mut board = fen("8/8/8/8/1b1N4/1Q6/p3n3/8 w");
-        let capturing_moves: HashSet<Move> = board.capturing_moves().collect();
+        let capturing_moves: HashSet<Move> = board.capturing_moves::<WhitePlayer>().collect();
 
         let expected: HashSet<Move> = board
             .pseudo_legal_moves()
