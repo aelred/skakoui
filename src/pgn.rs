@@ -31,37 +31,33 @@ impl Algebraic {
                 capturing: _,
                 target,
                 promoting,
-            } => {
-                let player = board.player();
-                let pieces = board.pieces().clone();
-                board.moves().find(|mov| {
-                    if pieces[mov.from()] != Some(Piece::new(player, piece_type)) {
+            } => board.pseudo_legal_moves().find(|mov| {
+                if board.pieces()[mov.from()] != Some(Piece::new(board.player(), piece_type)) {
+                    return false;
+                }
+
+                if let Some(file) = source_file {
+                    if mov.from().file() != file {
                         return false;
                     }
+                }
 
-                    if let Some(file) = source_file {
-                        if mov.from().file() != file {
-                            return false;
-                        }
-                    }
-
-                    if let Some(rank) = source_rank {
-                        if mov.from().rank() != rank {
-                            return false;
-                        }
-                    }
-
-                    if mov.to() != target {
+                if let Some(rank) = source_rank {
+                    if mov.from().rank() != rank {
                         return false;
                     }
+                }
 
-                    if mov.promoting() != promoting {
-                        return false;
-                    }
+                if mov.to() != target {
+                    return false;
+                }
 
-                    true
-                })
-            }
+                if mov.promoting() != promoting {
+                    return false;
+                }
+
+                board.check_legal(*mov)
+            }),
             Algebraic::CastleKingside => Some(Move::castle_kingside(board.player())),
             Algebraic::CastleQueenside => Some(Move::castle_queenside(board.player())),
         }

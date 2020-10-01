@@ -295,19 +295,13 @@ impl<'a> ThreadSearcher<'a> {
             return self.quiesce(alpha, beta, 0);
         }
 
-        let moves: Vec<Move> = self.board.moves().collect();
+        let mut value = LOW_SCORE;
 
-        let mut value = if moves.is_empty() {
-            if self.board.checkmate() {
-                -WIN
-            } else {
-                0 // In stalemate, so this is a tie
+        for mov in self.board.pseudo_legal_moves() {
+            if !self.board.check_legal(mov) {
+                continue;
             }
-        } else {
-            LOW_SCORE
-        };
 
-        for mov in moves {
             log_search!(self, depth, "{}:", mov);
 
             // Evaluate value of move for current player
@@ -339,6 +333,15 @@ impl<'a> ThreadSearcher<'a> {
                 log_search!(self, depth, "cut-off, {} >= {}", alpha, beta);
                 break;
             }
+        }
+
+        let no_legal_moves = value == LOW_SCORE;
+        if no_legal_moves {
+            value = if self.board.checkmate() {
+                -WIN
+            } else {
+                0 // In stalemate, so this is a tie
+            };
         }
 
         let node_type = if value <= alpha_orig {
@@ -374,7 +377,7 @@ impl<'a> ThreadSearcher<'a> {
             return self.board.eval();
         }
 
-        let moves: Vec<Move>;
+        let moves;
 
         if !self.board.check(self.board.player()) {
             // "standing pat" is a heuristic based on current board state.
@@ -396,7 +399,7 @@ impl<'a> ThreadSearcher<'a> {
             }
 
             alpha = alpha.max(stand_pat);
-            moves = self.board.capturing_moves().collect();
+            moves = self.board.capturing_moves();
         } else {
             // We don't want to use the "standing pat" if we're in check, because it may well be
             // that ANY move is worse than the current state.
@@ -408,14 +411,17 @@ impl<'a> ThreadSearcher<'a> {
                 beta
             );
             // When in check, assess all moves that get out of check, not just captures
-            moves = self.board.moves().collect();
-
-            if moves.is_empty() {
-                return -WIN;
-            }
+            moves = self.board.pseudo_legal_moves();
         }
 
+        let mut no_legal_moves = true;
+
         for mov in moves {
+            if !self.board.check_legal(mov) {
+                continue;
+            }
+            no_legal_moves = false;
+
             log_search!(self, depth, "trying {}", mov);
             let pmov = self.board.make_move(mov);
             let mov_value = -self.quiesce(-beta, -alpha, depth - 1);
@@ -433,7 +439,11 @@ impl<'a> ThreadSearcher<'a> {
             }
         }
 
-        alpha
+        if no_legal_moves {
+            -WIN
+        } else {
+            alpha
+        }
     }
 
     fn should_abort(&mut self) -> bool {

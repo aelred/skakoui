@@ -26,17 +26,10 @@ impl Board {
     /// Lazy iterator of all legal moves
     #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
-        let me = self.player();
-
         // TODO: this is a very inefficient way to confirm if in check
         // TODO: disallow castling when in check or through check
-        self.pseudo_legal_moves().filter(move |mov| {
-            let pmov = self.make_move(*mov);
-            let in_check = self.check(me);
-            let captured_king = pmov.capture() == Some(King);
-            self.unmake_move(pmov);
-            !(in_check || captured_king)
-        })
+        self.pseudo_legal_moves()
+            .filter(move |mov| self.check_legal(*mov))
     }
 
     /// See [pseudo_legal_moves_for]
@@ -84,6 +77,17 @@ impl Board {
             .chain(castle)
     }
 
+    pub fn check_legal(&mut self, mov: Move) -> bool {
+        // TODO: this is a very inefficient way to confirm if in check
+        // TODO: disallow castling when in check or through check
+        let me = self.player();
+        let pmov = self.make_move(mov);
+        let in_check = self.check(me);
+        let captured_king = pmov.capture() == Some(King);
+        self.unmake_move(pmov);
+        !(in_check || captured_king)
+    }
+
     #[inline]
     pub fn check(&self, king_player: Player) -> bool {
         let king = Piece::new(king_player, PieceType::King);
@@ -98,8 +102,7 @@ impl Board {
     #[inline]
     pub fn checkmate(&mut self) -> bool {
         let me = self.player();
-        let moves: Vec<Move> = self.moves().collect();
-        for mov in moves {
+        for mov in self.pseudo_legal_moves() {
             let pmov = self.make_move(mov);
             let check = self.check(me);
             self.unmake_move(pmov);

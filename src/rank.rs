@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Error};
-use std::borrow::Borrow;
 use std::fmt;
 use std::fmt::{Display, Write};
 use std::ops::Add;
@@ -94,11 +93,11 @@ impl<T> RankMap<T> {
     }
 }
 
-impl<T, R: Borrow<Rank>> Index<R> for RankMap<T> {
+impl<T> Index<Rank> for RankMap<T> {
     type Output = T;
 
     #[inline]
-    fn index(&self, rank: R) -> &T {
-        &self.0[rank.borrow().to_index() as usize]
+    fn index(&self, rank: Rank) -> &T {
+        &self.0[rank.to_index() as usize]
     }
 }

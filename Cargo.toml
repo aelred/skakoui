@@ -26,3 +26,6 @@ strict = []
 log-search = []
 log-search2 = []
 expensive_tests = []
+
+[profile.release]
+debug = true

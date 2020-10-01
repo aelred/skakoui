@@ -136,7 +136,7 @@ impl Iterator for SquareIterator {
 
         self.0.reset_lsb();
 
-        let square = Square::from_index(lsb_set as u8);
+        let square = Square::from_index(lsb_set);
 
         Some(square)
     }
