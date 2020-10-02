@@ -19,13 +19,21 @@ regex = "1.3.9"
 pretty_assertions = "0.5.1"
 spectral = "0.6.0"
 proptest = "0.10.1"
+criterion = "0.3"
 
 [features]
 # Makes warnings into errors
 strict = []
 log-search = []
 log-search2 = []
-expensive_tests = []
 
 [profile.release]
 debug = true
+
+[[bench]]
+name = "searcher"
+harness = false
+
+[[bench]]
+name = "perft"
+harness = false

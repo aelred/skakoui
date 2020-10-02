@@ -1,6 +1,5 @@
 //! Check count of number of moves up to a certain depth
 //! https://www.chessprogramming.org/Perft_Results#Position_2
-#![cfg(feature = "expensive_tests")]
 
 use skakoui::{Board, Move};
 use std::convert::TryInto;

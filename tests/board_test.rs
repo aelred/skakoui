@@ -1,5 +1,3 @@
-#![cfg(feature = "expensive_tests")]
-
 pub mod strategies;
 
 use proptest::prelude::*;

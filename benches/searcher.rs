@@ -1,33 +1,26 @@
-#![cfg(feature = "expensive_tests")]
+use skakoui::{Board, Move, PlayedMove, Searcher};
 
-pub mod strategies;
-
-use skakoui::{Board, File, Move, Piece, PieceType, PlayedMove, Player, Rank, Searcher, Square};
-
-use anyhow::anyhow;
-use anyhow::{Context, Error};
-use lazy_static::lazy_static;
-use regex::{Match, Regex};
-use serde::export::Formatter;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use skakoui::pgn::Algebraic;
-use std::fmt;
-use std::fmt::Display;
-use std::str::FromStr;
 
-#[test]
-fn searcher_can_find_mate_in_1() {
+fn searcher_can_find_mate_in_1(c: &mut Criterion) {
     let mut searcher = Searcher::default();
 
     // Searcher is still too slow to try them all
     const LIMIT: usize = 10;
 
     for (mut board, mating_move) in mate_in_1s().into_iter().take(LIMIT) {
-        println!(
-            "Testing board\n{}\nExpect: {}\n{:?}",
-            board, mating_move, board
+        c.bench_with_input(
+            BenchmarkId::new("mate_in_1", format!("{:?}", board)),
+            &board,
+            |b, board| {
+                b.iter(|| {
+                    searcher.go(&board, Some(2));
+                    searcher.wait();
+                });
+            },
         );
-        searcher.go(&board, Some(2));
-        searcher.wait();
+
         let pv = searcher.principal_variation();
         let mov = *pv.first().unwrap();
 
@@ -42,6 +35,9 @@ fn searcher_can_find_mate_in_1() {
         );
     }
 }
+
+criterion_group!(benches, searcher_can_find_mate_in_1);
+criterion_main!(benches);
 
 fn mate_in_1s() -> impl Iterator<Item = (Board, Move)> {
     mate_in_2s().into_iter().map(|(mut board, moves)| {
