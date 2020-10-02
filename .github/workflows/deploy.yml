@@ -35,6 +35,11 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: deploy.yml
+          name: criterion
+          path: target/criterion
       - run: make bench
       - uses: actions/upload-artifact@v2
         with:
