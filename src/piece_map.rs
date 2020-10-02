@@ -33,14 +33,12 @@ impl<F: FnMut(Piece) -> T, T> From<F> for PieceMap<T> {
 impl<T> Index<Piece> for PieceMap<T> {
     type Output = T;
 
-    #[inline]
     fn index(&self, piece: Piece) -> &T {
         &self.0[piece.player()][piece.piece_type()]
     }
 }
 
 impl<T> IndexMut<Piece> for PieceMap<T> {
-    #[inline]
     fn index_mut(&mut self, piece: Piece) -> &mut T {
         &mut self.0[piece.player()][piece.piece_type()]
     }

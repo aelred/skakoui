@@ -78,43 +78,35 @@ impl Square {
     pub const G8: Square = Square(62);
     pub const H8: Square = Square(63);
 
-    #[inline]
     pub fn new(file: File, rank: Rank) -> Self {
         let index = file.to_index() + rank.to_index() * 8;
         Self::from_index(index)
     }
 
-    #[inline]
     pub fn from_index(index: u8) -> Self {
         Square(index)
     }
 
-    #[inline]
     pub fn to_index(self) -> u8 {
         self.0
     }
 
-    #[inline]
     pub fn file(self) -> File {
         File::from_index(self.to_index() % 8)
     }
 
-    #[inline]
     pub fn rank(self) -> Rank {
         Rank::from_index(self.to_index() / 8)
     }
 
-    #[inline]
     pub fn shift_rank(self, offset: i8) -> Self {
         Self::from_index((self.to_index() as i8 + offset * 8) as u8)
     }
 
-    #[inline]
     pub fn shift_file(self, offset: i8) -> Self {
         Self::from_index((self.to_index() as i8 + offset) as u8)
     }
 
-    #[inline]
     pub fn color(self) -> SquareColor {
         // bitwise magic here
         if ((9 * u32::from(self.to_index())) & 8) == 0 {
@@ -156,18 +148,15 @@ impl FromStr for Square {
 pub struct SquareMap<T>([T; 64]);
 
 impl<T> SquareMap<T> {
-    #[inline]
     pub const fn new(values: [T; 64]) -> SquareMap<T> {
         SquareMap(values)
     }
 
-    #[inline]
     pub fn from<F: Fn(Square) -> T>(f: F) -> Self {
         let arr = array_init::array_init(|i| f(Square(i as u8)));
         SquareMap::new(arr)
     }
 
-    #[inline]
     pub fn iter(&self) -> impl Iterator<Item = (Square, &T)> {
         self.0
             .iter()
@@ -179,14 +168,12 @@ impl<T> SquareMap<T> {
 impl<T, S: Borrow<Square>> Index<S> for SquareMap<T> {
     type Output = T;
 
-    #[inline]
     fn index(&self, square: S) -> &T {
         &self.0[square.borrow().to_index() as usize]
     }
 }
 
 impl<T, S: Borrow<Square>> IndexMut<S> for SquareMap<T> {
-    #[inline]
     fn index_mut(&mut self, square: S) -> &mut T {
         &mut self.0[square.borrow().to_index() as usize]
     }

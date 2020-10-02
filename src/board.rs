@@ -99,13 +99,11 @@ impl Board {
     }
 
     /// Get the piece at a particular square
-    #[inline]
     pub fn get(&self, square: Square) -> Option<Piece> {
         self.pieces[square]
     }
 
     /// Get whose turn it is
-    #[inline]
     pub fn player(&self) -> Player {
         self.player
     }
@@ -306,37 +304,30 @@ impl Board {
         self.assert_invariants();
     }
 
-    #[inline]
     pub fn pieces(&self) -> &SquareMap<Option<Piece>> {
         &self.pieces
     }
 
-    #[inline]
     pub fn bitboards(&self) -> &PieceMap<Bitboard> {
         &self.bitboards
     }
 
-    #[inline]
     pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
         &self.bitboards[piece]
     }
 
-    #[inline]
     fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
         &mut self.bitboards[piece]
     }
 
-    #[inline]
     pub fn occupancy(&self) -> Bitboard {
         self.occupancy
     }
 
-    #[inline]
     pub fn occupancy_player(&self, player: Player) -> Bitboard {
         self.occupancy_player[player]
     }
 
-    #[inline]
     pub fn flags(&self) -> BoardFlags {
         self.flags
     }
@@ -353,7 +344,6 @@ impl Board {
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
-    #[inline]
     pub fn count(&self, piece: Piece) -> i32 {
         i32::from(self.piece_count[piece])
     }

@@ -24,7 +24,6 @@ use crate::piece::PieceType::King;
 
 impl Board {
     /// Lazy iterator of all legal moves
-    #[inline]
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
         // TODO: this is a very inefficient way to confirm if in check
         // TODO: disallow castling when in check or through check
@@ -33,7 +32,6 @@ impl Board {
     }
 
     /// See [pseudo_legal_moves_for]
-    #[inline]
     pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
         self.pseudo_legal_moves_for(self.player())
     }
@@ -42,7 +40,6 @@ impl Board {
     /// 1. Check
     /// 2. King captures
     /// 3. Castling through check
-    #[inline]
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
             Player::White => Box::new(self.moves_of_type::<AllMoves<WhitePlayer>>()),
@@ -54,18 +51,15 @@ impl Board {
     /// 1. Check
     /// 2. King captures
     /// 3. Castling through check
-    #[inline]
     pub fn pseudo_legal_moves_for_typed<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
         self.moves_of_type::<AllMoves<P>>()
     }
 
     /// Lazy iterator of all capturing moves
-    #[inline]
     pub fn capturing_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
         self.moves_of_type::<CapturingMoves<P>>()
     }
 
-    #[inline]
     fn moves_of_type<M: Movement>(&self) -> impl Iterator<Item = Move> {
         let king = M::piece::<KingType>(self);
         let queen = M::piece::<QueenType>(self);
@@ -94,7 +88,6 @@ impl Board {
         !(in_check || captured_king)
     }
 
-    #[inline]
     pub fn check(&self, king_player: Player) -> bool {
         let king = Piece::new(king_player, PieceType::King);
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
@@ -105,7 +98,6 @@ impl Board {
         }
     }
 
-    #[inline]
     pub fn checkmate(&mut self) -> bool {
         let me = self.player();
         for mov in self.pseudo_legal_moves() {
@@ -134,7 +126,6 @@ struct TargetIter {
 }
 
 impl<PT: PieceTypeT> MovesIter<PT> {
-    #[inline]
     fn new(board: &Board, mask: Bitboard) -> Self {
         let piece = Piece::new(board.player(), PT::PIECE_TYPE);
         MovesIter {
@@ -150,7 +141,6 @@ impl<PT: PieceTypeT> MovesIter<PT> {
 impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
     type Item = Move;
 
-    #[inline]
     fn next(&mut self) -> Option<Move> {
         loop {
             if self.target_iter.is_none() {
@@ -182,7 +172,6 @@ struct PawnMovesIter<P> {
 impl<P: PlayerType> Iterator for PawnMovesIter<P> {
     type Item = Move;
 
-    #[inline]
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.pushes.next() {
             let source = target.shift_rank(-P::DIRECTION);
@@ -207,7 +196,6 @@ struct PawnCapturesIter<P> {
 impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
     type Item = Move;
 
-    #[inline]
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.captures_east.next() {
             let source = target.shift_rank(-P::DIRECTION).shift_file(1);
@@ -297,7 +285,6 @@ impl<P: PlayerType> Movement for AllMoves<P> {
     type Castling = CastlingIter<P>;
     type Player = P;
 
-    #[inline]
     fn pawn(board: &Board) -> PawnMovesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
 
@@ -323,7 +310,6 @@ impl<P: PlayerType> Movement for AllMoves<P> {
         CastlingIter::new(board)
     }
 
-    #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         !board.occupancy_player(P::PLAYER)
     }
@@ -335,7 +321,6 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
     type Castling = std::iter::Empty<Move>;
     type Player = P;
 
-    #[inline]
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
         let piece = Piece::new(P::PLAYER, PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
@@ -357,7 +342,6 @@ impl<P: PlayerType> Movement for CapturingMoves<P> {
         std::iter::empty()
     }
 
-    #[inline]
     fn movement_mask(board: &Board) -> Bitboard {
         board.occupancy_player(P::Opp::PLAYER)
     }

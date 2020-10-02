@@ -32,12 +32,10 @@ impl File {
 
     const STRS: FileMap<&'static str> = FileMap::new(["a", "b", "c", "d", "e", "f", "g", "h"]);
 
-    #[inline]
     pub fn from_index(index: u8) -> Self {
         File(index)
     }
 
-    #[inline]
     pub fn to_index(self) -> u8 {
         self.0
     }
@@ -46,7 +44,6 @@ impl File {
 impl Add<i8> for File {
     type Output = Self;
 
-    #[inline]
     fn add(self, offset: i8) -> Self {
         Self::VALUES[(self.to_index() as i8 + offset) as usize]
     }
@@ -94,7 +91,6 @@ impl<T> FileMap<T> {
 impl<T, F: Borrow<File>> Index<F> for FileMap<T> {
     type Output = T;
 
-    #[inline]
     fn index(&self, file: F) -> &T {
         &self.0[file.borrow().to_index() as usize]
     }

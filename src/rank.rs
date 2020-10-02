@@ -30,12 +30,10 @@ impl Rank {
         Rank::_8,
     ];
 
-    #[inline]
     pub fn from_index(index: u8) -> Self {
         Rank(index)
     }
 
-    #[inline]
     pub fn to_index(self) -> u8 {
         self.0
     }
@@ -44,7 +42,6 @@ impl Rank {
 impl Add<i8> for Rank {
     type Output = Self;
 
-    #[inline]
     fn add(self, offset: i8) -> Self {
         Rank((self.0 as i8 + offset) as u8)
     }
@@ -53,7 +50,6 @@ impl Add<i8> for Rank {
 impl Sub<i8> for Rank {
     type Output = Self;
 
-    #[inline]
     fn sub(self, offset: i8) -> Self {
         Rank((self.0 as i8 - offset) as u8)
     }
@@ -96,7 +92,6 @@ impl<T> RankMap<T> {
 impl<T> Index<Rank> for RankMap<T> {
     type Output = T;
 
-    #[inline]
     fn index(&self, rank: Rank) -> &T {
         &self.0[rank.to_index() as usize]
     }

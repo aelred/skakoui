@@ -29,7 +29,6 @@ impl Move {
         }
     }
 
-    #[inline]
     pub fn castle_kingside(player: Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),
@@ -38,7 +37,6 @@ impl Move {
         }
     }
 
-    #[inline]
     pub fn castle_queenside(player: Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),

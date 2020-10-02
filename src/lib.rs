@@ -58,7 +58,6 @@ impl Player {
         }
     }
 
-    #[inline]
     const fn back_rank(self) -> Rank {
         match self {
             Player::White => Rank::_1,
