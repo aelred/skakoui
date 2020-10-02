@@ -38,8 +38,8 @@ jobs:
       - run: make bench
       - uses: actions/upload-artifact@v2
         with:
-          name: criterion-report
-          path: target/criterion/report/index.html
+          name: criterion
+          path: target/criterion
 
   deploy:
     if: github.ref == 'refs/heads/master'
