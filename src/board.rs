@@ -348,6 +348,12 @@ impl Board {
         i32::from(self.piece_count[piece])
     }
 
+    pub fn fen_url(&self) -> String {
+        let fen = self.to_fen();
+        let fen_url = fen.replace(" ", "_");
+        format!("https://lichess.org/analysis/{}", fen_url)
+    }
+
     /// Check this move is possible - not legal - just that it moves a piece of the right colour
     /// to a space without a friendly piece
     fn assert_can_move(&self, player: Player, from: Square, to: Square) {
@@ -438,12 +444,7 @@ impl Default for Board {
 impl fmt::Debug for Board {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let fen = self.to_fen();
-        let fen_url = fen.replace(" ", "_");
-        write!(
-            f,
-            "Board::from_fen(\"{}\") /* https://lichess.org/analysis/{} */",
-            fen, fen_url
-        )
+        write!(f, "Board::from_fen(\"{}\") /* {} */", fen, self.fen_url())
     }
 }
 

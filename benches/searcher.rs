@@ -11,7 +11,7 @@ fn searcher_can_find_mate_in_1(c: &mut Criterion) {
 
     for (mut board, mating_move) in mate_in_1s().into_iter().take(LIMIT) {
         c.bench_with_input(
-            BenchmarkId::new("mate_in_1", format!("{:?}", board)),
+            BenchmarkId::new("mate_in_1", board.fen_url()),
             &board,
             |b, board| {
                 b.iter(|| {
@@ -36,8 +36,8 @@ fn searcher_can_find_mate_in_1(c: &mut Criterion) {
     }
 }
 
-criterion_group!(benches, searcher_can_find_mate_in_1);
-criterion_main!(benches);
+criterion_group!(searcher, searcher_can_find_mate_in_1);
+criterion_main!(searcher);
 
 fn mate_in_1s() -> impl Iterator<Item = (Board, Move)> {
     mate_in_2s().into_iter().map(|(mut board, moves)| {
