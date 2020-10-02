@@ -5,10 +5,10 @@ ENV USER docker
 RUN cargo init
 COPY Cargo.lock .
 COPY Cargo.toml .
+COPY ./benches benches
 RUN cargo build --release
 RUN rm src/main.rs
 COPY ./src src
-COPY ./benches benches
 RUN cargo install --path .
 
 FROM python:3-alpine as python3-venv
