@@ -6,7 +6,7 @@ use skakoui::pgn::Algebraic;
 fn searcher_can_find_mate_in_1(c: &mut Criterion) {
     let mut searcher = Searcher::default();
 
-    // Searcher is still too slow to try them all
+    // Searcher tries to castle out of check - FIXME
     const LIMIT: usize = 10;
 
     for (mut board, mating_move) in mate_in_1s().into_iter().take(LIMIT) {

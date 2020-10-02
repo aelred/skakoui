@@ -8,6 +8,9 @@ lint:
 test:
 	cargo test
 
+test-all:
+	cargo test --benches --release
+
 bench:
 	cargo bench
 
