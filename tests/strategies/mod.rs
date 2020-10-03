@@ -5,42 +5,11 @@ use proptest::collection::{vec, SizeRange};
 use proptest::option;
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
-use skakoui::{Board, BoardFlags, Move, Piece, PieceType, PlayedMove, Player};
+use skakoui::{Board, BoardFlags, GameState, Move, Piece, PieceType, PlayedMove, Player};
 use std::borrow::Borrow;
 use std::convert::TryFrom;
 use std::iter::FromIterator;
 use std::rc::Rc;
-
-#[derive(Debug, Clone, Default)]
-struct GameState {
-    board: Board,
-    moves: Vec<PlayedMove>,
-}
-
-impl GameState {
-    fn new(board: Board) -> Self {
-        Self {
-            board,
-            moves: vec![],
-        }
-    }
-
-    fn push_move(&mut self, mov: Move) {
-        let pmov = self.board.make_move(mov);
-        self.moves.push(pmov);
-    }
-
-    fn pop(&mut self) -> Option<Move> {
-        self.moves.pop().map(|pmov| {
-            self.board.unmake_move(pmov);
-            pmov.mov
-        })
-    }
-
-    fn moves(&self) -> impl Iterator<Item = &Move> {
-        self.moves.iter().map(|pm| &pm.mov)
-    }
-}
 
 pub fn arb_player() -> impl Strategy<Value = Player> {
     select(vec![Player::White, Player::Black])

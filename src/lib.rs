@@ -149,3 +149,34 @@ impl PlayerType for BlackPlayer {
         bitboard.shift_rank_neg(1)
     }
 }
+
+#[derive(Debug, Clone, Default)]
+pub struct GameState {
+    pub board: Board,
+    moves: Vec<PlayedMove>,
+}
+
+impl GameState {
+    pub fn new(board: Board) -> Self {
+        Self {
+            board,
+            moves: vec![],
+        }
+    }
+
+    pub fn push_move(&mut self, mov: Move) {
+        let pmov = self.board.make_move(mov);
+        self.moves.push(pmov);
+    }
+
+    pub fn pop(&mut self) -> Option<Move> {
+        self.moves.pop().map(|pmov| {
+            self.board.unmake_move(pmov);
+            pmov.mov
+        })
+    }
+
+    pub fn moves(&self) -> impl Iterator<Item = &Move> {
+        self.moves.iter().map(|pm| &pm.mov)
+    }
+}
