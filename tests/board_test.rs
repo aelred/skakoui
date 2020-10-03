@@ -11,4 +11,11 @@ proptest! {
         board_after.unmake_move(pmov);
         assert_eq!(board_before, board_after)
     }
+
+    #[test]
+    fn legal_moves_never_leave_king_in_check((mut board, mov) in board_and_move(arb_board())) {
+        let me = board.player();
+        board.make_move(mov);
+        assert!(!board.check(me));
+    }
 }
