@@ -1,37 +1,21 @@
 use skakoui::{Board, Move, PlayedMove, Searcher};
 
-use criterion::{criterion_group, criterion_main, Bencher, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use itertools::Itertools;
 use skakoui::pgn::Algebraic;
 use skakoui::GameState;
 
-fn searcher_can_find_mate_in_1(c: &mut Criterion) {
+fn searcher_can_find_mate(c: &mut Criterion) {
     let mut searcher = Searcher::default();
 
-    // Searcher tries to castle out of check - FIXME
-    const LIMIT: usize = 10;
+    let puzzles = mate_in_1s().chain(mate_in_2s()).chain(mate_in_3s());
 
-    for (board, mating_move) in mate_in_1s().into_iter().take(LIMIT) {
-        test_find_mate(c, &mut searcher, board, &[mating_move]);
-    }
-}
-
-fn searcher_can_find_mate_in_2(c: &mut Criterion) {
-    let mut searcher = Searcher::default();
-
-    // Searcher tries to castle out of check - FIXME
-    const LIMIT: usize = 10;
-
-    for (board, mating_moves) in mate_in_2s().into_iter().take(LIMIT) {
+    for (board, mating_moves) in puzzles {
         test_find_mate(c, &mut searcher, board, &mating_moves);
     }
 }
 
-criterion_group!(
-    searcher,
-    searcher_can_find_mate_in_1,
-    searcher_can_find_mate_in_2
-);
+criterion_group!(searcher, searcher_can_find_mate);
 criterion_main!(searcher);
 
 fn test_find_mate(c: &mut Criterion, searcher: &mut Searcher, board: Board, mating_moves: &[Move]) {
@@ -71,24 +55,37 @@ fn test_find_mate(c: &mut Criterion, searcher: &mut Searcher, board: Board, mati
     );
 }
 
-fn mate_in_1s() -> impl Iterator<Item = (Board, Move)> {
+fn mate_in_1s() -> impl Iterator<Item = (Board, Vec<Move>)> {
     mate_in_2s().into_iter().map(|(mut board, moves)| {
         board.make_move(moves[0]);
         board.make_move(moves[1]);
-        (board, moves[2])
+        (board, vec![moves[2]])
     })
 }
 
 fn mate_in_2s() -> impl Iterator<Item = (Board, Vec<Move>)> {
-    let m8n2 = include_str!("m8n2.txt");
-    let mut lines = m8n2.lines().peekable();
+    read_mates(include_str!("m8n2.txt"))
+}
+
+fn mate_in_3s() -> impl Iterator<Item = (Board, Vec<Move>)> {
+    // TODO: still too slow to try these all
+    read_mates(include_str!("m8n3.txt")).take(20)
+}
+
+fn read_mates(mates_str: &'static str) -> impl Iterator<Item = (Board, Vec<Move>)> {
+    let mut lines = mates_str.lines().peekable();
 
     std::iter::from_fn(move || {
         // Try to parse each line as a board position
-        let mut board = lines.find_map(|line| Board::from_fen(line).ok())?;
+        let board = lines.find_map(|line| Board::from_fen(line).ok())?;
 
         let mstr = lines.next()?;
-        let mstr = mstr.replace("1.", "").replace("2.", "").replace(".", "");
+        let mstr = mstr
+            .replace("1.", "")
+            .replace("2.", "")
+            .replace("3.", "")
+            .replace(".", "")
+            .replace("*", "");
 
         Some((board, mstr))
     })
