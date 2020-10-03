@@ -1,11 +1,10 @@
 mod tree;
 
-use crate::search::tree::SearchTree;
 use crate::{BlackPlayer, Board, PlayerType};
 use crate::{Move, Player, WhitePlayer};
 
-use std::collections::HashSet;
-
+use crate::search::tree::SearchTree;
+use arrayvec::ArrayVec;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
@@ -155,12 +154,18 @@ impl Searcher {
         }
     }
 
-    pub fn principal_variation(&self) -> Vec<Move> {
-        let mut board = self.board.clone();
+    pub fn principal_variation(&mut self) -> Vec<Move> {
+        let pv = self
+            .transposition_table
+            .principal_variation(&mut self.board);
 
         if cfg!(feature = "log-search2") {
-            let tree = SearchTree::from_table(&mut board, &self.transposition_table);
             println!("Rebuilding search tree");
+            let tree = SearchTree::from_table(
+                &mut self.board,
+                &self.transposition_table,
+                pv.len() as u16 + 1,
+            );
             println!("Dumping to file search-tree.json");
             fs::write(
                 "search-tree.json",
@@ -169,59 +174,13 @@ impl Searcher {
             .unwrap();
         }
 
-        let mut pv = vec![];
-
-        let mut key_set = HashSet::new();
-
-        let mut adjust = 1;
-
-        'find_pv: loop {
-            // Negate score based on who is playing
-            adjust *= -1;
-
-            let moves: Vec<Move> = board.moves().collect();
-
-            let mut best_move = None;
-            let mut best_score = LOW_SCORE;
-
-            for mov in moves {
-                let pmov = board.make_move(mov);
-                let key = board.key();
-                board.unmake_move(pmov);
-
-                // Check for loop
-                if !key_set.insert(key) {
-                    break 'find_pv;
-                }
-
-                if let Some(entry) = self.transposition_table.get(&key) {
-                    let score = entry.value * adjust;
-                    if entry.node_type == NodeType::PV && score > best_score {
-                        best_move = Some(mov);
-                        best_score = score;
-                    }
-                }
-            }
-
-            if let Some(best) = best_move {
-                pv.push(best);
-                board.make_move(best);
-            } else {
-                break;
-            }
-        }
-
-        // Return a totally random move if we couldn't find anything.
-        // This can happen if search is stopped very quickly.
-        if pv.is_empty() {
-            if let Some(mov) = board.moves().next() {
-                pv.push(mov);
-            }
-        }
-
         pv
     }
 }
+
+// Maximum PV length to store. Depth 20 is grandmaster-level play.
+// We can search deeper but won't have access to the PV to do efficient cut-off.
+const MAX_PV: usize = 32;
 
 struct ThreadSearcher<'a> {
     board: &'a mut Board,
@@ -230,6 +189,9 @@ struct ThreadSearcher<'a> {
     abort: bool,
     target_depth: u16,
     max_depth: u16,
+    principal_variation: ArrayVec<[Move; MAX_PV]>,
+    // true while we are searching the left-most tree (i.e. the principal variation)
+    leftmost: bool,
 }
 
 impl<'a> ThreadSearcher<'a> {
@@ -246,6 +208,8 @@ impl<'a> ThreadSearcher<'a> {
             abort: false,
             target_depth: target_depth.unwrap_or(u16::MAX),
             max_depth: 0,
+            principal_variation: ArrayVec::new(),
+            leftmost: true,
         }
     }
 
@@ -256,10 +220,19 @@ impl<'a> ThreadSearcher<'a> {
         while !self.should_abort() {
             log_search!(self, self.max_depth, "search at depth");
 
+            self.leftmost = true;
+
             match self.board.player() {
                 Player::White => self.search::<WhitePlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
                 Player::Black => self.search::<BlackPlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
             };
+
+            let pv = self
+                .transposition_table
+                .principal_variation(&mut self.board);
+            self.principal_variation.clear();
+            self.principal_variation.extend(pv);
+
             self.max_depth += 1;
         }
 
@@ -301,7 +274,18 @@ impl<'a> ThreadSearcher<'a> {
 
         let mut value = LOW_SCORE;
 
-        for mov in self.board.pseudo_legal_moves_for_typed::<P>() {
+        // Try the PV if we're still searching the left-most tree
+        let pv = self
+            .principal_variation
+            .get((self.max_depth - depth) as usize)
+            .filter(|_| self.leftmost)
+            .copied();
+        let other_moves = self
+            .board
+            .pseudo_legal_moves_for_typed::<P>()
+            .filter(|mov| pv != Some(*mov));
+
+        for mov in pv.into_iter().chain(other_moves) {
             if !self.board.check_legal(mov) {
                 continue;
             }
@@ -337,6 +321,8 @@ impl<'a> ThreadSearcher<'a> {
                 log_search!(self, depth, "cut-off, {} >= {}", alpha, beta);
                 break;
             }
+
+            self.leftmost = false;
         }
 
         let no_legal_moves = value == LOW_SCORE;

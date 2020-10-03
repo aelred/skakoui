@@ -1,6 +1,8 @@
-use crate::{Bitboard, BoardFlags, PieceMap, Player};
+use crate::search::LOW_SCORE;
+use crate::{Bitboard, Board, BoardFlags, Move, PieceMap, Player};
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::AtomicU64;
 use std::sync::atomic::Ordering::Relaxed;
@@ -43,15 +45,71 @@ impl TranspositionTable {
         key.hash(&mut hasher);
         hasher.finish()
     }
+
+    pub fn principal_variation(&self, board: &mut Board) -> Vec<Move> {
+        let mut pv = vec![];
+        let mut key_set = HashSet::new();
+        let mut adjust = 1;
+
+        'find_pv: loop {
+            // Negate score based on who is playing
+            adjust *= -1;
+
+            let moves: Vec<Move> = board.moves().collect();
+
+            let mut best_move = None;
+            let mut best_score = LOW_SCORE;
+
+            for mov in moves {
+                let pmov = board.make_move(mov);
+                let key = board.key();
+                board.unmake_move(pmov);
+
+                // Check for loop
+                if !key_set.insert(key) {
+                    break 'find_pv;
+                }
+
+                if let Some(entry) = self.get(&key) {
+                    let score = entry.value * adjust;
+                    if entry.node_type == NodeType::PV && score > best_score {
+                        best_move = Some(mov);
+                        best_score = score;
+                    }
+                }
+            }
+
+            if let Some(best) = best_move {
+                let pmov = board.make_move(best);
+                pv.push(pmov);
+            } else {
+                break;
+            }
+        }
+
+        for pmov in pv.iter().rev() {
+            board.unmake_move(*pmov);
+        }
+
+        // Return a totally random move if we couldn't find anything.
+        // This can happen if search is stopped very quickly.
+        if pv.is_empty() {
+            if let Some(mov) = board.moves().next() {
+                return vec![mov];
+            }
+        }
+
+        pv.into_iter().map(|pmov| pmov.mov).collect()
+    }
 }
 
 pub type Key = (PieceMap<Bitboard>, Player, BoardFlags);
 
-#[derive(Debug, Copy, Clone, Serialize)]
+#[derive(Debug, Copy, Clone, Serialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Node {
     pub depth: u16,
-    pub value: i32,
     pub node_type: NodeType,
+    pub value: i32,
 }
 
 impl Into<u64> for Node {
@@ -70,7 +128,7 @@ impl From<u64> for Node {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Serialize)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Copy, Clone, Serialize)]
 pub enum NodeType {
     /// Principal variation node, fully explored and value is exact
     PV = 0,
