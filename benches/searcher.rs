@@ -16,6 +16,7 @@ fn searcher_can_find_mate(c: &mut Criterion) {
 
     test_find_mates("in1", &mut group, mate_in_1s());
     test_find_mates("in2", &mut group, mate_in_2s());
+    // TODO: too slow for all of these
     test_find_mates("in3", &mut group, mate_in_3s().take(10));
 
     group.finish();
@@ -29,6 +30,9 @@ fn test_find_mates<M: Measurement>(
     g: &mut BenchmarkGroup<M>,
     mates: impl Iterator<Item = (Board, Vec<Move>)>,
 ) {
+    // Only run a sample for benchmarking, but run all if testing
+    let mates = mates.take(if !cfg!(bench) { 10 } else { usize::MAX });
+
     let mut mates: Vec<(Board, Vec<Move>)> = mates.collect();
     g.throughput(Throughput::Elements(mates.len() as u64));
     g.bench_function(name, move |b| {
