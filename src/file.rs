@@ -2,8 +2,8 @@ use std::borrow::Borrow;
 use std::fmt;
 
 use anyhow::{anyhow, Error};
-use std::ops::Add;
 use std::ops::Index;
+use std::ops::{Add, Sub};
 use std::str::FromStr;
 
 #[derive(PartialOrd, Ord, PartialEq, Eq, Copy, Clone, Hash)]
@@ -46,6 +46,14 @@ impl Add<i8> for File {
 
     fn add(self, offset: i8) -> Self {
         Self::VALUES[(self.to_index() as i8 + offset) as usize]
+    }
+}
+
+impl Sub<File> for File {
+    type Output = i8;
+
+    fn sub(self, rhs: File) -> Self::Output {
+        self.to_index() as i8 - rhs.to_index() as i8
     }
 }
 

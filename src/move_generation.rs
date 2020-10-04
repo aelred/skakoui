@@ -28,8 +28,6 @@ use crate::piece::PieceType::King;
 impl Board {
     /// Lazy iterator of all legal moves
     pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
-        // TODO: this is a very inefficient way to confirm if in check
-        // TODO: disallow castling when in check or through check
         self.pseudo_legal_moves()
             .filter(move |mov| self.check_legal(*mov))
     }
@@ -45,8 +43,8 @@ impl Board {
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
-            Player::White => Box::new(self.moves_of_type::<AllMoves<WhitePlayer>>()),
-            Player::Black => Box::new(self.moves_of_type::<AllMoves<BlackPlayer>>()),
+            Player::White => Box::new(self.moves_of_type::<WhitePlayer, AllMoves<WhitePlayer>>()),
+            Player::Black => Box::new(self.moves_of_type::<BlackPlayer, AllMoves<BlackPlayer>>()),
         }
     }
 
@@ -55,15 +53,15 @@ impl Board {
     /// 2. King captures
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for_typed<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_of_type::<AllMoves<P>>()
+        self.moves_of_type::<P, AllMoves<P>>()
     }
 
     /// Lazy iterator of all capturing moves
     pub fn capturing_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_of_type::<CapturingMoves<P>>()
+        self.moves_of_type::<P, CapturingMoves<P>>()
     }
 
-    fn moves_of_type<M: Movement>(&self) -> impl Iterator<Item = Move> {
+    fn moves_of_type<P: PlayerType, M: Movement<P>>(&self) -> impl Iterator<Item = Move> {
         let king = M::piece::<KingType>(self);
         let queen = M::piece::<QueenType>(self);
         let rook = M::piece::<RookType>(self);
@@ -82,8 +80,15 @@ impl Board {
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
         // TODO: this is a very inefficient way to confirm if in check
-        // TODO: disallow castling when in check or through check
         let me = self.player();
+
+        // TODO: disallow castling through check
+        let king_move = self.pieces()[mov.from()].map(Piece::piece_type) == Some(PieceType::King);
+        let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
+        if castling && self.check(me) {
+            return false;
+        }
+
         let pmov = self.make_move(mov);
         let in_check = self.check(me);
         let captured_king = pmov.capture() == Some(King);
@@ -115,12 +120,13 @@ impl Board {
     }
 }
 
-struct MovesIter<P> {
+struct MovesIter<P, PT> {
     mask: Bitboard,
     occupancy: Bitboard,
     sources: SquareIterator,
     target_iter: Option<TargetIter>,
-    _phantom: PhantomData<P>,
+    _phantom_p: PhantomData<P>,
+    _phantom_pt: PhantomData<PT>,
 }
 
 struct TargetIter {
@@ -128,20 +134,21 @@ struct TargetIter {
     targets: SquareIterator,
 }
 
-impl<PT: PieceTypeT> MovesIter<PT> {
+impl<P: PlayerType, PT: PieceTypeT> MovesIter<P, PT> {
     fn new(board: &Board, mask: Bitboard) -> Self {
-        let piece = Piece::new(board.player(), PT::PIECE_TYPE);
+        let piece = Piece::new(P::PLAYER, PT::PIECE_TYPE);
         MovesIter {
             mask,
             occupancy: board.occupancy(),
             sources: board.bitboard_piece(piece).squares(),
             target_iter: None,
-            _phantom: PhantomData,
+            _phantom_p: PhantomData,
+            _phantom_pt: PhantomData,
         }
     }
 }
 
-impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
+impl<P: PlayerType, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Move> {
@@ -165,7 +172,7 @@ impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
     }
 }
 
-trait Movement {
+trait Movement<P: PlayerType> {
     type PawnIter: Iterator<Item = Move>;
     type Castling: Iterator<Item = Move>;
     type Player: PlayerType;
@@ -174,7 +181,7 @@ trait Movement {
     fn pawn(board: &Board) -> Self::PawnIter;
 
     /// Iterator of moves for a given piece
-    fn piece<PT: PieceTypeT>(board: &Board) -> MovesIter<PT> {
+    fn piece<PT: PieceTypeT>(board: &Board) -> MovesIter<P, PT> {
         MovesIter::new(board, Self::movement_mask(board))
     }
 
@@ -189,7 +196,7 @@ trait Movement {
 
 struct AllMoves<P>(PhantomData<P>);
 
-impl<P: PlayerType> Movement for AllMoves<P> {
+impl<P: PlayerType> Movement<P> for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
     type Castling = CastlingIter<P>;
     type Player = P;
@@ -209,7 +216,7 @@ impl<P: PlayerType> Movement for AllMoves<P> {
 
 struct CapturingMoves<P>(PhantomData<P>);
 
-impl<P: PlayerType> Movement for CapturingMoves<P> {
+impl<P: PlayerType> Movement<P> for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
     type Castling = std::iter::Empty<Move>;
     type Player = P;
@@ -365,6 +372,28 @@ mod tests {
         assert_moves!(
             board,
             [e8c8, e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
+        );
+    }
+
+    #[test]
+    fn king_cannot_castle_out_of_check() {
+        let mut board = fen("8/8/8/8/8/8/r2q3r/R3K2R w");
+        assert_moves!(board, [e1f1]);
+        let mut board = fen("r3k2r/R2Q3R/8/8/8/8/8/8 b");
+        assert_moves!(board, [e8f8]);
+    }
+
+    #[test]
+    fn king_cannot_castle_into_check() {
+        let mut board = fen("8/8/8/8/8/8/r6p/R3K2R w");
+        assert_moves!(
+            board,
+            [e1c1, e1d1, e1f1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
+        );
+        let mut board = fen("r3k2r/RP5R/8/8/8/8/8/8 b");
+        assert_moves!(
+            board,
+            [e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
         );
     }
 
