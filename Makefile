@@ -2,7 +2,10 @@ tag=$(shell git rev-parse HEAD)
 image=aelred/skakoui
 tagged=$(image):$(tag)
 
-lint:
+check:
+	cargo check --all-targets
+
+lint: check
 	cargo clippy --features strict -- -D clippy::all
 
 test:
