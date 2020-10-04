@@ -48,7 +48,7 @@ fn run_perft(
         let depth = depth + 1;
         c.bench_with_input(BenchmarkId::new(name, depth), &depth, |b, depth| {
             b.iter(|| {
-                expect_moves(&mut board, depth, *expected_moves);
+                expect_moves(&mut board, *depth, *expected_moves);
             });
         });
     }
