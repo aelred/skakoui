@@ -53,7 +53,6 @@ pub struct Searcher {
     txs: Vec<Sender<Request>>,
     rxs: Vec<Receiver<Response>>,
     transposition_table: Arc<TranspositionTable>,
-    board: Board,
 }
 
 fn num_threads() -> u32 {
@@ -68,28 +67,7 @@ impl Default for Searcher {
     fn default() -> Self {
         // Each table entry is 8 bytes
         const TABLE_SIZE: usize = 20_000_000;
-
-        let transposition_table = Arc::new(TranspositionTable::new(TABLE_SIZE));
-        let mut txs = vec![];
-        let mut rxs = vec![];
-
-        for _ in 0..num_threads() {
-            let transposition_table = transposition_table.clone();
-            let (req_tx, req_rx) = std::sync::mpsc::channel();
-            let (res_tx, res_rx) = std::sync::mpsc::channel();
-
-            thread::spawn(move || worker_thread(&transposition_table, &req_rx, &res_tx));
-
-            txs.push(req_tx);
-            rxs.push(res_rx);
-        }
-
-        Self {
-            txs,
-            rxs,
-            transposition_table,
-            board: Board::default(),
-        }
+        Self::new(num_threads(), TABLE_SIZE)
     }
 }
 
@@ -126,9 +104,30 @@ impl Drop for Searcher {
 }
 
 impl Searcher {
-    pub fn go(&mut self, board: &Board, target_depth: Option<u16>) {
-        self.board = board.clone();
+    pub fn new(num_threads: u32, table_size: usize) -> Self {
+        let transposition_table = Arc::new(TranspositionTable::new(table_size));
+        let mut txs = vec![];
+        let mut rxs = vec![];
 
+        for _ in 0..num_threads {
+            let transposition_table = transposition_table.clone();
+            let (req_tx, req_rx) = std::sync::mpsc::channel();
+            let (res_tx, res_rx) = std::sync::mpsc::channel();
+
+            thread::spawn(move || worker_thread(&transposition_table, &req_rx, &res_tx));
+
+            txs.push(req_tx);
+            rxs.push(res_rx);
+        }
+
+        Self {
+            txs,
+            rxs,
+            transposition_table,
+        }
+    }
+
+    pub fn go(&mut self, board: &Board, target_depth: Option<u16>) {
         for tx in &self.txs {
             let start_search = Request::StartSearch {
                 board: Box::new(board.clone()),
@@ -154,18 +153,13 @@ impl Searcher {
         }
     }
 
-    pub fn principal_variation(&mut self) -> Vec<Move> {
-        let pv = self
-            .transposition_table
-            .principal_variation(&mut self.board);
+    pub fn principal_variation(&mut self, board: &mut Board) -> Vec<Move> {
+        let pv = self.transposition_table.principal_variation(board);
 
         if cfg!(feature = "log-search2") {
             println!("Rebuilding search tree");
-            let tree = SearchTree::from_table(
-                &mut self.board,
-                &self.transposition_table,
-                pv.len() as u16 + 1,
-            );
+            let tree =
+                SearchTree::from_table(board, &self.transposition_table, pv.len() as u16 + 1);
             println!("Dumping to file search-tree.json");
             fs::write(
                 "search-tree.json",

@@ -60,7 +60,7 @@ impl Agent for Computer {
         self.searcher.go(board, None);
         std::thread::sleep(Duration::from_secs(1));
         self.searcher.stop();
-        let pv = self.searcher.principal_variation();
+        let pv = self.searcher.principal_variation(board);
         pv.first().copied()
     }
 }

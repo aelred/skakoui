@@ -1,55 +1,69 @@
 use skakoui::{Board, Move, PlayedMove, Searcher};
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::measurement::Measurement;
+use criterion::{
+    criterion_group, criterion_main, BatchSize, BenchmarkGroup, BenchmarkId, Criterion,
+    SamplingMode, Throughput,
+};
 use itertools::Itertools;
 use skakoui::pgn::Algebraic;
 use skakoui::GameState;
 
 fn searcher_can_find_mate(c: &mut Criterion) {
-    let mut searcher = Searcher::default();
+    let mut group = c.benchmark_group("mate");
+    // for long-running benchmarks
+    group.sampling_mode(SamplingMode::Flat).sample_size(10);
 
-    let puzzles = mate_in_1s().chain(mate_in_2s()).chain(mate_in_3s());
+    test_find_mates("in1", &mut group, mate_in_1s());
+    test_find_mates("in2", &mut group, mate_in_2s());
+    test_find_mates("in3", &mut group, mate_in_3s().take(10));
 
-    for (board, mating_moves) in puzzles {
-        test_find_mate(c, &mut searcher, board, &mating_moves);
-    }
+    group.finish();
 }
 
 criterion_group!(searcher, searcher_can_find_mate);
 criterion_main!(searcher);
 
-fn test_find_mate(c: &mut Criterion, searcher: &mut Searcher, board: Board, mating_moves: &[Move]) {
-    let fen_url = board.fen_url();
-    let mut state = GameState::new(board);
+fn test_find_mates<M: Measurement>(
+    name: &'static str,
+    g: &mut BenchmarkGroup<M>,
+    mates: impl Iterator<Item = (Board, Vec<Move>)>,
+) {
+    let mut mates: Vec<(Board, Vec<Move>)> = mates.collect();
+    g.throughput(Throughput::Elements(mates.len() as u64));
+    g.bench_function(name, move |b| {
+        b.iter_batched(
+            || (Searcher::default(), mates.clone()),
+            |(mut searcher, mates)| {
+                for (board, mating_moves) in mates {
+                    test_find_mate(&mut searcher, board, &mating_moves);
+                }
+            },
+            BatchSize::LargeInput,
+        );
+    });
+}
+
+fn test_find_mate(searcher: &mut Searcher, mut board: Board, mating_moves: &[Move]) {
     let n = mating_moves.len();
 
-    c.bench_with_input(
-        BenchmarkId::new(format!("mate_in_{}", n / 2 + 1), &fen_url),
-        &state.board,
-        |b, board| {
-            b.iter(|| {
-                searcher.go(&board, Some(n as u16 + 1));
-                searcher.wait();
-            });
-        },
-    );
+    searcher.go(&board, Some(n as u16 + 1));
+    searcher.wait();
 
-    let mut moves = searcher.principal_variation();
+    let mut moves = searcher.principal_variation(&mut board);
     moves.truncate(n);
 
+    let mut test_board = board.clone();
     for mov in moves.iter() {
-        state.push_move(*mov);
+        test_board.make_move(*mov);
     }
-    let checkmate = state.board.checkmate();
-    for _ in moves.iter() {
-        state.pop();
-    }
+    let checkmate = test_board.checkmate();
 
     assert!(
         checkmate,
         "{}\n{}\nExpect: {}\nActual: {}",
-        state.board,
-        fen_url,
+        board,
+        board.fen_url(),
         mating_moves.iter().join(" "),
         moves.iter().join(" ")
     );

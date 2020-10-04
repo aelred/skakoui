@@ -92,7 +92,7 @@ impl<W: Write> UCI<W> {
 
                     if let Some(movetime) = movetime {
                         std::thread::sleep(movetime);
-                        self.stop()?;
+                        self.stop(&mut board)?;
                     }
 
                     let clock = match board.player() {
@@ -104,11 +104,11 @@ impl<W: Write> UCI<W> {
                         let max_wait = Duration::from_secs(5);
                         // Naively assume there's 40 moves to go in the game
                         std::thread::sleep((clock / 40).min(max_wait));
-                        self.stop()?;
+                        self.stop(&mut board)?;
                     }
                 }
                 "stop" => {
-                    self.stop()?;
+                    self.stop(&mut board)?;
                 }
                 _ => (), // Ignore unknown commands
             }
@@ -117,10 +117,10 @@ impl<W: Write> UCI<W> {
         Ok(())
     }
 
-    fn stop(&mut self) -> Result<(), std::io::Error> {
+    fn stop(&mut self, board: &mut Board) -> Result<(), std::io::Error> {
         self.searcher.stop();
 
-        let pv = self.searcher.principal_variation();
+        let pv = self.searcher.principal_variation(board);
         let pv_str = pv
             .iter()
             .map(|x| x.to_string())

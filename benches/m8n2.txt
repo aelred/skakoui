@@ -865,9 +865,10 @@ Rainer Polzin vs Alexander Motylev, Germany, 2008
 1... Qh1+ 2. Kxh1 Bf2#
 
 
-Eltaj Safarli vs Bela Khotenashvili, Baku, 2008
-5r2/7p/3R4/p3pk2/1p2N2p/1P2BP2/6PK/4r3 w - - 1 0
-1. g4+ hxg3+ 2. Nxg3#
+# TODO: requires an en-passant capture
+# Eltaj Safarli vs Bela Khotenashvili, Baku, 2008
+# 5r2/7p/3R4/p3pk2/1p2N2p/1P2BP2/6PK/4r3 w - - 1 0
+# 1. g4+ hxg3+ 2. Nxg3#
 
 
 # TODO: does something stupid, dunno why
