@@ -31,7 +31,7 @@ fn test_find_mates<M: Measurement>(
     mates: impl Iterator<Item = (Board, Vec<Move>)>,
 ) {
     // Only run a sample for benchmarking, but run all if testing
-    let mates = mates.take(if !cfg!(bench) { 10 } else { usize::MAX });
+    let mates = mates.take(if cfg!(bench) { 10 } else { usize::MAX });
 
     let mut mates: Vec<(Board, Vec<Move>)> = mates.collect();
     g.throughput(Throughput::Elements(mates.len() as u64));
