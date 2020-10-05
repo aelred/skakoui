@@ -37,6 +37,7 @@ impl<W: Write> UCI<W> {
                 "uci" => {
                     writeln!(self.output, "id name skakoui")?;
                     writeln!(self.output, "id author Felix Chapman")?;
+                    writeln!(self.output, "option name Ponder type check default true")?;
                     writeln!(self.output, "uciok")?;
                 }
                 "isready" => {
@@ -66,6 +67,7 @@ impl<W: Write> UCI<W> {
                     let mut movetime = None;
                     let mut wtime = None;
                     let mut btime = None;
+                    let mut ponder = false;
 
                     while let Some(arg) = args.next() {
                         match arg {
@@ -84,6 +86,9 @@ impl<W: Write> UCI<W> {
                                     args.next().unwrap().parse::<u64>().unwrap(),
                                 ));
                             }
+                            "ponder" => {
+                                ponder = true;
+                            }
                             arg => writeln!(stderr, "Unrecognised arg: {}", arg)?,
                         }
                     }
@@ -95,16 +100,18 @@ impl<W: Write> UCI<W> {
                         self.stop(&mut board)?;
                     }
 
-                    let clock = match board.player() {
-                        Player::White => wtime,
-                        Player::Black => btime,
-                    };
+                    if !ponder {
+                        let clock = match board.player() {
+                            Player::White => wtime,
+                            Player::Black => btime,
+                        };
 
-                    if let Some(clock) = clock {
-                        let max_wait = Duration::from_secs(5);
-                        // Naively assume there's 40 moves to go in the game
-                        std::thread::sleep((clock / 40).min(max_wait));
-                        self.stop(&mut board)?;
+                        if let Some(clock) = clock {
+                            let max_wait = Duration::from_secs(5);
+                            // Naively assume there's 40 moves to go in the game
+                            std::thread::sleep((clock / 40).min(max_wait));
+                            self.stop(&mut board)?;
+                        }
                     }
                 }
                 "stop" => {
@@ -129,10 +136,16 @@ impl<W: Write> UCI<W> {
         writeln!(self.output, "info pv {}", pv_str)?;
 
         let mov = pv.first();
+        let ponder = pv.get(1);
         let mov_str = mov
             .map(|m| m.to_string())
             .unwrap_or_else(|| "0000".to_string());
-        writeln!(self.output, "bestmove {}", mov_str)
+
+        write!(self.output, "bestmove {}", mov_str)?;
+        if let Some(ponder) = ponder {
+            write!(self.output, " ponder {}", ponder)?;
+        }
+        writeln!(self.output)
     }
 }
 

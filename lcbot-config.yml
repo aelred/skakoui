@@ -5,6 +5,7 @@ engine:                      # engine settings
   dir: "./engines/"          # dir containing engines, relative to this project
   name: "skakoui"            # binary name of the engine to use
   protocol: "uci"
+  uci_ponder: true
 engine_options:              # any custom command line params to pass to the engine
   silence_stderr: false      # some engines (yes you, leela) are very noisy
 
