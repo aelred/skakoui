@@ -1,4 +1,3 @@
-use crate::bitboard::SquareIterator;
 use crate::Bitboard;
 use crate::BlackPlayer;
 use crate::Board;
@@ -7,7 +6,6 @@ use crate::Piece;
 use crate::PieceType;
 use crate::Player;
 use crate::PlayerType;
-use crate::Square;
 use crate::WhitePlayer;
 use std::marker::PhantomData;
 
@@ -62,20 +60,28 @@ impl Board {
     }
 
     fn moves_of_type<P: PlayerType, M: Movement<P>>(&self) -> impl Iterator<Item = Move> {
-        let king = M::piece::<KingType>(self);
-        let queen = M::piece::<QueenType>(self);
-        let rook = M::piece::<RookType>(self);
-        let bishop = M::piece::<BishopType>(self);
-        let knight = M::piece::<KnightType>(self);
-        let pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<M::Player>);
+        let mask = M::movement_mask(self);
+
+        let king = KingType.moves::<P>(self);
+        let queen = QueenType.moves::<P>(self);
+        let rook = RookType.moves::<P>(self);
+        let bishop = BishopType.moves::<P>(self);
+        let knight = KnightType.moves::<P>(self);
+        let pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<P>);
         let castle = M::castling(&self);
 
-        king.chain(queen)
+        let piece_moves = king
+            .chain(queen)
             .chain(rook)
             .chain(bishop)
             .chain(knight)
-            .chain(pawn)
-            .chain(castle)
+            .flat_map(move |(source, targets)| {
+                (targets & mask)
+                    .squares()
+                    .map(move |target| Move::new(source, target))
+            });
+
+        piece_moves.chain(pawn).chain(castle)
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
@@ -120,70 +126,12 @@ impl Board {
     }
 }
 
-struct MovesIter<P, PT> {
-    mask: Bitboard,
-    occupancy: Bitboard,
-    sources: SquareIterator,
-    target_iter: Option<TargetIter>,
-    _phantom_p: PhantomData<P>,
-    _phantom_pt: PhantomData<PT>,
-}
-
-struct TargetIter {
-    source: Square,
-    targets: SquareIterator,
-}
-
-impl<P: PlayerType, PT: PieceTypeT> MovesIter<P, PT> {
-    fn new(board: &Board, mask: Bitboard) -> Self {
-        let piece = Piece::new(P::PLAYER, PT::PIECE_TYPE);
-        MovesIter {
-            mask,
-            occupancy: board.occupancy(),
-            sources: board.bitboard_piece(piece).squares(),
-            target_iter: None,
-            _phantom_p: PhantomData,
-            _phantom_pt: PhantomData,
-        }
-    }
-}
-
-impl<P: PlayerType, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
-    type Item = Move;
-
-    fn next(&mut self) -> Option<Move> {
-        loop {
-            if self.target_iter.is_none() {
-                let source = self.sources.next()?;
-                let targets = (PT::movement(source, self.occupancy) & self.mask).squares();
-                self.target_iter = Some(TargetIter { source, targets });
-            }
-
-            let target_iter = self.target_iter.as_mut().unwrap();
-
-            let source = target_iter.source;
-
-            if let Some(target) = target_iter.targets.next() {
-                return Some(Move::new(source, target));
-            } else {
-                self.target_iter = None;
-            }
-        }
-    }
-}
-
 trait Movement<P: PlayerType> {
     type PawnIter: Iterator<Item = Move>;
     type Castling: Iterator<Item = Move>;
-    type Player: PlayerType;
 
     /// Iterator of pawn moves
     fn pawn(board: &Board) -> Self::PawnIter;
-
-    /// Iterator of moves for a given piece
-    fn piece<PT: PieceTypeT>(board: &Board) -> MovesIter<P, PT> {
-        MovesIter::new(board, Self::movement_mask(board))
-    }
 
     /// Iterator of pseudo-legal castling moves
     fn castling(board: &Board) -> Self::Castling;
@@ -199,7 +147,6 @@ struct AllMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement<P> for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
     type Castling = CastlingIter<P>;
-    type Player = P;
 
     fn pawn(board: &Board) -> PawnMovesIter<P> {
         PawnMovesIter::new(board)
@@ -219,7 +166,6 @@ struct CapturingMoves<P>(PhantomData<P>);
 impl<P: PlayerType> Movement<P> for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
     type Castling = std::iter::Empty<Move>;
-    type Player = P;
 
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
         PawnCapturesIter::new(board)

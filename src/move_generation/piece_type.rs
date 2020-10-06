@@ -1,10 +1,12 @@
-use crate::bitboards;
-use crate::Bitboard;
+use crate::bitboard::SquareIterator;
 use crate::PieceType;
 use crate::Square;
+use crate::{bitboards, Board, PlayerType};
+use crate::{Bitboard, Piece};
+use std::marker::PhantomData;
 
 /// Type-level representation of [PieceType].
-pub trait PieceTypeT {
+pub trait PieceTypeT: Sized {
     const PIECE_TYPE: PieceType;
 
     /// Returns all moves for this piece when placed at the given square.
@@ -12,6 +14,15 @@ pub trait PieceTypeT {
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
     fn movement(source: Square, occupancy: Bitboard) -> Bitboard;
+
+    fn moves<P: PlayerType>(self, board: &Board) -> MovesIter<Self> {
+        let piece = Piece::new(P::PLAYER, Self::PIECE_TYPE);
+        MovesIter {
+            occupancy: board.occupancy(),
+            sources: board.bitboard_piece(piece).squares(),
+            _phantom: PhantomData,
+        }
+    }
 }
 
 pub struct KingType;
@@ -59,6 +70,22 @@ impl PieceTypeT for QueenType {
             | slide::<EastWest>(source, occupancy)
             | slide::<Diagonal>(source, occupancy)
             | slide::<AntiDiagonal>(source, occupancy)
+    }
+}
+
+pub struct MovesIter<PT> {
+    occupancy: Bitboard,
+    sources: SquareIterator,
+    _phantom: PhantomData<PT>,
+}
+
+impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
+    type Item = (Square, Bitboard);
+
+    fn next(&mut self) -> Option<(Square, Bitboard)> {
+        let source = self.sources.next()?;
+        let targets = PT::movement(source, self.occupancy);
+        Some((source, targets))
     }
 }
 
