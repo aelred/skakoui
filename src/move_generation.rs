@@ -9,11 +9,9 @@ use crate::PlayerType;
 use crate::WhitePlayer;
 use std::marker::PhantomData;
 
-mod castling;
 mod pawn;
 mod piece_type;
 
-use self::castling::CastlingIter;
 use self::piece_type::BishopType;
 use self::piece_type::KingType;
 use self::piece_type::KnightType;
@@ -68,7 +66,6 @@ impl Board {
         let bishop = BishopType.moves::<P>(self);
         let knight = KnightType.moves::<P>(self);
         let pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<P>);
-        let castle = M::castling(&self);
 
         let piece_moves = king
             .chain(queen)
@@ -81,7 +78,7 @@ impl Board {
                     .map(move |target| Move::new(source, target))
             });
 
-        piece_moves.chain(pawn).chain(castle)
+        piece_moves.chain(pawn)
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
@@ -128,13 +125,9 @@ impl Board {
 
 trait Movement<P: PlayerType> {
     type PawnIter: Iterator<Item = Move>;
-    type Castling: Iterator<Item = Move>;
 
     /// Iterator of pawn moves
     fn pawn(board: &Board) -> Self::PawnIter;
-
-    /// Iterator of pseudo-legal castling moves
-    fn castling(board: &Board) -> Self::Castling;
 
     /// Mask of valid target squares to control what moves are generated.
     /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
@@ -146,14 +139,9 @@ struct AllMoves<P>(PhantomData<P>);
 
 impl<P: PlayerType> Movement<P> for AllMoves<P> {
     type PawnIter = PawnMovesIter<P>;
-    type Castling = CastlingIter<P>;
 
     fn pawn(board: &Board) -> PawnMovesIter<P> {
         PawnMovesIter::new(board)
-    }
-
-    fn castling(board: &Board) -> Self::Castling {
-        CastlingIter::new(board)
     }
 
     fn movement_mask(board: &Board) -> Bitboard {
@@ -165,14 +153,9 @@ struct CapturingMoves<P>(PhantomData<P>);
 
 impl<P: PlayerType> Movement<P> for CapturingMoves<P> {
     type PawnIter = PawnCapturesIter<P>;
-    type Castling = std::iter::Empty<Move>;
 
     fn pawn(board: &Board) -> PawnCapturesIter<P> {
         PawnCapturesIter::new(board)
-    }
-
-    fn castling(_: &Board) -> Self::Castling {
-        std::iter::empty()
     }
 
     fn movement_mask(board: &Board) -> Bitboard {

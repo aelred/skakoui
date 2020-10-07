@@ -1,8 +1,8 @@
 use crate::bitboard::SquareIterator;
-use crate::PieceType;
-use crate::Square;
 use crate::{bitboards, Board, PlayerType};
 use crate::{Bitboard, Piece};
+use crate::{BoardFlags, PieceType};
+use crate::{File, Square};
 use std::marker::PhantomData;
 
 /// Type-level representation of [PieceType].
@@ -11,16 +11,25 @@ pub trait PieceTypeT: Sized {
 
     /// Returns all moves for this piece when placed at the given square.
     ///
+    /// Usually the same as [attacks] except also including moves that don't capture, like castling.
+    fn movement<P: PlayerType>(source: Square, occupancy: Bitboard, _: BoardFlags) -> Bitboard {
+        Self::attacks(source, occupancy)
+    }
+
+    /// Returns all squares this piece can attack when placed at the given square.
+    ///
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard;
+    fn attacks(source: Square, occupancy: Bitboard) -> Bitboard;
 
-    fn moves<P: PlayerType>(self, board: &Board) -> MovesIter<Self> {
+    fn moves<P: PlayerType>(self, board: &Board) -> MovesIter<P, Self> {
         let piece = Piece::new(P::PLAYER, Self::PIECE_TYPE);
         MovesIter {
             occupancy: board.occupancy(),
             sources: board.bitboard_piece(piece).squares(),
-            _phantom: PhantomData,
+            flags: board.flags(),
+            _phantom_p: PhantomData,
+            _phantom_pt: PhantomData,
         }
     }
 }
@@ -29,7 +38,25 @@ pub struct KingType;
 impl PieceTypeT for KingType {
     const PIECE_TYPE: PieceType = PieceType::King;
 
-    fn movement(source: Square, _: Bitboard) -> Bitboard {
+    fn movement<P: PlayerType>(source: Square, occupancy: Bitboard, flags: BoardFlags) -> Bitboard {
+        let mut movement = Self::attacks(source, occupancy);
+
+        if flags.is_set(P::CASTLE_KINGSIDE_FLAG)
+            && (P::CASTLE_KINGSIDE_CLEAR & occupancy).is_empty()
+        {
+            movement.set(Square::new(File::G, P::PLAYER.back_rank()));
+        }
+
+        if flags.is_set(P::CASTLE_QUEENSIDE_FLAG)
+            && (P::CASTLE_QUEENSIDE_CLEAR & occupancy).is_empty()
+        {
+            movement.set(Square::new(File::C, P::PLAYER.back_rank()));
+        }
+
+        movement
+    }
+
+    fn attacks(source: Square, _: Bitboard) -> Bitboard {
         bitboards::KING_MOVES[source]
     }
 }
@@ -38,7 +65,7 @@ pub struct KnightType;
 impl PieceTypeT for KnightType {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
-    fn movement(source: Square, _: Bitboard) -> Bitboard {
+    fn attacks(source: Square, _: Bitboard) -> Bitboard {
         bitboards::KNIGHT_MOVES[source]
     }
 }
@@ -47,7 +74,7 @@ pub struct RookType;
 impl PieceTypeT for RookType {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
     }
 }
@@ -56,7 +83,7 @@ pub struct BishopType;
 impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
     }
 }
@@ -65,7 +92,7 @@ pub struct QueenType;
 impl PieceTypeT for QueenType {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
-    fn movement(source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(source: Square, occupancy: Bitboard) -> Bitboard {
         slide::<NorthSouth>(source, occupancy)
             | slide::<EastWest>(source, occupancy)
             | slide::<Diagonal>(source, occupancy)
@@ -73,18 +100,20 @@ impl PieceTypeT for QueenType {
     }
 }
 
-pub struct MovesIter<PT> {
+pub struct MovesIter<P, PT> {
     occupancy: Bitboard,
     sources: SquareIterator,
-    _phantom: PhantomData<PT>,
+    flags: BoardFlags,
+    _phantom_p: PhantomData<P>,
+    _phantom_pt: PhantomData<PT>,
 }
 
-impl<PT: PieceTypeT> Iterator for MovesIter<PT> {
+impl<P: PlayerType, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
     type Item = (Square, Bitboard);
 
     fn next(&mut self) -> Option<(Square, Bitboard)> {
         let source = self.sources.next()?;
-        let targets = PT::movement(source, self.occupancy);
+        let targets = PT::movement::<P>(source, self.occupancy, self.flags);
         Some((source, targets))
     }
 }
