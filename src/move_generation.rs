@@ -9,15 +9,21 @@ use crate::PlayerType;
 use crate::WhitePlayer;
 use std::marker::PhantomData;
 
+mod bishop;
+mod king;
+mod knight;
 mod pawn;
 mod piece_type;
+mod queen;
+mod rook;
 
-use self::piece_type::BishopType;
-use self::piece_type::KingType;
-use self::piece_type::KnightType;
-use self::piece_type::QueenType;
-use self::piece_type::RookType;
-use crate::move_generation::piece_type::{Movable, PawnType, PieceT};
+use crate::move_generation::bishop::BishopType;
+use crate::move_generation::king::KingType;
+use crate::move_generation::knight::KnightType;
+use crate::move_generation::pawn::PawnType;
+use crate::move_generation::piece_type::{Movable, PieceT};
+use crate::move_generation::queen::QueenType;
+use crate::move_generation::rook::RookType;
 use crate::piece::PieceType::King;
 
 impl Board {
