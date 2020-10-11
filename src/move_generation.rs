@@ -15,10 +15,9 @@ mod piece_type;
 use self::piece_type::BishopType;
 use self::piece_type::KingType;
 use self::piece_type::KnightType;
-use self::piece_type::PieceTypeT;
 use self::piece_type::QueenType;
 use self::piece_type::RookType;
-use crate::move_generation::pawn::{PawnCapturesIter, PawnMovesIter};
+use crate::move_generation::piece_type::{Movable, PawnType, PieceT};
 use crate::piece::PieceType::King;
 
 impl Board {
@@ -39,8 +38,12 @@ impl Board {
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
-            Player::White => Box::new(self.moves_of_type::<WhitePlayer, AllMoves<WhitePlayer>>()),
-            Player::Black => Box::new(self.moves_of_type::<BlackPlayer, AllMoves<BlackPlayer>>()),
+            Player::White => {
+                Box::new(self.moves_of_type::<WhitePlayer, AllMoves<WhitePlayer>>(WhitePlayer))
+            }
+            Player::Black => {
+                Box::new(self.moves_of_type::<BlackPlayer, AllMoves<BlackPlayer>>(BlackPlayer))
+            }
         }
     }
 
@@ -49,36 +52,32 @@ impl Board {
     /// 2. King captures
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for_typed<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_of_type::<P, AllMoves<P>>()
+        self.moves_of_type::<P, AllMoves<P>>(P::default())
     }
 
     /// Lazy iterator of all capturing moves
     pub fn capturing_moves<P: PlayerType>(&self) -> impl Iterator<Item = Move> {
-        self.moves_of_type::<P, CapturingMoves<P>>()
+        self.moves_of_type::<P, CapturingMoves<P>>(P::default())
     }
 
-    fn moves_of_type<P: PlayerType, M: Movement<P>>(&self) -> impl Iterator<Item = Move> {
+    fn moves_of_type<P: PlayerType, M: Movement<P>>(
+        &self,
+        player: P,
+    ) -> impl Iterator<Item = Move> {
         let mask = M::movement_mask(self);
 
-        let king = KingType.moves::<P>(self);
-        let queen = QueenType.moves::<P>(self);
-        let rook = RookType.moves::<P>(self);
-        let bishop = BishopType.moves::<P>(self);
-        let knight = KnightType.moves::<P>(self);
-        let pawn = M::pawn(self).flat_map(Move::with_valid_promotions::<P>);
+        let king = PieceT::new(player, KingType).moves(self, mask);
+        let queen = PieceT::new(player, QueenType).moves(self, mask);
+        let rook = PieceT::new(player, RookType).moves(self, mask);
+        let bishop = PieceT::new(player, BishopType).moves(self, mask);
+        let knight = PieceT::new(player, KnightType).moves(self, mask);
+        let pawn = PieceT::new(player, PawnType).moves(self, mask);
 
-        let piece_moves = king
-            .chain(queen)
+        king.chain(queen)
             .chain(rook)
             .chain(bishop)
             .chain(knight)
-            .flat_map(move |(source, targets)| {
-                (targets & mask)
-                    .squares()
-                    .map(move |target| Move::new(source, target))
-            });
-
-        piece_moves.chain(pawn)
+            .chain(pawn)
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
@@ -124,11 +123,6 @@ impl Board {
 }
 
 trait Movement<P: PlayerType> {
-    type PawnIter: Iterator<Item = Move>;
-
-    /// Iterator of pawn moves
-    fn pawn(board: &Board) -> Self::PawnIter;
-
     /// Mask of valid target squares to control what moves are generated.
     /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
     /// pieces" (except for en-passant but screw en-passant).
@@ -138,12 +132,6 @@ trait Movement<P: PlayerType> {
 struct AllMoves<P>(PhantomData<P>);
 
 impl<P: PlayerType> Movement<P> for AllMoves<P> {
-    type PawnIter = PawnMovesIter<P>;
-
-    fn pawn(board: &Board) -> PawnMovesIter<P> {
-        PawnMovesIter::new(board)
-    }
-
     fn movement_mask(board: &Board) -> Bitboard {
         !board.occupancy_player(P::PLAYER)
     }
@@ -152,12 +140,6 @@ impl<P: PlayerType> Movement<P> for AllMoves<P> {
 struct CapturingMoves<P>(PhantomData<P>);
 
 impl<P: PlayerType> Movement<P> for CapturingMoves<P> {
-    type PawnIter = PawnCapturesIter<P>;
-
-    fn pawn(board: &Board) -> PawnCapturesIter<P> {
-        PawnCapturesIter::new(board)
-    }
-
     fn movement_mask(board: &Board) -> Bitboard {
         board.occupancy_player(P::Opp::PLAYER)
     }

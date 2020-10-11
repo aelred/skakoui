@@ -57,7 +57,7 @@ impl Move {
         self.promoting
     }
 
-    pub fn with_valid_promotions<P: PlayerType>(self) -> impl IntoIterator<Item = Move> {
+    pub fn with_valid_promotions<P: PlayerType>(self) -> Vec<Move> {
         if self.to.rank() == P::PROMOTING_RANK {
             vec![
                 Move {
