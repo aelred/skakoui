@@ -1,5 +1,6 @@
 use crate::move_generation::piece_type::{Movable, MovesIter, PieceT, PieceTypeT};
-use crate::{bitboards, Bitboard, Board, BoardFlags, File, PieceType, PlayerType, Square};
+use crate::{Bitboard, Board, BoardFlags, File, PieceType, PlayerType, Square, SquareMap};
+use lazy_static::lazy_static;
 
 #[derive(Copy, Clone)]
 pub struct KingType;
@@ -31,7 +32,7 @@ impl PieceTypeT for KingType {
     }
 
     fn attacks(self, source: Square, _: Bitboard) -> Bitboard {
-        bitboards::KING_MOVES[source]
+        KING_MOVES[source]
     }
 }
 
@@ -40,4 +41,13 @@ impl<P: PlayerType> Movable for PieceT<P, KingType> {
     fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves {
         MovesIter::new(board, self, mask)
     }
+}
+
+lazy_static! {
+    static ref KING_MOVES: SquareMap<Bitboard> = SquareMap::from(|square| {
+        let king = Bitboard::from(square);
+        let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
+        let ranks = king | attacks;
+        attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
+    });
 }
