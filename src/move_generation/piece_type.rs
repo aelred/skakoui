@@ -106,68 +106,68 @@ impl<P: PlayerType, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
 }
 
 /// Slide a piece from the source square in the given direction.
-pub fn slide<Dir: SlideDirection>(source: Square, occupancy: Bitboard) -> Bitboard {
-    let pos_movement = Dir::positive_bitboard(source);
+pub fn slide(dir: impl SlideDirection, source: Square, occupancy: Bitboard) -> Bitboard {
+    let pos_movement = dir.positive_bitboard(source);
     let mut blockers = pos_movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
     blockers.set(Square::H8);
     let blocking_square = blockers.first_set();
-    let pos_movement = pos_movement ^ Dir::positive_bitboard(blocking_square);
+    let pos_movement = pos_movement ^ dir.positive_bitboard(blocking_square);
 
-    let neg_movement = Dir::negative_bitboard(source);
+    let neg_movement = dir.negative_bitboard(source);
     let mut blockers = neg_movement & occupancy;
     // Set the last square so there is always a blocking square (no need to branch)
     blockers.set(Square::A1);
     let blocking_square = blockers.last_set();
-    let neg_movement = neg_movement ^ Dir::negative_bitboard(blocking_square);
+    let neg_movement = neg_movement ^ dir.negative_bitboard(blocking_square);
 
     pos_movement | neg_movement
 }
 pub trait SlideDirection {
-    fn positive_bitboard(source: Square) -> Bitboard;
-    fn negative_bitboard(source: Square) -> Bitboard;
+    fn positive_bitboard(&self, source: Square) -> Bitboard;
+    fn negative_bitboard(&self, source: Square) -> Bitboard;
 }
 
 pub struct NorthSouth;
 impl SlideDirection for NorthSouth {
-    fn positive_bitboard(source: Square) -> Bitboard {
+    fn positive_bitboard(&self, source: Square) -> Bitboard {
         bitboards::NORTH[source]
     }
 
-    fn negative_bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(&self, source: Square) -> Bitboard {
         bitboards::SOUTH[source]
     }
 }
 
 pub struct EastWest;
 impl SlideDirection for EastWest {
-    fn positive_bitboard(source: Square) -> Bitboard {
+    fn positive_bitboard(&self, source: Square) -> Bitboard {
         bitboards::EAST[source]
     }
 
-    fn negative_bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(&self, source: Square) -> Bitboard {
         bitboards::WEST[source]
     }
 }
 
 pub struct Diagonal;
 impl SlideDirection for Diagonal {
-    fn positive_bitboard(source: Square) -> Bitboard {
+    fn positive_bitboard(&self, source: Square) -> Bitboard {
         bitboards::POSITIVE_DIAGONALS[source]
     }
 
-    fn negative_bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(&self, source: Square) -> Bitboard {
         bitboards::NEGATIVE_DIAGONALS[source]
     }
 }
 
 pub struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
-    fn positive_bitboard(source: Square) -> Bitboard {
+    fn positive_bitboard(&self, source: Square) -> Bitboard {
         bitboards::POSITIVE_ANTIDIAGONALS[source]
     }
 
-    fn negative_bitboard(source: Square) -> Bitboard {
+    fn negative_bitboard(&self, source: Square) -> Bitboard {
         bitboards::NEGATIVE_ANTIDIAGONALS[source]
     }
 }

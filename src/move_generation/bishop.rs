@@ -9,7 +9,7 @@ impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
     fn attacks(self, source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<Diagonal>(source, occupancy) | slide::<AntiDiagonal>(source, occupancy)
+        slide(Diagonal, source, occupancy) | slide(AntiDiagonal, source, occupancy)
     }
 }
 

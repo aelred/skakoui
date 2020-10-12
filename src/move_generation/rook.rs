@@ -9,7 +9,7 @@ impl PieceTypeT for RookType {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
     fn attacks(self, source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<NorthSouth>(source, occupancy) | slide::<EastWest>(source, occupancy)
+        slide(NorthSouth, source, occupancy) | slide(EastWest, source, occupancy)
     }
 }
 

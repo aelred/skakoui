@@ -9,10 +9,10 @@ impl PieceTypeT for QueenType {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
     fn attacks(self, source: Square, occupancy: Bitboard) -> Bitboard {
-        slide::<NorthSouth>(source, occupancy)
-            | slide::<EastWest>(source, occupancy)
-            | slide::<Diagonal>(source, occupancy)
-            | slide::<AntiDiagonal>(source, occupancy)
+        slide(NorthSouth, source, occupancy)
+            | slide(EastWest, source, occupancy)
+            | slide(Diagonal, source, occupancy)
+            | slide(AntiDiagonal, source, occupancy)
     }
 }
 
