@@ -4,7 +4,6 @@ use crate::{bitboards, Board, Move, PlayerType};
 use crate::{Bitboard, Piece};
 use crate::{BoardFlags, PieceType};
 
-#[derive(Copy, Clone)]
 pub struct PieceT<P, PT> {
     player: P,
     piece_type: PT,
@@ -15,7 +14,7 @@ impl<P: PlayerType, PT: PieceTypeT> PieceT<P, PT> {
         Self { player, piece_type }
     }
 
-    fn value(self) -> Piece {
+    fn value(&self) -> Piece {
         Piece::new(self.player.value(), self.piece_type.value())
     }
 }
@@ -26,10 +25,10 @@ pub trait Movable {
 }
 
 /// Type-level representation of [PieceType].
-pub trait PieceTypeT: Sized + Copy {
+pub trait PieceTypeT: Sized {
     const PIECE_TYPE: PieceType;
 
-    fn value(self) -> PieceType {
+    fn value(&self) -> PieceType {
         Self::PIECE_TYPE
     }
 
@@ -37,7 +36,7 @@ pub trait PieceTypeT: Sized + Copy {
     ///
     /// Usually the same as [attacks] except also including moves that don't capture, like castling.
     fn movement(
-        self,
+        &self,
         source: Square,
         occupancy: Bitboard,
         _: impl PlayerType,
@@ -50,7 +49,7 @@ pub trait PieceTypeT: Sized + Copy {
     ///
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
-    fn attacks(self, source: Square, occupancy: Bitboard) -> Bitboard;
+    fn attacks(&self, source: Square, occupancy: Bitboard) -> Bitboard;
 }
 
 pub struct MovesIter<P, PT> {

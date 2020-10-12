@@ -3,12 +3,11 @@ use crate::move_generation::piece_type::{
 };
 use crate::{Bitboard, Board, PieceType, PlayerType, Square};
 
-#[derive(Copy, Clone)]
 pub struct BishopType;
 impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
-    fn attacks(self, source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, occupancy: Bitboard) -> Bitboard {
         slide(Diagonal, source, occupancy) | slide(AntiDiagonal, source, occupancy)
     }
 }

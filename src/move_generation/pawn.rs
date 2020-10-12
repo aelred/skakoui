@@ -4,16 +4,15 @@ use crate::{bitboards, Bitboard, Board, BoardFlags, Move, Piece, PieceType, Play
 use std::iter::FlatMap;
 use std::marker::PhantomData;
 
-#[derive(Copy, Clone)]
 pub struct PawnType;
 impl PieceTypeT for PawnType {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
-    fn movement(self, _: Square, _: Bitboard, _: impl PlayerType, _: BoardFlags) -> Bitboard {
+    fn movement(&self, _: Square, _: Bitboard, _: impl PlayerType, _: BoardFlags) -> Bitboard {
         unimplemented!()
     }
 
-    fn attacks(self, _: Square, _: Bitboard) -> Bitboard {
+    fn attacks(&self, _: Square, _: Bitboard) -> Bitboard {
         unimplemented!()
     }
 }

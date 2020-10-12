@@ -2,12 +2,11 @@ use crate::move_generation::piece_type::{Movable, MovesIter, PieceT, PieceTypeT}
 use crate::{Bitboard, Board, PieceType, PlayerType, Square, SquareMap};
 use lazy_static::lazy_static;
 
-#[derive(Copy, Clone)]
 pub struct KnightType;
 impl PieceTypeT for KnightType {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
-    fn attacks(self, source: Square, _: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard) -> Bitboard {
         KNIGHT_MOVES[source]
     }
 }
