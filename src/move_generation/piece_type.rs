@@ -1,6 +1,6 @@
 use crate::bitboard::SquareIterator;
 use crate::Square;
-use crate::{bitboards, Board, Move, PlayerType};
+use crate::{bitboards, Board, Move, PlayerT};
 use crate::{Bitboard, Piece};
 use crate::{BoardFlags, PieceType};
 
@@ -9,7 +9,7 @@ pub struct PieceT<P, PT> {
     piece_type: PT,
 }
 
-impl<P: PlayerType, PT: PieceTypeT> PieceT<P, PT> {
+impl<P: PlayerT, PT: PieceTypeT> PieceT<P, PT> {
     pub fn new(player: P, piece_type: PT) -> Self {
         Self { player, piece_type }
     }
@@ -39,7 +39,7 @@ pub trait PieceTypeT: Sized {
         &self,
         source: Square,
         occupancy: Bitboard,
-        _: impl PlayerType,
+        _: impl PlayerT,
         _: BoardFlags,
     ) -> Bitboard {
         self.attacks(source, occupancy)
@@ -62,7 +62,7 @@ pub struct MovesIter<P, PT> {
     flags: BoardFlags,
 }
 
-impl<P: PlayerType, PT: PieceTypeT> MovesIter<P, PT> {
+impl<P: PlayerT, PT: PieceTypeT> MovesIter<P, PT> {
     pub(crate) fn new(board: &Board, piece: PieceT<P, PT>, mask: Bitboard) -> Self {
         // arbitrary source square with no targets to avoid empty case
         let source = Square::A1;
@@ -79,7 +79,7 @@ impl<P: PlayerType, PT: PieceTypeT> MovesIter<P, PT> {
     }
 }
 
-impl<P: PlayerType, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
+impl<P: PlayerT, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {

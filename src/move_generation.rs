@@ -1,12 +1,12 @@
 use crate::Bitboard;
-use crate::BlackPlayer;
+use crate::Black;
 use crate::Board;
 use crate::Move;
 use crate::Piece;
 use crate::PieceType;
 use crate::Player;
-use crate::PlayerType;
-use crate::WhitePlayer;
+use crate::PlayerT;
+use crate::White;
 
 mod bishop;
 mod king;
@@ -43,8 +43,8 @@ impl Board {
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
-            Player::White => Box::new(self.moves_of_type(WhitePlayer, AllMoves(WhitePlayer))),
-            Player::Black => Box::new(self.moves_of_type(BlackPlayer, AllMoves(BlackPlayer))),
+            Player::White => Box::new(self.moves_of_type(White, AllMoves(White))),
+            Player::Black => Box::new(self.moves_of_type(Black, AllMoves(Black))),
         }
     }
 
@@ -52,19 +52,16 @@ impl Board {
     /// 1. Check
     /// 2. King captures
     /// 3. Castling through check
-    pub fn pseudo_legal_moves_for_typed(
-        &self,
-        player: impl PlayerType,
-    ) -> impl Iterator<Item = Move> {
+    pub fn pseudo_legal_moves_for_typed(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
         self.moves_of_type(player, AllMoves(player))
     }
 
     /// Lazy iterator of all capturing moves
-    pub fn capturing_moves(&self, player: impl PlayerType) -> impl Iterator<Item = Move> {
+    pub fn capturing_moves(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
         self.moves_of_type(player, CapturingMoves(player))
     }
 
-    fn moves_of_type<P: PlayerType, M: Movement<P>>(
+    fn moves_of_type<P: PlayerT, M: Movement<P>>(
         &self,
         player: P,
         movement: M,
@@ -127,7 +124,7 @@ impl Board {
     }
 }
 
-trait Movement<P: PlayerType> {
+trait Movement<P: PlayerT> {
     /// Mask of valid target squares to control what moves are generated.
     /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
     /// pieces" (except for en-passant but screw en-passant).
@@ -136,7 +133,7 @@ trait Movement<P: PlayerType> {
 
 struct AllMoves<P>(P);
 
-impl<P: PlayerType> Movement<P> for AllMoves<P> {
+impl<P: PlayerT> Movement<P> for AllMoves<P> {
     fn movement_mask(&self, board: &Board) -> Bitboard {
         !board.occupancy_player(self.0.value())
     }
@@ -144,7 +141,7 @@ impl<P: PlayerType> Movement<P> for AllMoves<P> {
 
 struct CapturingMoves<P>(P);
 
-impl<P: PlayerType> Movement<P> for CapturingMoves<P> {
+impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
     fn movement_mask(&self, board: &Board) -> Bitboard {
         board.occupancy_player(self.0.opponent().value())
     }
@@ -350,7 +347,7 @@ mod tests {
     #[test]
     fn capturing_moves_are_all_pseudo_legal_moves_that_capture_a_piece() {
         let mut board = fen("8/8/8/8/1b1N4/1Q6/p3n3/8 w");
-        let capturing_moves: HashSet<Move> = board.capturing_moves(WhitePlayer).collect();
+        let capturing_moves: HashSet<Move> = board.capturing_moves(White).collect();
 
         let expected: HashSet<Move> = board
             .pseudo_legal_moves()

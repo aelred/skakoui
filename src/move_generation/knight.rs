@@ -1,5 +1,5 @@
 use crate::move_generation::piece_type::{Movable, MovesIter, PieceT, PieceTypeT};
-use crate::{Bitboard, Board, PieceType, PlayerType, Square, SquareMap};
+use crate::{Bitboard, Board, PieceType, PlayerT, Square, SquareMap};
 use lazy_static::lazy_static;
 
 pub struct KnightType;
@@ -11,7 +11,7 @@ impl PieceTypeT for KnightType {
     }
 }
 
-impl<P: PlayerType> Movable for PieceT<P, KnightType> {
+impl<P: PlayerT> Movable for PieceT<P, KnightType> {
     type Moves = MovesIter<P, KnightType>;
     fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves {
         MovesIter::new(board, self, mask)

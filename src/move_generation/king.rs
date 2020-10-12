@@ -1,5 +1,5 @@
 use crate::move_generation::piece_type::{Movable, MovesIter, PieceT, PieceTypeT};
-use crate::{Bitboard, Board, BoardFlags, File, PieceType, PlayerType, Square, SquareMap};
+use crate::{Bitboard, Board, BoardFlags, File, PieceType, PlayerT, Square, SquareMap};
 use lazy_static::lazy_static;
 
 pub struct KingType;
@@ -10,7 +10,7 @@ impl PieceTypeT for KingType {
         &self,
         source: Square,
         occupancy: Bitboard,
-        player: impl PlayerType,
+        player: impl PlayerT,
         flags: BoardFlags,
     ) -> Bitboard {
         let mut movement = self.attacks(source, occupancy);
@@ -35,7 +35,7 @@ impl PieceTypeT for KingType {
     }
 }
 
-impl<P: PlayerType> Movable for PieceT<P, KingType> {
+impl<P: PlayerT> Movable for PieceT<P, KingType> {
     type Moves = MovesIter<P, KingType>;
     fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves {
         MovesIter::new(board, self, mask)

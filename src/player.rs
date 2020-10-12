@@ -104,8 +104,8 @@ impl fmt::Display for Player {
     }
 }
 
-pub trait PlayerType: Sized + Copy + Default {
-    type Opp: PlayerType;
+pub trait PlayerT: Sized + Copy + Default {
+    type Opp: PlayerT;
     const PLAYER: Player;
 
     fn value(self) -> Player {
@@ -154,17 +154,17 @@ pub trait PlayerType: Sized + Copy + Default {
 }
 
 #[derive(Copy, Clone, Default)]
-pub struct WhitePlayer;
+pub struct White;
 
 #[derive(Copy, Clone, Default)]
-pub struct BlackPlayer;
+pub struct Black;
 
-impl PlayerType for WhitePlayer {
-    type Opp = BlackPlayer;
+impl PlayerT for White {
+    type Opp = Black;
     const PLAYER: Player = Player::White;
 }
 
-impl PlayerType for BlackPlayer {
-    type Opp = WhitePlayer;
+impl PlayerT for Black {
+    type Opp = White;
     const PLAYER: Player = Player::Black;
 }

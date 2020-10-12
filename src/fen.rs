@@ -1,4 +1,4 @@
-use crate::{BlackPlayer, Board, BoardFlags, Piece, PieceType, Player, PlayerType, WhitePlayer};
+use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerT, White};
 use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use std::borrow::Borrow;
@@ -50,16 +50,16 @@ impl Board {
         let flags = fields.next().map(|castling| {
             let mut set_flags = 0u8;
             if castling.contains('K') {
-                set_flags |= WhitePlayer.castle_kingside_flag();
+                set_flags |= White.castle_kingside_flag();
             }
             if castling.contains('Q') {
-                set_flags |= WhitePlayer.castle_queenside_flag();
+                set_flags |= White.castle_queenside_flag();
             }
             if castling.contains('k') {
-                set_flags |= BlackPlayer.castle_kingside_flag();
+                set_flags |= Black.castle_kingside_flag();
             }
             if castling.contains('q') {
-                set_flags |= BlackPlayer.castle_queenside_flag();
+                set_flags |= Black.castle_queenside_flag();
             }
             BoardFlags::new(set_flags)
         });
@@ -108,19 +108,19 @@ impl Board {
 
         fen.push(' ');
         let mut can_castle = false;
-        if self.flags().is_set(WhitePlayer.castle_kingside_flag()) {
+        if self.flags().is_set(White.castle_kingside_flag()) {
             fen.push('K');
             can_castle = true;
         }
-        if self.flags().is_set(WhitePlayer.castle_queenside_flag()) {
+        if self.flags().is_set(White.castle_queenside_flag()) {
             fen.push('Q');
             can_castle = true;
         }
-        if self.flags().is_set(BlackPlayer.castle_kingside_flag()) {
+        if self.flags().is_set(Black.castle_kingside_flag()) {
             fen.push('k');
             can_castle = true;
         }
-        if self.flags().is_set(BlackPlayer.castle_queenside_flag()) {
+        if self.flags().is_set(Black.castle_queenside_flag()) {
             fen.push('q');
             can_castle = true;
         }

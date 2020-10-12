@@ -1,7 +1,7 @@
 mod tree;
 
-use crate::{BlackPlayer, Board, PlayerType};
-use crate::{Move, Player, WhitePlayer};
+use crate::{Black, Board, PlayerT};
+use crate::{Move, Player, White};
 
 use crate::search::tree::SearchTree;
 use arrayvec::ArrayVec;
@@ -217,8 +217,8 @@ impl<'a> ThreadSearcher<'a> {
             self.leftmost = true;
 
             match self.board.player() {
-                Player::White => self.search(WhitePlayer, self.max_depth, LOW_SCORE, HIGH_SCORE),
-                Player::Black => self.search(BlackPlayer, self.max_depth, LOW_SCORE, HIGH_SCORE),
+                Player::White => self.search(White, self.max_depth, LOW_SCORE, HIGH_SCORE),
+                Player::Black => self.search(Black, self.max_depth, LOW_SCORE, HIGH_SCORE),
             };
 
             let pv = self
@@ -235,13 +235,7 @@ impl<'a> ThreadSearcher<'a> {
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
-    fn search(
-        &mut self,
-        player: impl PlayerType,
-        depth: u16,
-        mut alpha: i32,
-        mut beta: i32,
-    ) -> i32 {
+    fn search(&mut self, player: impl PlayerT, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
         log_search!(self, depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
@@ -361,7 +355,7 @@ impl<'a> ThreadSearcher<'a> {
     /// The idea is that a board with lots going on is worth investigating more deeply.
     /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
     /// piece could be taken in the next turn.
-    fn quiesce(&mut self, player: impl PlayerType, mut alpha: i32, beta: i32, depth: i16) -> i32 {
+    fn quiesce(&mut self, player: impl PlayerT, mut alpha: i32, beta: i32, depth: i16) -> i32 {
         // hard cut-off to depth of quiescent search
         if depth <= -1 {
             log_search!(self, depth, "woah that's deep enough");

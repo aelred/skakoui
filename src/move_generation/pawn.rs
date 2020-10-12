@@ -1,13 +1,13 @@
 use crate::bitboard::SquareIterator;
 use crate::move_generation::piece_type::{Movable, PieceT, PieceTypeT};
-use crate::{bitboards, Bitboard, Board, BoardFlags, Move, Piece, PieceType, PlayerType, Square};
+use crate::{bitboards, Bitboard, Board, BoardFlags, Move, Piece, PieceType, PlayerT, Square};
 use std::iter::FlatMap;
 
 pub struct PawnType;
 impl PieceTypeT for PawnType {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
-    fn movement(&self, _: Square, _: Bitboard, _: impl PlayerType, _: BoardFlags) -> Bitboard {
+    fn movement(&self, _: Square, _: Bitboard, _: impl PlayerT, _: BoardFlags) -> Bitboard {
         unimplemented!()
     }
 
@@ -16,7 +16,7 @@ impl PieceTypeT for PawnType {
     }
 }
 
-impl<P: PlayerType> Movable for PieceT<P, PawnType> {
+impl<P: PlayerT> Movable for PieceT<P, PawnType> {
     #[allow(clippy::type_complexity)]
     type Moves = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
     fn moves(self, board: &Board, _: Bitboard) -> Self::Moves {
@@ -31,7 +31,7 @@ pub struct PawnMovesIter<P> {
     captures: PawnCapturesIter<P>,
 }
 
-impl<P: PlayerType> PawnMovesIter<P> {
+impl<P: PlayerT> PawnMovesIter<P> {
     fn new(board: &Board, player: P) -> Self {
         let piece = Piece::new(player.value(), PieceType::Pawn);
 
@@ -54,7 +54,7 @@ impl<P: PlayerType> PawnMovesIter<P> {
     }
 }
 
-impl<P: PlayerType> Iterator for PawnMovesIter<P> {
+impl<P: PlayerT> Iterator for PawnMovesIter<P> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Move> {
@@ -78,7 +78,7 @@ pub struct PawnCapturesIter<P> {
     captures_west: SquareIterator,
 }
 
-impl<P: PlayerType> PawnCapturesIter<P> {
+impl<P: PlayerT> PawnCapturesIter<P> {
     fn new(board: &Board, player: P) -> Self {
         let piece = Piece::new(player.value(), PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
@@ -97,7 +97,7 @@ impl<P: PlayerType> PawnCapturesIter<P> {
     }
 }
 
-impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
+impl<P: PlayerT> Iterator for PawnCapturesIter<P> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Move> {

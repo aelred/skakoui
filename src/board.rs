@@ -9,9 +9,9 @@ use crate::Rank;
 use crate::Square;
 use crate::SquareColor;
 use crate::SquareMap;
-use crate::{bitboards, PlayerType};
-use crate::{Bitboard, WhitePlayer};
-use crate::{BlackPlayer, File};
+use crate::{bitboards, PlayerT};
+use crate::{Bitboard, White};
+use crate::{Black, File};
 use anyhow::Error;
 use enum_map::EnumMap;
 use serde::export::Formatter;
@@ -49,16 +49,16 @@ impl Board {
         let mut unset_flags = 0;
         // Remove any impossible castling options
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::H1] != Some(Piece::WR) {
-            unset_flags |= WhitePlayer.castle_kingside_flag();
+            unset_flags |= White.castle_kingside_flag();
         }
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::A1] != Some(Piece::WR) {
-            unset_flags |= WhitePlayer.castle_queenside_flag();
+            unset_flags |= White.castle_queenside_flag();
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::H8] != Some(Piece::BR) {
-            unset_flags |= BlackPlayer.castle_kingside_flag();
+            unset_flags |= Black.castle_kingside_flag();
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::A8] != Some(Piece::BR) {
-            unset_flags |= BlackPlayer.castle_queenside_flag();
+            unset_flags |= Black.castle_queenside_flag();
         }
         flags.unset(unset_flags);
 

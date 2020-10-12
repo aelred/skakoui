@@ -1,4 +1,4 @@
-use crate::{BoardFlags, PlayerType};
+use crate::{BoardFlags, PlayerT};
 use crate::{File, PieceType};
 use crate::{Player, Square};
 use std::error::Error;
@@ -57,7 +57,7 @@ impl Move {
         self.promoting
     }
 
-    pub fn with_valid_promotions<P: PlayerType>(self) -> Vec<Move> {
+    pub fn with_valid_promotions<P: PlayerT>(self) -> Vec<Move> {
         let player = P::default();
         if self.to.rank() == player.promoting_rank() {
             vec![
