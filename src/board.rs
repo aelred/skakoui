@@ -49,16 +49,16 @@ impl Board {
         let mut unset_flags = 0;
         // Remove any impossible castling options
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::H1] != Some(Piece::WR) {
-            unset_flags |= WhitePlayer::CASTLE_KINGSIDE_FLAG;
+            unset_flags |= WhitePlayer.castle_kingside_flag();
         }
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::A1] != Some(Piece::WR) {
-            unset_flags |= WhitePlayer::CASTLE_QUEENSIDE_FLAG;
+            unset_flags |= WhitePlayer.castle_queenside_flag();
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::H8] != Some(Piece::BR) {
-            unset_flags |= BlackPlayer::CASTLE_KINGSIDE_FLAG;
+            unset_flags |= BlackPlayer.castle_kingside_flag();
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::A8] != Some(Piece::BR) {
-            unset_flags |= BlackPlayer::CASTLE_QUEENSIDE_FLAG;
+            unset_flags |= BlackPlayer.castle_queenside_flag();
         }
         flags.unset(unset_flags);
 
@@ -340,7 +340,7 @@ impl Board {
             + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
             + (self.count(Piece::WP) - self.count(Piece::BP));
 
-        white_centric_score * self.player.score_multiplier() * 100
+        white_centric_score * self.player.multiplier() as i32 * 100
         // TODO: mobility, isolated pawns, blah blah blah
     }
 

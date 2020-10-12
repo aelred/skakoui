@@ -50,16 +50,16 @@ impl Board {
         let flags = fields.next().map(|castling| {
             let mut set_flags = 0u8;
             if castling.contains('K') {
-                set_flags |= WhitePlayer::CASTLE_KINGSIDE_FLAG;
+                set_flags |= WhitePlayer.castle_kingside_flag();
             }
             if castling.contains('Q') {
-                set_flags |= WhitePlayer::CASTLE_QUEENSIDE_FLAG;
+                set_flags |= WhitePlayer.castle_queenside_flag();
             }
             if castling.contains('k') {
-                set_flags |= BlackPlayer::CASTLE_KINGSIDE_FLAG;
+                set_flags |= BlackPlayer.castle_kingside_flag();
             }
             if castling.contains('q') {
-                set_flags |= BlackPlayer::CASTLE_QUEENSIDE_FLAG;
+                set_flags |= BlackPlayer.castle_queenside_flag();
             }
             BoardFlags::new(set_flags)
         });
@@ -108,19 +108,19 @@ impl Board {
 
         fen.push(' ');
         let mut can_castle = false;
-        if self.flags().is_set(WhitePlayer::CASTLE_KINGSIDE_FLAG) {
+        if self.flags().is_set(WhitePlayer.castle_kingside_flag()) {
             fen.push('K');
             can_castle = true;
         }
-        if self.flags().is_set(WhitePlayer::CASTLE_QUEENSIDE_FLAG) {
+        if self.flags().is_set(WhitePlayer.castle_queenside_flag()) {
             fen.push('Q');
             can_castle = true;
         }
-        if self.flags().is_set(BlackPlayer::CASTLE_KINGSIDE_FLAG) {
+        if self.flags().is_set(BlackPlayer.castle_kingside_flag()) {
             fen.push('k');
             can_castle = true;
         }
-        if self.flags().is_set(BlackPlayer::CASTLE_QUEENSIDE_FLAG) {
+        if self.flags().is_set(BlackPlayer.castle_queenside_flag()) {
             fen.push('q');
             can_castle = true;
         }

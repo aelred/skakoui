@@ -58,7 +58,8 @@ impl Move {
     }
 
     pub fn with_valid_promotions<P: PlayerType>(self) -> Vec<Move> {
-        if self.to.rank() == P::PROMOTING_RANK {
+        let player = P::default();
+        if self.to.rank() == player.promoting_rank() {
             vec![
                 Move {
                     promoting: Some(PieceType::Queen),

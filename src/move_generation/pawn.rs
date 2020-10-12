@@ -42,7 +42,7 @@ impl<P: PlayerType> PawnMovesIter<P> {
 
         let pushes = pawns_forward & free_spaces;
 
-        let double_mask = bitboards::RANKS[player.pawn_rank() + player.direction()];
+        let double_mask = bitboards::RANKS[player.pawn_rank() + player.multiplier()];
         let double_pushes = player.advance_bitboard(pushes & double_mask) & free_spaces;
 
         PawnMovesIter {
@@ -59,12 +59,12 @@ impl<P: PlayerType> Iterator for PawnMovesIter<P> {
 
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.pushes.next() {
-            let source = target.shift_rank(-self.player.direction());
+            let source = target.shift_rank(-self.player.multiplier());
             return Some(Move::new(source, target));
         }
 
         if let Some(target) = self.double_pushes.next() {
-            let source = target.shift_rank(-self.player.direction() * 2);
+            let source = target.shift_rank(-self.player.multiplier() * 2);
             return Some(Move::new(source, target));
         }
 
@@ -102,12 +102,12 @@ impl<P: PlayerType> Iterator for PawnCapturesIter<P> {
 
     fn next(&mut self) -> Option<Move> {
         if let Some(target) = self.captures_east.next() {
-            let source = target.shift_rank(-self.player.direction()).shift_file(1);
+            let source = target.shift_rank(-self.player.multiplier()).shift_file(1);
             return Some(Move::new(source, target));
         }
 
         if let Some(target) = self.captures_west.next() {
-            let source = target.shift_rank(-self.player.direction()).shift_file(-1);
+            let source = target.shift_rank(-self.player.multiplier()).shift_file(-1);
             return Some(Move::new(source, target));
         }
 
