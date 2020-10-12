@@ -133,8 +133,20 @@ pub trait PlayerType: Sized + Copy + Default {
         Self::PLAYER
     }
 
+    fn opponent(self) -> Self::Opp {
+        Self::Opp::default()
+    }
+
     fn back_rank(self) -> Rank {
         Self::BACK_RANK
+    }
+
+    fn pawn_rank(self) -> Rank {
+        Self::PAWN_RANK
+    }
+
+    fn promoting_rank(self) -> Rank {
+        Self::PROMOTING_RANK
     }
 
     fn castle_kingside_clear(self) -> Bitboard {
@@ -153,7 +165,11 @@ pub trait PlayerType: Sized + Copy + Default {
         Self::CASTLE_QUEENSIDE_FLAG
     }
 
-    fn advance_bitboard(bitboard: Bitboard) -> Bitboard;
+    fn direction(self) -> i8 {
+        Self::DIRECTION
+    }
+
+    fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard;
 }
 
 #[derive(Copy, Clone, Default)]
@@ -170,7 +186,7 @@ impl PlayerType for WhitePlayer {
     const BACK_RANK: Rank = Rank::_1;
     const PAWN_RANK: Rank = Rank::_2;
 
-    fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
+    fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank(1)
     }
 }
@@ -183,7 +199,7 @@ impl PlayerType for BlackPlayer {
     const BACK_RANK: Rank = Rank::_8;
     const PAWN_RANK: Rank = Rank::_7;
 
-    fn advance_bitboard(bitboard: Bitboard) -> Bitboard {
+    fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
         bitboard.shift_rank_neg(1)
     }
 }

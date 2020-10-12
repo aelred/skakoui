@@ -217,8 +217,8 @@ impl<'a> ThreadSearcher<'a> {
             self.leftmost = true;
 
             match self.board.player() {
-                Player::White => self.search::<WhitePlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
-                Player::Black => self.search::<BlackPlayer>(self.max_depth, LOW_SCORE, HIGH_SCORE),
+                Player::White => self.search(WhitePlayer, self.max_depth, LOW_SCORE, HIGH_SCORE),
+                Player::Black => self.search(BlackPlayer, self.max_depth, LOW_SCORE, HIGH_SCORE),
             };
 
             let pv = self
@@ -235,7 +235,13 @@ impl<'a> ThreadSearcher<'a> {
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
-    fn search<P: PlayerType>(&mut self, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
+    fn search(
+        &mut self,
+        player: impl PlayerType,
+        depth: u16,
+        mut alpha: i32,
+        mut beta: i32,
+    ) -> i32 {
         log_search!(self, depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
@@ -263,7 +269,7 @@ impl<'a> ThreadSearcher<'a> {
         }
 
         if depth == 0 {
-            return self.quiesce::<P>(alpha, beta, 0);
+            return self.quiesce(player, alpha, beta, 0);
         }
 
         let mut value = LOW_SCORE;
@@ -276,7 +282,7 @@ impl<'a> ThreadSearcher<'a> {
             .copied();
         let other_moves = self
             .board
-            .pseudo_legal_moves_for_typed::<P>()
+            .pseudo_legal_moves_for_typed(player)
             .filter(|mov| pv != Some(*mov));
 
         for mov in pv.into_iter().chain(other_moves) {
@@ -288,7 +294,8 @@ impl<'a> ThreadSearcher<'a> {
 
             // Evaluate value of move for current player
             let pmov = self.board.make_move(mov);
-            let mov_value = -self.search::<P::Opp>(
+            let mov_value = -self.search(
+                player.opponent(),
                 depth - 1,
                 // If our maximum possible score is `x`, then the opponent is guaranteed to
                 // score at least `-x`
@@ -354,7 +361,7 @@ impl<'a> ThreadSearcher<'a> {
     /// The idea is that a board with lots going on is worth investigating more deeply.
     /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
     /// piece could be taken in the next turn.
-    fn quiesce<P: PlayerType>(&mut self, mut alpha: i32, beta: i32, depth: i16) -> i32 {
+    fn quiesce(&mut self, player: impl PlayerType, mut alpha: i32, beta: i32, depth: i16) -> i32 {
         // hard cut-off to depth of quiescent search
         if depth <= -1 {
             log_search!(self, depth, "woah that's deep enough");
@@ -383,7 +390,7 @@ impl<'a> ThreadSearcher<'a> {
             }
 
             alpha = alpha.max(stand_pat);
-            moves = self.board.capturing_moves::<P>().collect();
+            moves = self.board.capturing_moves(player).collect();
         } else {
             // We don't want to use the "standing pat" if we're in check, because it may well be
             // that ANY move is worse than the current state.
@@ -395,7 +402,7 @@ impl<'a> ThreadSearcher<'a> {
                 beta
             );
             // When in check, assess all moves that get out of check, not just captures
-            moves = self.board.pseudo_legal_moves_for_typed::<P>().collect();
+            moves = self.board.pseudo_legal_moves_for_typed(player).collect();
         }
 
         let mut no_legal_moves = true;
@@ -408,7 +415,7 @@ impl<'a> ThreadSearcher<'a> {
 
             log_search!(self, depth, "trying {}", mov);
             let pmov = self.board.make_move(mov);
-            let mov_value = -self.quiesce::<P::Opp>(-beta, -alpha, depth - 1);
+            let mov_value = -self.quiesce(player.opponent(), -beta, -alpha, depth - 1);
             self.board.unmake_move(pmov);
 
             log_search!(self, depth, "{} = {}", mov, mov_value);
