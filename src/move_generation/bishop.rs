@@ -7,7 +7,7 @@ pub struct BishopType;
 impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
-    fn attacks(&self, source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, occupancy: Bitboard, _: impl PlayerT) -> Bitboard {
         slide(Diagonal, source, occupancy) | slide(AntiDiagonal, source, occupancy)
     }
 }

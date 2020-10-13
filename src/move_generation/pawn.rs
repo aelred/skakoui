@@ -7,12 +7,20 @@ pub struct PawnType;
 impl PieceTypeT for PawnType {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
-    fn movement(&self, _: Square, _: Bitboard, _: impl PlayerT, _: BoardFlags) -> Bitboard {
-        unimplemented!()
+    fn movement(
+        &self,
+        source: Square,
+        occupancy: Bitboard,
+        player: impl PlayerT,
+        _: BoardFlags,
+    ) -> Bitboard {
+        let (pushes, double_pushes) = moves(source.into(), occupancy, player);
+        self.attacks(source, occupancy, player) | pushes | double_pushes
     }
 
-    fn attacks(&self, _: Square, _: Bitboard) -> Bitboard {
-        unimplemented!()
+    fn attacks(&self, source: Square, occupancy: Bitboard, player: impl PlayerT) -> Bitboard {
+        let (captures_east, captures_west) = captures(source.into(), occupancy, player);
+        captures_east | captures_west
     }
 }
 
@@ -20,7 +28,7 @@ impl<P: PlayerT> Movable for PieceT<P, PawnType> {
     #[allow(clippy::type_complexity)]
     type Moves = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
     fn moves(self, board: &Board, _: Bitboard) -> Self::Moves {
-        PawnMovesIter::new(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
+        PawnMovesIter::from_board(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
     }
 }
 
@@ -32,25 +40,31 @@ pub struct PawnMovesIter<P> {
 }
 
 impl<P: PlayerT> PawnMovesIter<P> {
-    fn new(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceType::Pawn);
-
-        let pawns = board.bitboard_piece(piece);
-        let free_spaces = !board.occupancy();
-
-        let pawns_forward = player.advance_bitboard(*pawns);
-
+    fn new(
+        sources: Bitboard,
+        occupancy: Bitboard,
+        opponent_occupancy: Bitboard,
+        player: P,
+    ) -> Self {
+        let free_spaces = !occupancy;
+        let pawns_forward = player.advance_bitboard(sources);
         let pushes = pawns_forward & free_spaces;
-
         let double_mask = bitboards::RANKS[player.pawn_rank() + player.multiplier()];
         let double_pushes = player.advance_bitboard(pushes & double_mask) & free_spaces;
 
-        PawnMovesIter {
+        Self {
             player,
             pushes: pushes.squares(),
             double_pushes: double_pushes.squares(),
-            captures: PawnCapturesIter::new(board, player),
+            captures: PawnCapturesIter::new(sources, opponent_occupancy, player),
         }
+    }
+
+    fn from_board(board: &Board, player: P) -> Self {
+        let piece = Piece::new(player.value(), PieceType::Pawn);
+        let pawns = board.bitboard_piece(piece);
+        let opponent_occupancy = board.occupancy_player(player.opponent().value());
+        Self::new(*pawns, board.occupancy(), opponent_occupancy, player)
     }
 }
 
@@ -79,17 +93,10 @@ pub struct PawnCapturesIter<P> {
 }
 
 impl<P: PlayerT> PawnCapturesIter<P> {
-    fn new(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceType::Pawn);
-        let pawns = board.bitboard_piece(piece);
-        let pawns_forward = player.advance_bitboard(*pawns);
+    fn new(sources: Bitboard, occupancy: Bitboard, player: P) -> Self {
+        let (captures_east, captures_west) = captures(sources, occupancy, player);
 
-        let opponent_pieces = board.occupancy_player(player.opponent().value());
-
-        let captures_east = pawns_forward.shift_file_neg(1) & opponent_pieces;
-        let captures_west = pawns_forward.shift_file(1) & opponent_pieces;
-
-        PawnCapturesIter {
+        Self {
             player,
             captures_east: captures_east.squares(),
             captures_west: captures_west.squares(),
@@ -113,6 +120,23 @@ impl<P: PlayerT> Iterator for PawnCapturesIter<P> {
 
         None
     }
+}
+
+fn moves(sources: Bitboard, occupancy: Bitboard, player: impl PlayerT) -> (Bitboard, Bitboard) {
+    let free_spaces = !occupancy;
+    let pawns_forward = player.advance_bitboard(sources);
+    let pushes = pawns_forward & free_spaces;
+    let double_mask = bitboards::RANKS[player.pawn_rank() + player.multiplier()];
+    let double_pushes = player.advance_bitboard(pushes & double_mask) & free_spaces;
+    (pushes, double_pushes)
+}
+
+fn captures(sources: Bitboard, targets: Bitboard, player: impl PlayerT) -> (Bitboard, Bitboard) {
+    let pawns_forward = player.advance_bitboard(sources);
+    (
+        pawns_forward.shift_file_neg(1) & targets,
+        pawns_forward.shift_file(1) & targets,
+    )
 }
 
 #[cfg(test)]

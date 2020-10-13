@@ -13,7 +13,7 @@ impl PieceTypeT for KingType {
         player: impl PlayerT,
         flags: BoardFlags,
     ) -> Bitboard {
-        let mut movement = self.attacks(source, occupancy);
+        let mut movement = self.attacks(source, occupancy, player);
 
         if flags.is_set(player.castle_kingside_flag())
             && (player.castle_kingside_clear() & occupancy).is_empty()
@@ -30,7 +30,7 @@ impl PieceTypeT for KingType {
         movement
     }
 
-    fn attacks(&self, source: Square, _: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard, _: impl PlayerT) -> Bitboard {
         KING_MOVES[source]
     }
 }

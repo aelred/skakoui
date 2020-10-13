@@ -6,7 +6,7 @@ pub struct KnightType;
 impl PieceTypeT for KnightType {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
-    fn attacks(&self, source: Square, _: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard, _: impl PlayerT) -> Bitboard {
         KNIGHT_MOVES[source]
     }
 }

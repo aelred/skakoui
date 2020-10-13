@@ -39,17 +39,17 @@ pub trait PieceTypeT: Sized {
         &self,
         source: Square,
         occupancy: Bitboard,
-        _: impl PlayerT,
+        player: impl PlayerT,
         _: BoardFlags,
     ) -> Bitboard {
-        self.attacks(source, occupancy)
+        self.attacks(source, occupancy, player)
     }
 
     /// Returns all squares this piece can attack when placed at the given square.
     ///
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
-    fn attacks(&self, source: Square, occupancy: Bitboard) -> Bitboard;
+    fn attacks(&self, source: Square, occupancy: Bitboard, player: impl PlayerT) -> Bitboard;
 }
 
 pub struct MovesIter<P, PT> {

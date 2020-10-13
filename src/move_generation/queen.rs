@@ -7,7 +7,7 @@ pub struct QueenType;
 impl PieceTypeT for QueenType {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
-    fn attacks(&self, source: Square, occupancy: Bitboard) -> Bitboard {
+    fn attacks(&self, source: Square, occupancy: Bitboard, _: impl PlayerT) -> Bitboard {
         slide(NorthSouth, source, occupancy)
             | slide(EastWest, source, occupancy)
             | slide(Diagonal, source, occupancy)
