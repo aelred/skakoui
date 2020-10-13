@@ -152,21 +152,21 @@ impl SlideDirection for EastWest {
 pub struct Diagonal;
 impl SlideDirection for Diagonal {
     fn positive_bitboard(&self, source: Square) -> Bitboard {
-        bitboards::POSITIVE_DIAGONALS[source]
+        bitboards::NORTH_EAST[source]
     }
 
     fn negative_bitboard(&self, source: Square) -> Bitboard {
-        bitboards::NEGATIVE_DIAGONALS[source]
+        bitboards::SOUTH_WEST[source]
     }
 }
 
 pub struct AntiDiagonal;
 impl SlideDirection for AntiDiagonal {
     fn positive_bitboard(&self, source: Square) -> Bitboard {
-        bitboards::POSITIVE_ANTIDIAGONALS[source]
+        bitboards::NORTH_WEST[source]
     }
 
     fn negative_bitboard(&self, source: Square) -> Bitboard {
-        bitboards::NEGATIVE_ANTIDIAGONALS[source]
+        bitboards::SOUTH_EAST[source]
     }
 }

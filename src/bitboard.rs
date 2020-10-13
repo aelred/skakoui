@@ -15,7 +15,7 @@ use std::ops::Not;
 pub struct Bitboard(u64);
 
 impl Bitboard {
-    pub fn new(num: u64) -> Self {
+    pub const fn new(num: u64) -> Self {
         Bitboard(num)
     }
 
@@ -276,53 +276,37 @@ pub mod bitboards {
     pub const ANTIDIAGONAL: Bitboard =
         Bitboard(0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000);
 
-    pub const CASTLE_KINGSIDE_CLEAR: Bitboard = Bitboard(0b_01100000);
-    pub const CASTLE_QUEENSIDE_CLEAR: Bitboard = Bitboard(0b_00001110);
-
     lazy_static! {
-        pub static ref DIAGONALS: SquareMap<Bitboard> = {
-            SquareMap::from(|square: Square| {
-                let sq = square.to_index() as isize;
-                let diag = 8 * (sq & 7) - (sq & 56);
-                let nort = -diag & (diag >> 31);
-                let sout = diag & (-diag >> 31);
-                Bitboard((DIAGONAL.0 >> sout) << nort)
-            })
-        };
-        pub static ref ANTIDIAGONALS: SquareMap<Bitboard> = {
-            SquareMap::from(|square: Square| {
-                let sq = square.to_index() as isize;
-                let diag = 56 - 8 * (sq & 7) - (sq & 56);
-                let nort = -diag & (diag >> 31);
-                let sout = diag & (-diag >> 31);
-                Bitboard((ANTIDIAGONAL.0 >> sout) << nort)
-            })
-        };
+        pub static ref DIAGONALS: SquareMap<Bitboard> = SquareMap::from(|square: Square| {
+            let sq = square.to_index() as isize;
+            let diag = 8 * (sq & 7) - (sq & 56);
+            let nort = -diag & (diag >> 31);
+            let sout = diag & (-diag >> 31);
+            Bitboard((DIAGONAL.0 >> sout) << nort)
+        });
+        pub static ref ANTIDIAGONALS: SquareMap<Bitboard> = SquareMap::from(|square: Square| {
+            let sq = square.to_index() as isize;
+            let diag = 56 - 8 * (sq & 7) - (sq & 56);
+            let nort = -diag & (diag >> 31);
+            let sout = diag & (-diag >> 31);
+            Bitboard((ANTIDIAGONAL.0 >> sout) << nort)
+        });
         pub static ref NORTH: SquareMap<Bitboard> =
-            SquareMap::from(|square| FILES[square.file()]
-                & !RANKS_FILLED[square.rank().to_index() as usize + 1]);
-        pub static ref SOUTH: SquareMap<Bitboard> = SquareMap::from(
-            |square| FILES[square.file()] & RANKS_FILLED[square.rank().to_index() as usize]
-        );
+            SquareMap::from(|s| FILES[s.file()] & !RANKS_FILLED[s.rank().to_index() as usize + 1]);
+        pub static ref SOUTH: SquareMap<Bitboard> =
+            SquareMap::from(|s| FILES[s.file()] & RANKS_FILLED[s.rank().to_index() as usize]);
         pub static ref EAST: SquareMap<Bitboard> =
-            SquareMap::from(|square| RANKS[square.rank()]
-                & !FILES_FILLED[square.file().to_index() as usize + 1]);
-        pub static ref WEST: SquareMap<Bitboard> = SquareMap::from(
-            |square| RANKS[square.rank()] & FILES_FILLED[square.file().to_index() as usize]
-        );
-        pub static ref POSITIVE_DIAGONALS: SquareMap<Bitboard> = SquareMap::from(
-            |square| DIAGONALS[square] & !FILES_FILLED[square.file().to_index() as usize + 1]
-        );
-        pub static ref NEGATIVE_DIAGONALS: SquareMap<Bitboard> = SquareMap::from(
-            |square| DIAGONALS[square] & FILES_FILLED[square.file().to_index() as usize]
-        );
-        pub static ref POSITIVE_ANTIDIAGONALS: SquareMap<Bitboard> =
-            SquareMap::from(|square| ANTIDIAGONALS[square]
-                & !RANKS_FILLED[square.rank().to_index() as usize + 1]);
-        pub static ref NEGATIVE_ANTIDIAGONALS: SquareMap<Bitboard> =
-            SquareMap::from(
-                |square| ANTIDIAGONALS[square] & RANKS_FILLED[square.rank().to_index() as usize]
-            );
+            SquareMap::from(|s| RANKS[s.rank()] & !FILES_FILLED[s.file().to_index() as usize + 1]);
+        pub static ref WEST: SquareMap<Bitboard> =
+            SquareMap::from(|s| RANKS[s.rank()] & FILES_FILLED[s.file().to_index() as usize]);
+        pub static ref NORTH_EAST: SquareMap<Bitboard> =
+            SquareMap::from(|s| DIAGONALS[s] & !FILES_FILLED[s.file().to_index() as usize + 1]);
+        pub static ref SOUTH_WEST: SquareMap<Bitboard> =
+            SquareMap::from(|s| DIAGONALS[s] & FILES_FILLED[s.file().to_index() as usize]);
+        pub static ref NORTH_WEST: SquareMap<Bitboard> =
+            SquareMap::from(|s| ANTIDIAGONALS[s] & !RANKS_FILLED[s.rank().to_index() as usize + 1]);
+        pub static ref SOUTH_EAST: SquareMap<Bitboard> =
+            SquareMap::from(|s| ANTIDIAGONALS[s] & RANKS_FILLED[s.rank().to_index() as usize]);
     }
 }
 

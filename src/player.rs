@@ -1,4 +1,4 @@
-use crate::{bitboards, Bitboard, Rank};
+use crate::{Bitboard, Rank};
 use anyhow::Error;
 use enum_map::Enum;
 use std::fmt;
@@ -65,16 +65,18 @@ impl Player {
     }
 
     pub const fn castle_kingside_clear(self) -> Bitboard {
+        const CLEAR: Bitboard = Bitboard::new(0b_01100000);
         match self {
-            Player::White => bitboards::CASTLE_KINGSIDE_CLEAR,
-            Player::Black => bitboards::CASTLE_KINGSIDE_CLEAR.reverse(),
+            Player::White => CLEAR,
+            Player::Black => CLEAR.reverse(),
         }
     }
 
     pub const fn castle_queenside_clear(self) -> Bitboard {
+        const CLEAR: Bitboard = Bitboard::new(0b_00001110);
         match self {
-            Player::White => bitboards::CASTLE_QUEENSIDE_CLEAR,
-            Player::Black => bitboards::CASTLE_QUEENSIDE_CLEAR.reverse(),
+            Player::White => CLEAR,
+            Player::Black => CLEAR.reverse(),
         }
     }
 
