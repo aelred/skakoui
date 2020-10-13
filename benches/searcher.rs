@@ -2,12 +2,10 @@ use skakoui::{Board, Move, PlayedMove, Searcher};
 
 use criterion::measurement::Measurement;
 use criterion::{
-    criterion_group, criterion_main, BatchSize, BenchmarkGroup, BenchmarkId, Criterion,
-    SamplingMode, Throughput,
+    criterion_group, criterion_main, BatchSize, BenchmarkGroup, Criterion, SamplingMode, Throughput,
 };
 use itertools::Itertools;
 use skakoui::pgn::Algebraic;
-use skakoui::GameState;
 
 fn searcher_can_find_mate(c: &mut Criterion) {
     let mut group = c.benchmark_group("mate");
@@ -33,7 +31,7 @@ fn test_find_mates<M: Measurement>(
     // Only run a sample for benchmarking, but run all if testing
     let mates = mates.take(if cfg!(bench) { 10 } else { usize::MAX });
 
-    let mut mates: Vec<(Board, Vec<Move>)> = mates.collect();
+    let mates: Vec<(Board, Vec<Move>)> = mates.collect();
     g.throughput(Throughput::Elements(mates.len() as u64));
     g.bench_function(name, move |b| {
         b.iter_batched(

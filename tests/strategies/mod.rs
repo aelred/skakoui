@@ -1,15 +1,9 @@
 use arrayvec::ArrayVec;
-use proptest::array::uniform8;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
-use proptest::option;
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
-use skakoui::{Board, BoardFlags, GameState, Move, Piece, PieceType, PlayedMove, Player};
-use std::borrow::Borrow;
-use std::convert::TryFrom;
-use std::iter::FromIterator;
-use std::rc::Rc;
+use skakoui::{Board, BoardFlags, GameState, Move, Piece, PieceType, Player};
 
 pub fn arb_player() -> impl Strategy<Value = Player> {
     select(vec![Player::White, Player::Black])
