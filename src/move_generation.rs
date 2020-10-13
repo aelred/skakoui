@@ -148,25 +148,28 @@ impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
 }
 
 #[cfg(test)]
+#[macro_use]
 mod tests {
     use super::*;
     use crate::board::tests::fen;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 
+    #[macro_export]
     macro_rules! mov {
         ($mov:expr) => {
-            stringify!($mov).parse::<Move>().unwrap()
+            stringify!($mov).parse::<$crate::Move>().unwrap()
         };
     }
 
+    #[macro_export]
     macro_rules! assert_moves {
         ($board:expr, [$($moves:expr),* $(,)*]) => {
-            let mut moves: Vec<Move> = $board.moves().collect();
+            let mut moves: Vec<$crate::Move> = $board.moves().collect();
             moves.sort();
 
-            let mut expected_moves: Vec<Move> = [
-                $(mov!($moves)),*
+            let mut expected_moves: Vec<$crate::Move> = [
+                $($crate::mov!($moves)),*
             ].iter().cloned().collect();
             expected_moves.sort();
 
@@ -198,142 +201,6 @@ mod tests {
                 a7a6, b7b6, c7c6, d7d6, e7e6, f7f6, g7g6, h7h6, a7a5, b7b5, c7c5, d7d5, e7e5, f7f5,
                 g7g5, h7h5, b8a6, b8c6, g8h6, g8f6
             ]
-        );
-    }
-
-    #[test]
-    fn pawn_cannot_move_at_end_of_board() {
-        // Such a situation is impossible in normal chess, but it's an edge case that could cause
-        // something to go out of bounds.
-        let mut board = fen("8/8/8/8/8/8/8/p7 b");
-        assert_moves!(board, []);
-    }
-
-    #[test]
-    fn pawn_cannot_capture_piece_directly_in_front_of_it() {
-        let mut board = fen("8/5p2/5N2/3p1N2/3Q4/8/8/8 b");
-        assert_moves!(board, []);
-    }
-
-    #[test]
-    fn pawn_can_capture_pieces_on_diagonal() {
-        let mut board = fen("8/8/8/3p4/2NPN3/8/8/8 b");
-        assert_moves!(board, [d5c4, d5e4]);
-    }
-
-    #[test]
-    fn pawn_cannot_capture_same_player_pieces() {
-        let mut board = fen("8/8/8/3p4/3Pp3/4P3/8/8 b");
-        assert_moves!(board, []);
-    }
-
-    #[test]
-    fn pawn_cannot_double_push_if_blocked() {
-        let mut board = fen("8/8/8/8/8/p7/P7/8 w");
-        assert_moves!(board, []);
-    }
-
-    #[test]
-    fn pawn_cannot_double_push_when_not_at_initial_position() {
-        let mut board = fen("8/8/8/8/8/P7/8/8 w");
-        assert_moves!(board, [a3a4]);
-    }
-
-    #[ignore]
-    #[test]
-    fn pawn_can_take_another_pawn_en_passant_immediately_after_double_push() {
-        let mut board = fen("8/8/8/8/1p6/1N6/P7/8 w");
-        board.make_move(mov!(a2a4));
-        assert_moves!(board, [b4a3]);
-    }
-
-    #[ignore]
-    #[test]
-    fn pawn_cannot_take_another_pawn_en_passant_in_other_situations() {
-        let mut board = fen("8/8/8/8/1p6/PN6/8/8 w");
-        board.make_move(mov!(a3a4));
-        assert_moves!(board, []);
-    }
-
-    #[test]
-    fn pawn_can_be_promoted_at_end_of_board() {
-        let mut board = fen("8/P7/8/8/8/8/8/8 w");
-        assert_moves!(board, [a7a8N, a7a8B, a7a8R, a7a8Q]);
-    }
-
-    #[test]
-    fn pawn_can_capture_and_promote_at_end_of_board() {
-        let mut board = fen("nq6/P7/8/8/8/8/8/8 w");
-        assert_moves!(board, [a7b8N, a7b8B, a7b8R, a7b8Q]);
-    }
-
-    #[test]
-    fn king_can_move_and_capture_one_square_in_any_direction() {
-        let mut board = fen("8/8/8/8/8/1Kp5/2P5/8 w");
-        // b3b2 is missing because it puts the king in check
-        assert_moves!(board, [b3a2, b3a3, b3c3, b3a4, b3b4, b3c4,]);
-    }
-
-    #[test]
-    fn king_can_castle() {
-        let mut board = fen("8/8/8/8/8/8/r6r/R3K2R w");
-        assert_moves!(
-            board,
-            [e1c1, e1g1, e1d1, e1f1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
-        );
-        let mut board = fen("r3k2r/R6R/8/8/8/8/8/8 b");
-        assert_moves!(
-            board,
-            [e8c8, e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
-        );
-    }
-
-    #[test]
-    fn king_cannot_castle_out_of_check() {
-        let mut board = fen("8/8/8/8/8/8/r2q3r/R3K2R w");
-        assert_moves!(board, [e1f1]);
-        let mut board = fen("r3k2r/R2Q3R/8/8/8/8/8/8 b");
-        assert_moves!(board, [e8f8]);
-    }
-
-    #[test]
-    fn king_cannot_castle_into_check() {
-        let mut board = fen("8/8/8/8/8/8/r6p/R3K2R w");
-        assert_moves!(
-            board,
-            [e1c1, e1d1, e1f1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
-        );
-        let mut board = fen("r3k2r/RP5R/8/8/8/8/8/8 b");
-        assert_moves!(
-            board,
-            [e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
-        );
-    }
-
-    #[test]
-    fn knight_can_move_and_capture_in_its_weird_way() {
-        let mut board = fen("8/8/2p5/2P5/3p4/1N6/8/8 w");
-        assert_moves!(board, [b3a1, b3c1, b3d2, b3d4, b3a5,]);
-    }
-
-    #[test]
-    fn rook_can_move_and_capture_along_rank_and_file() {
-        let mut board = fen("8/8/1p6/1P6/8/1Rq5/8/8 w");
-        assert_moves!(board, [b3b1, b3b2, b3a3, b3c3, b3b4,]);
-    }
-
-    #[test]
-    fn bishop_can_move_and_capture_diagonally() {
-        let mut board = fen("8/8/8/2p5/2P5/1B6/8/3b4 w");
-        assert_moves!(board, [b3d1, b3a2, b3c2, b3a4,]);
-    }
-
-    #[test]
-    fn queen_can_move_and_capture_in_all_directions() {
-        let mut board = fen("8/8/1p6/2p5/2P5/1QP5/8/3b4 w");
-        assert_moves!(
-            board,
-            [b3d1, b3a2, b3c2, b3a4, b3a3, b3b1, b3b2, b3b4, b3b5, b3b6,]
         );
     }
 

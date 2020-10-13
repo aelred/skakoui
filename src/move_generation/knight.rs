@@ -28,3 +28,15 @@ lazy_static! {
         rank_attacks | file_attacks
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::assert_moves;
+    use crate::board::tests::fen;
+
+    #[test]
+    fn knight_can_move_and_capture_in_its_weird_way() {
+        let mut board = fen("8/8/2p5/2P5/3p4/1N6/8/8 w");
+        assert_moves!(board, [b3a1, b3c1, b3d2, b3d4, b3a5,]);
+    }
+}
