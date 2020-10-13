@@ -6,7 +6,8 @@ use proptest::sample::{select, Index};
 use skakoui::{Board, BoardFlags, GameState, Move, Piece, PieceType, Player};
 
 pub fn arb_player() -> impl Strategy<Value = Player> {
-    select(vec![Player::White, Player::Black])
+    const PLAYERS: &[Player] = &[Player::White, Player::Black];
+    select(PLAYERS)
 }
 
 pub fn all_pieces() -> Vec<Option<Piece>> {
@@ -59,17 +60,6 @@ pub fn arb_piece_type() -> impl Strategy<Value = PieceType> {
     select(types)
 }
 
-pub fn legal_move(board: &mut Board) -> impl Strategy<Value = Move> {
-    let moves: Vec<Move> = board.moves().collect();
-    any::<Index>().prop_filter_map("stalemate", move |idx| {
-        if moves.is_empty() {
-            None
-        } else {
-            Some(*idx.get(&moves))
-        }
-    })
-}
-
 pub fn arb_flags() -> impl Strategy<Value = BoardFlags> {
     any::<u8>().prop_map(BoardFlags::new)
 }
@@ -99,16 +89,14 @@ pub fn board_and_move(
 ) -> impl Strategy<Value = (Board, Move)> {
     boards
         .prop_filter_map("stalemate", |mut board| {
-            if board.moves().next().is_some() {
-                Some(board)
-            } else {
+            let moves: Vec<Move> = board.moves().collect();
+            if moves.is_empty() {
                 None
+            } else {
+                Some((board, moves))
             }
         })
-        .prop_flat_map(|mut board| {
-            let moves = legal_move(&mut board);
-            (Just(board), moves)
-        })
+        .prop_flat_map(|(board, moves)| (Just(board), select(moves)))
 }
 
 pub fn mate_in_1_board() -> impl Strategy<Value = (Board, Move)> {
