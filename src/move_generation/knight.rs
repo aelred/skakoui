@@ -1,4 +1,5 @@
 use crate::move_generation::piece_type::{MovesIter, PieceT, PieceTypeT};
+use crate::move_generation::{AllMoves, CapturingMoves};
 use crate::{Bitboard, Board, PieceType, PlayerT, Square, SquareMap};
 use lazy_static::lazy_static;
 
@@ -12,8 +13,15 @@ impl PieceTypeT for KnightType {
     }
 }
 
-pub fn moves<P: PlayerT>(_: P, board: &Board, mask: Bitboard) -> MovesIter<P, KnightType> {
-    MovesIter::new(board, PieceT::default(), mask)
+pub type Moves<P> = MovesIter<P, KnightType, AllMoves<P>>;
+pub type Attacks<P> = MovesIter<P, KnightType, CapturingMoves<P>>;
+
+pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
+    MovesIter::new(board, PieceT::default(), AllMoves(player), mask)
+}
+
+pub fn attacks<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
+    MovesIter::new(board, PieceT::default(), CapturingMoves(player), mask)
 }
 
 lazy_static! {

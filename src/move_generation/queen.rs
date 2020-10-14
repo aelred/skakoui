@@ -1,6 +1,7 @@
 use crate::move_generation::piece_type::{
     slide, AntiDiagonal, Diagonal, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT,
 };
+use crate::move_generation::{AllMoves, CapturingMoves};
 use crate::{Bitboard, Board, PieceType, PlayerT, Square};
 
 #[derive(Default)]
@@ -16,8 +17,15 @@ impl PieceTypeT for QueenType {
     }
 }
 
-pub fn moves<P: PlayerT>(_: P, board: &Board, mask: Bitboard) -> MovesIter<P, QueenType> {
-    MovesIter::new(board, PieceT::default(), mask)
+pub type Moves<P> = MovesIter<P, QueenType, AllMoves<P>>;
+pub type Attacks<P> = MovesIter<P, QueenType, CapturingMoves<P>>;
+
+pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
+    MovesIter::new(board, PieceT::default(), AllMoves(player), mask)
+}
+
+pub fn attacks<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
+    MovesIter::new(board, PieceT::default(), CapturingMoves(player), mask)
 }
 
 #[cfg(test)]

@@ -1,4 +1,5 @@
 use crate::bitboard::SquareIterator;
+use crate::move_generation::Movement;
 use crate::Square;
 use crate::{bitboards, Board, Move, PlayerT};
 use crate::{Bitboard, Piece};
@@ -44,18 +45,19 @@ pub trait PieceTypeT: Sized + Default {
     fn attacks(&self, source: Square, occupancy: Bitboard, player: impl PlayerT) -> Bitboard;
 }
 
-pub struct MovesIter<P, PT> {
+pub struct MovesIter<P, PT, M> {
     occupancy: Bitboard,
     mask: Bitboard,
     sources: SquareIterator,
     source: Square,
     targets: SquareIterator,
     piece: PieceT<P, PT>,
+    movement: M,
     flags: BoardFlags,
 }
 
-impl<P: PlayerT, PT: PieceTypeT> MovesIter<P, PT> {
-    pub(crate) fn new(board: &Board, piece: PieceT<P, PT>, mask: Bitboard) -> Self {
+impl<P: PlayerT, PT: PieceTypeT, M: Movement<P>> MovesIter<P, PT, M> {
+    pub(crate) fn new(board: &Board, piece: PieceT<P, PT>, movement: M, mask: Bitboard) -> Self {
         // arbitrary source square with no targets to avoid empty case
         let source = Square::A1;
         let targets = bitboards::EMPTY.squares();
@@ -66,12 +68,13 @@ impl<P: PlayerT, PT: PieceTypeT> MovesIter<P, PT> {
             source,
             targets,
             piece,
+            movement,
             flags: board.flags(),
         }
     }
 }
 
-impl<P: PlayerT, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
+impl<P: PlayerT, PT: PieceTypeT, M: Movement<P>> Iterator for MovesIter<P, PT, M> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -79,10 +82,11 @@ impl<P: PlayerT, PT: PieceTypeT> Iterator for MovesIter<P, PT> {
             match self.targets.next() {
                 None => {
                     self.source = self.sources.next()?;
-                    let targets = self.piece.piece_type.movement(
+                    // TODO: use right movement here
+                    let targets = self.movement.movement(
+                        &self.piece.piece_type,
                         self.source,
                         self.occupancy,
-                        self.piece.player,
                         self.flags,
                     );
                     self.targets = (targets & self.mask).squares();

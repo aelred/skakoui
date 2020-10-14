@@ -1,5 +1,3 @@
-use crate::Bitboard;
-use crate::Black;
 use crate::Board;
 use crate::Move;
 use crate::Piece;
@@ -7,6 +5,8 @@ use crate::PieceType;
 use crate::Player;
 use crate::PlayerT;
 use crate::White;
+use crate::{Bitboard, Square};
+use crate::{Black, BoardFlags};
 
 mod bishop;
 mod king;
@@ -16,7 +16,9 @@ mod piece_type;
 mod queen;
 mod rook;
 
+use crate::move_generation::piece_type::PieceTypeT;
 use crate::piece::PieceType::King;
+use std::iter::Chain;
 
 impl Board {
     /// Lazy iterator of all legal moves
@@ -36,8 +38,8 @@ impl Board {
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
         match player {
-            Player::White => Box::new(self.moves_of_type(White, AllMoves(White))),
-            Player::Black => Box::new(self.moves_of_type(Black, AllMoves(Black))),
+            Player::White => Box::new(self.moves_of_type(AllMoves(White))),
+            Player::Black => Box::new(self.moves_of_type(AllMoves(Black))),
         }
     }
 
@@ -46,33 +48,16 @@ impl Board {
     /// 2. King captures
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for_typed(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
-        self.moves_of_type(player, AllMoves(player))
+        self.moves_of_type(AllMoves(player))
     }
 
     /// Lazy iterator of all capturing moves
     pub fn capturing_moves(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
-        self.moves_of_type(player, CapturingMoves(player))
+        self.moves_of_type(CapturingMoves(player))
     }
 
-    fn moves_of_type<P: PlayerT, M: Movement<P>>(
-        &self,
-        player: P,
-        movement: M,
-    ) -> impl Iterator<Item = Move> {
-        let mask = movement.movement_mask(self);
-
-        let king = king::moves(player, self, mask);
-        let queen = queen::moves(player, self, mask);
-        let rook = rook::moves(player, self, mask);
-        let bishop = bishop::moves(player, self, mask);
-        let knight = knight::moves(player, self, mask);
-        let pawn = pawn::moves(player, self, mask);
-
-        king.chain(queen)
-            .chain(rook)
-            .chain(bishop)
-            .chain(knight)
-            .chain(pawn)
+    fn moves_of_type<P: PlayerT, M: Movement<P>>(&self, movement: M) -> impl Iterator<Item = Move> {
+        movement.moves(self)
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
@@ -117,26 +102,113 @@ impl Board {
     }
 }
 
-trait Movement<P: PlayerT> {
+pub trait Movement<P: PlayerT> {
+    type Moves: Iterator<Item = Move>;
+
     /// Mask of valid target squares to control what moves are generated.
     /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
     /// pieces" (except for en-passant but screw en-passant).
     fn movement_mask(&self, board: &Board) -> Bitboard;
+
+    fn movement(
+        &self,
+        piece_type: &impl PieceTypeT,
+        source: Square,
+        occupancy: Bitboard,
+        flags: BoardFlags,
+    ) -> Bitboard;
+
+    fn moves(&self, board: &Board) -> Self::Moves;
 }
 
-struct AllMoves<P>(P);
+pub struct AllMoves<P>(P);
 
 impl<P: PlayerT> Movement<P> for AllMoves<P> {
+    #[allow(clippy::type_complexity)]
+    type Moves = Chain<
+        Chain<
+            Chain<Chain<Chain<king::Moves<P>, queen::Moves<P>>, rook::Moves<P>>, bishop::Moves<P>>,
+            knight::Moves<P>,
+        >,
+        pawn::Moves<P>,
+    >;
+
     fn movement_mask(&self, board: &Board) -> Bitboard {
         !board.occupancy_player(self.0.value())
     }
+
+    fn movement(
+        &self,
+        piece_type: &impl PieceTypeT,
+        source: Square,
+        occupancy: Bitboard,
+        flags: BoardFlags,
+    ) -> Bitboard {
+        piece_type.movement(source, occupancy, self.0, flags)
+    }
+
+    fn moves(&self, board: &Board) -> Self::Moves {
+        let mask = self.movement_mask(board);
+
+        let king = king::moves(self.0, board, mask);
+        let queen = queen::moves(self.0, board, mask);
+        let rook = rook::moves(self.0, board, mask);
+        let bishop = bishop::moves(self.0, board, mask);
+        let knight = knight::moves(self.0, board, mask);
+        let pawn = pawn::moves(self.0, board, mask);
+
+        king.chain(queen)
+            .chain(rook)
+            .chain(bishop)
+            .chain(knight)
+            .chain(pawn)
+    }
 }
 
-struct CapturingMoves<P>(P);
+pub struct CapturingMoves<P>(P);
 
 impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
+    #[allow(clippy::type_complexity)]
+    type Moves = Chain<
+        Chain<
+            Chain<
+                Chain<Chain<king::Attacks<P>, queen::Attacks<P>>, rook::Attacks<P>>,
+                bishop::Attacks<P>,
+            >,
+            knight::Attacks<P>,
+        >,
+        pawn::Attacks<P>,
+    >;
+
     fn movement_mask(&self, board: &Board) -> Bitboard {
         board.occupancy_player(self.0.opponent().value())
+    }
+
+    fn movement(
+        &self,
+        piece_type: &impl PieceTypeT,
+        source: Square,
+        occupancy: Bitboard,
+        _: BoardFlags,
+    ) -> Bitboard {
+        piece_type.attacks(source, occupancy, self.0)
+    }
+
+    fn moves(&self, board: &Board) -> Self::Moves {
+        let mask = self.movement_mask(board);
+
+        let king = king::attacks(self.0, board, mask);
+        let queen = queen::attacks(self.0, board, mask);
+        let rook = rook::attacks(self.0, board, mask);
+        let bishop = bishop::attacks(self.0, board, mask);
+        let knight = knight::attacks(self.0, board, mask);
+        let pawn = pawn::attacks(self.0, board, mask);
+
+        king.chain(queen)
+            .chain(rook)
+            .chain(bishop)
+            .chain(knight)
+            .chain(pawn)
     }
 }
 

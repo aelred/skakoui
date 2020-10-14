@@ -25,10 +25,15 @@ impl PieceTypeT for PawnType {
     }
 }
 
-type Moves<P> = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
+pub type Moves<P> = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
+pub type Attacks<P> = FlatMap<PawnCapturesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
 
 pub fn moves<P: PlayerT>(_: P, board: &Board, _: Bitboard) -> Moves<P> {
     PawnMovesIter::from_board(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
+}
+
+pub fn attacks<P: PlayerT>(_: P, board: &Board, _: Bitboard) -> Attacks<P> {
+    PawnCapturesIter::from_board(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
 }
 
 pub struct PawnMovesIter<P> {
@@ -100,6 +105,13 @@ impl<P: PlayerT> PawnCapturesIter<P> {
             captures_east: captures_east.squares(),
             captures_west: captures_west.squares(),
         }
+    }
+
+    fn from_board(board: &Board, player: P) -> Self {
+        let piece = Piece::new(player.value(), PieceType::Pawn);
+        let pawns = board.bitboard_piece(piece);
+        let opponent_occupancy = board.occupancy_player(player.opponent().value());
+        Self::new(*pawns, opponent_occupancy, player)
     }
 }
 
