@@ -14,6 +14,9 @@ mod rank;
 mod search;
 mod square;
 
+#[cfg(test)]
+pub mod strategies;
+
 pub use crate::{
     bitboard::{bitboards, Bitboard},
     board::{Board, BoardFlags},

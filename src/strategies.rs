@@ -1,9 +1,9 @@
+use crate::{Board, BoardFlags, GameState, Move, Piece, PieceType, Player};
 use arrayvec::ArrayVec;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
-use skakoui::{Board, BoardFlags, GameState, Move, Piece, PieceType, Player};
 
 pub fn arb_player() -> impl Strategy<Value = Player> {
     const PLAYERS: &[Player] = &[Player::White, Player::Black];
@@ -19,10 +19,13 @@ pub fn all_pieces() -> Vec<Option<Piece>> {
 }
 
 pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
-    // odds are chosen per-board instead of per-piece, so we get boards with many pieces and some with few
-    let keep_pieces = (0.0..=1.0).prop_flat_map(|keep_odds| vec(weighted(keep_odds), 64));
+    let all_pieces = all_pieces();
+    let len = all_pieces.len();
 
-    let shuffled_pieces = Just(all_pieces()).prop_shuffle();
+    // odds are chosen per-board instead of per-piece, so we get boards with many pieces and some with few
+    let keep_pieces = (0.0..=1.0).prop_flat_map(move |keep_odds| vec(weighted(keep_odds), len));
+
+    let shuffled_pieces = Just(all_pieces.to_owned()).prop_shuffle();
     (shuffled_pieces, keep_pieces)
         .prop_map(|(pieces, keep)| {
             pieces

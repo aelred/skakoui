@@ -206,8 +206,6 @@ impl Board {
 
         self.player = self.player.opponent();
 
-        self.assert_invariants();
-
         PlayedMove::new(mov, captured_piece_type, prev_flags)
     }
 
@@ -300,8 +298,6 @@ impl Board {
                 self.occupancy_player[player].move_bit(rook_to, rook_from);
             }
         }
-
-        self.assert_invariants();
     }
 
     pub fn pieces(&self) -> &SquareMap<Option<Piece>> {
@@ -357,54 +353,22 @@ impl Board {
     /// Check this move is possible - not legal - just that it moves a piece of the right colour
     /// to a space without a friendly piece
     fn assert_can_move(&self, player: Player, from: Square, to: Square) {
-        if cfg!(debug_assertions) {
-            assert_eq!(
-                self.pieces[from].map(Piece::player),
-                Some(player),
-                "{} should have a {} piece, but was {:?}",
-                from,
-                player,
-                self.pieces[from]
-            );
-            assert_ne!(
-                self.pieces[to].map(Piece::player),
-                Some(player),
-                "{} should not have a {} piece, but was {:?}",
-                to,
-                player,
-                self.pieces[to]
-            );
-        }
-    }
-
-    /// Check invariants for internal redundant board state (only enabled in debug).
-    fn assert_invariants(&self) {
-        if cfg!(debug_assertions) {
-            let mut expected_piece_count = PieceMap::from(|_| 0u8);
-
-            // Use `pieces` as the source-of-truth
-            for (square, piece) in self.pieces.iter() {
-                for (bb_piece, bitboard) in self.bitboards.iter() {
-                    assert_eq!(bitboard.get(square), *piece == Some(bb_piece));
-                }
-
-                if let Some(piece) = piece {
-                    expected_piece_count[*piece] += 1;
-                }
-
-                assert_eq!(self.occupancy.get(square), piece.is_some());
-
-                let player_at_square = piece.map(Piece::player);
-                for (player, occupancy_player) in self.occupancy_player.iter() {
-                    assert_eq!(
-                        occupancy_player.get(square),
-                        player_at_square == Some(player)
-                    );
-                }
-            }
-
-            assert_eq!(self.piece_count, expected_piece_count);
-        }
+        debug_assert_eq!(
+            self.pieces[from].map(Piece::player),
+            Some(player),
+            "{} should have a {} piece, but was {:?}",
+            from,
+            player,
+            self.pieces[from]
+        );
+        debug_assert_ne!(
+            self.pieces[to].map(Piece::player),
+            Some(player),
+            "{} should not have a {} piece, but was {:?}",
+            to,
+            player,
+            self.pieces[to]
+        );
     }
 }
 
@@ -535,7 +499,9 @@ impl BoardFlags {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::strategies::*;
     use pretty_assertions::assert_eq;
+    use proptest::proptest;
 
     #[test]
     fn can_create_default_chess_board() {
@@ -718,5 +684,65 @@ pub mod tests {
 
     pub fn fen(fen: &str) -> Board {
         Board::from_fen(fen).unwrap()
+    }
+
+    proptest! {
+        #[test]
+        fn legal_moves_can_be_unmade((board_before, mov) in board_and_move(arb_board())) {
+            let mut board_after = board_before.clone();
+            let pmov = board_after.make_move(mov);
+            board_after.unmake_move(pmov);
+            assert_eq!(board_before, board_after)
+        }
+
+        #[test]
+        fn legal_moves_never_leave_king_in_check((mut board, mov) in board_and_move(arb_board())) {
+            let me = board.player();
+            board.make_move(mov);
+            assert!(!board.check(me));
+        }
+
+        #[test]
+        fn make_move_preserves_invariants((mut board, mov) in board_and_move(arb_board())) {
+            board.make_move(mov);
+            assert_invariants(&board);
+        }
+
+        #[test]
+        fn unmake_move_preserves_invariants((mut board, mov) in board_and_move(arb_board())) {
+            let pmov = board.make_move(mov);
+            board.unmake_move(pmov);
+            assert_invariants(&board);
+        }
+    }
+
+    /// Check invariants for internal redundant board state (only enabled in debug).
+    fn assert_invariants(board: &Board) {
+        if cfg!(debug_assertions) {
+            let mut expected_piece_count = PieceMap::from(|_| 0u8);
+
+            // Use `pieces` as the source-of-truth
+            for (square, piece) in board.pieces.iter() {
+                for (bb_piece, bitboard) in board.bitboards.iter() {
+                    assert_eq!(bitboard.get(square), *piece == Some(bb_piece));
+                }
+
+                if let Some(piece) = piece {
+                    expected_piece_count[*piece] += 1;
+                }
+
+                assert_eq!(board.occupancy.get(square), piece.is_some());
+
+                let player_at_square = piece.map(Piece::player);
+                for (player, occupancy_player) in board.occupancy_player.iter() {
+                    assert_eq!(
+                        occupancy_player.get(square),
+                        player_at_square == Some(player)
+                    );
+                }
+            }
+
+            assert_eq!(board.piece_count, expected_piece_count);
+        }
     }
 }
