@@ -120,11 +120,12 @@ pub struct AllMoves<P>(P);
 
 impl<P: PlayerT> Movement<P> for AllMoves<P> {
     #[allow(clippy::type_complexity)]
-    type Moves = Chain<
-        Chain<
-            Chain<Chain<Chain<king::Moves<P>, queen::Moves<P>>, rook::Moves<P>>, bishop::Moves<P>>,
-            knight::Moves<P>,
-        >,
+    type Moves = MoveChain<
+        king::Moves<P>,
+        queen::Moves<P>,
+        rook::Moves<P>,
+        bishop::Moves<P>,
+        knight::Moves<P>,
         pawn::Moves<P>,
     >;
 
@@ -160,14 +161,12 @@ pub struct CapturingMoves<P>(P);
 
 impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
     #[allow(clippy::type_complexity)]
-    type Moves = Chain<
-        Chain<
-            Chain<
-                Chain<Chain<king::Attacks<P>, queen::Attacks<P>>, rook::Attacks<P>>,
-                bishop::Attacks<P>,
-            >,
-            knight::Attacks<P>,
-        >,
+    type Moves = MoveChain<
+        king::Attacks<P>,
+        queen::Attacks<P>,
+        rook::Attacks<P>,
+        bishop::Attacks<P>,
+        knight::Attacks<P>,
         pawn::Attacks<P>,
     >;
 
@@ -198,6 +197,8 @@ impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
             .chain(pawn)
     }
 }
+
+type MoveChain<K, Q, R, B, N, P> = Chain<Chain<Chain<Chain<Chain<K, Q>, R>, B>, N>, P>;
 
 #[cfg(test)]
 #[macro_use]
