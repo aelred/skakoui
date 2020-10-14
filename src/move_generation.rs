@@ -105,11 +105,6 @@ impl Board {
 pub trait Movement<P: PlayerT> {
     type Moves: Iterator<Item = Move>;
 
-    /// Mask of valid target squares to control what moves are generated.
-    /// For example, we can restrict to capturing moves by masking to "squares occupied by enemy
-    /// pieces" (except for en-passant but screw en-passant).
-    fn movement_mask(&self, board: &Board) -> Bitboard;
-
     fn movement(
         &self,
         piece_type: &impl PieceTypeT,
@@ -133,10 +128,6 @@ impl<P: PlayerT> Movement<P> for AllMoves<P> {
         pawn::Moves<P>,
     >;
 
-    fn movement_mask(&self, board: &Board) -> Bitboard {
-        !board.occupancy_player(self.0.value())
-    }
-
     fn movement(
         &self,
         piece_type: &impl PieceTypeT,
@@ -148,7 +139,7 @@ impl<P: PlayerT> Movement<P> for AllMoves<P> {
     }
 
     fn moves(&self, board: &Board) -> Self::Moves {
-        let mask = self.movement_mask(board);
+        let mask = !board.occupancy_player(self.0.value());
 
         let king = king::moves(self.0, board, mask);
         let queen = queen::moves(self.0, board, mask);
@@ -180,10 +171,6 @@ impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
         pawn::Attacks<P>,
     >;
 
-    fn movement_mask(&self, board: &Board) -> Bitboard {
-        board.occupancy_player(self.0.opponent().value())
-    }
-
     fn movement(
         &self,
         piece_type: &impl PieceTypeT,
@@ -195,7 +182,7 @@ impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
     }
 
     fn moves(&self, board: &Board) -> Self::Moves {
-        let mask = self.movement_mask(board);
+        let mask = board.occupancy_player(self.0.opponent().value());
 
         let king = king::attacks(self.0, board, mask);
         let queen = queen::attacks(self.0, board, mask);
