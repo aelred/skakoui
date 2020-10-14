@@ -1,8 +1,9 @@
 use crate::bitboard::SquareIterator;
-use crate::move_generation::piece_type::{Movable, PieceT, PieceTypeT};
+use crate::move_generation::piece_type::PieceTypeT;
 use crate::{bitboards, Bitboard, Board, BoardFlags, Move, Piece, PieceType, PlayerT, Square};
 use std::iter::FlatMap;
 
+#[derive(Default)]
 pub struct PawnType;
 impl PieceTypeT for PawnType {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
@@ -14,22 +15,20 @@ impl PieceTypeT for PawnType {
         player: impl PlayerT,
         _: BoardFlags,
     ) -> Bitboard {
-        let (pushes, double_pushes) = moves(source.into(), occupancy, player);
+        let (pushes, double_pushes) = move_boards(source.into(), occupancy, player);
         self.attacks(source, occupancy, player) | pushes | double_pushes
     }
 
     fn attacks(&self, source: Square, occupancy: Bitboard, player: impl PlayerT) -> Bitboard {
-        let (captures_east, captures_west) = captures(source.into(), occupancy, player);
+        let (captures_east, captures_west) = capture_boards(source.into(), occupancy, player);
         captures_east | captures_west
     }
 }
 
-impl<P: PlayerT> Movable for PieceT<P, PawnType> {
-    #[allow(clippy::type_complexity)]
-    type Moves = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
-    fn moves(self, board: &Board, _: Bitboard) -> Self::Moves {
-        PawnMovesIter::from_board(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
-    }
+type Moves<P> = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
+
+pub fn moves<P: PlayerT>(_: P, board: &Board, _: Bitboard) -> Moves<P> {
+    PawnMovesIter::from_board(board, P::default()).flat_map(Move::with_valid_promotions::<P>)
 }
 
 pub struct PawnMovesIter<P> {
@@ -94,7 +93,7 @@ pub struct PawnCapturesIter<P> {
 
 impl<P: PlayerT> PawnCapturesIter<P> {
     fn new(sources: Bitboard, occupancy: Bitboard, player: P) -> Self {
-        let (captures_east, captures_west) = captures(sources, occupancy, player);
+        let (captures_east, captures_west) = capture_boards(sources, occupancy, player);
 
         Self {
             player,
@@ -122,7 +121,11 @@ impl<P: PlayerT> Iterator for PawnCapturesIter<P> {
     }
 }
 
-fn moves(sources: Bitboard, occupancy: Bitboard, player: impl PlayerT) -> (Bitboard, Bitboard) {
+fn move_boards(
+    sources: Bitboard,
+    occupancy: Bitboard,
+    player: impl PlayerT,
+) -> (Bitboard, Bitboard) {
     let free_spaces = !occupancy;
     let pawns_forward = player.advance_bitboard(sources);
     let pushes = pawns_forward & free_spaces;
@@ -131,7 +134,11 @@ fn moves(sources: Bitboard, occupancy: Bitboard, player: impl PlayerT) -> (Bitbo
     (pushes, double_pushes)
 }
 
-fn captures(sources: Bitboard, targets: Bitboard, player: impl PlayerT) -> (Bitboard, Bitboard) {
+fn capture_boards(
+    sources: Bitboard,
+    targets: Bitboard,
+    player: impl PlayerT,
+) -> (Bitboard, Bitboard) {
     let pawns_forward = player.advance_bitboard(sources);
     (
         pawns_forward.shift_file_neg(1) & targets,

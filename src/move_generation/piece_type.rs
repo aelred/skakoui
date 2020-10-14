@@ -4,28 +4,20 @@ use crate::{bitboards, Board, Move, PlayerT};
 use crate::{Bitboard, Piece};
 use crate::{BoardFlags, PieceType};
 
+#[derive(Default)]
 pub struct PieceT<P, PT> {
-    player: P,
-    piece_type: PT,
+    pub player: P,
+    pub piece_type: PT,
 }
 
 impl<P: PlayerT, PT: PieceTypeT> PieceT<P, PT> {
-    pub fn new(player: P, piece_type: PT) -> Self {
-        Self { player, piece_type }
-    }
-
     fn value(&self) -> Piece {
         Piece::new(self.player.value(), self.piece_type.value())
     }
 }
 
-pub trait Movable {
-    type Moves: Iterator<Item = Move>;
-    fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves;
-}
-
 /// Type-level representation of [PieceType].
-pub trait PieceTypeT: Sized {
+pub trait PieceTypeT: Sized + Default {
     const PIECE_TYPE: PieceType;
 
     fn value(&self) -> PieceType {

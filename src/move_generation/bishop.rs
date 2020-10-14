@@ -1,8 +1,9 @@
 use crate::move_generation::piece_type::{
-    slide, AntiDiagonal, Diagonal, Movable, MovesIter, PieceT, PieceTypeT,
+    slide, AntiDiagonal, Diagonal, MovesIter, PieceT, PieceTypeT,
 };
 use crate::{Bitboard, Board, PieceType, PlayerT, Square};
 
+#[derive(Default)]
 pub struct BishopType;
 impl PieceTypeT for BishopType {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
@@ -12,11 +13,8 @@ impl PieceTypeT for BishopType {
     }
 }
 
-impl<P: PlayerT> Movable for PieceT<P, BishopType> {
-    type Moves = MovesIter<P, BishopType>;
-    fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves {
-        MovesIter::new(board, self, mask)
-    }
+pub fn moves<P: PlayerT>(_: P, board: &Board, mask: Bitboard) -> MovesIter<P, BishopType> {
+    MovesIter::new(board, PieceT::default(), mask)
 }
 
 #[cfg(test)]

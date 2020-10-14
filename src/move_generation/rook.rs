@@ -1,8 +1,9 @@
 use crate::move_generation::piece_type::{
-    slide, EastWest, Movable, MovesIter, NorthSouth, PieceT, PieceTypeT,
+    slide, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT,
 };
 use crate::{Bitboard, Board, PieceType, PlayerT, Square};
 
+#[derive(Default)]
 pub struct RookType;
 impl PieceTypeT for RookType {
     const PIECE_TYPE: PieceType = PieceType::Rook;
@@ -12,11 +13,8 @@ impl PieceTypeT for RookType {
     }
 }
 
-impl<P: PlayerT> Movable for PieceT<P, RookType> {
-    type Moves = MovesIter<P, RookType>;
-    fn moves(self, board: &Board, mask: Bitboard) -> Self::Moves {
-        MovesIter::new(board, self, mask)
-    }
+pub fn moves<P: PlayerT>(_: P, board: &Board, mask: Bitboard) -> MovesIter<P, RookType> {
+    MovesIter::new(board, PieceT::default(), mask)
 }
 
 #[cfg(test)]

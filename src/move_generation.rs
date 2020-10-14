@@ -16,13 +16,6 @@ mod piece_type;
 mod queen;
 mod rook;
 
-use crate::move_generation::bishop::BishopType;
-use crate::move_generation::king::KingType;
-use crate::move_generation::knight::KnightType;
-use crate::move_generation::pawn::PawnType;
-use crate::move_generation::piece_type::{Movable, PieceT};
-use crate::move_generation::queen::QueenType;
-use crate::move_generation::rook::RookType;
 use crate::piece::PieceType::King;
 
 impl Board {
@@ -68,12 +61,12 @@ impl Board {
     ) -> impl Iterator<Item = Move> {
         let mask = movement.movement_mask(self);
 
-        let king = PieceT::new(player, KingType).moves(self, mask);
-        let queen = PieceT::new(player, QueenType).moves(self, mask);
-        let rook = PieceT::new(player, RookType).moves(self, mask);
-        let bishop = PieceT::new(player, BishopType).moves(self, mask);
-        let knight = PieceT::new(player, KnightType).moves(self, mask);
-        let pawn = PieceT::new(player, PawnType).moves(self, mask);
+        let king = king::moves(player, self, mask);
+        let queen = queen::moves(player, self, mask);
+        let rook = rook::moves(player, self, mask);
+        let bishop = bishop::moves(player, self, mask);
+        let knight = knight::moves(player, self, mask);
+        let pawn = pawn::moves(player, self, mask);
 
         king.chain(queen)
             .chain(rook)
