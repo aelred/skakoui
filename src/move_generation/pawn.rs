@@ -4,8 +4,8 @@ use crate::{bitboards, Bitboard, Board, BoardFlags, Move, Piece, PieceType, Play
 use std::iter::FlatMap;
 
 #[derive(Default)]
-pub struct PawnType;
-impl PieceTypeT for PawnType {
+pub struct Pawn;
+impl PieceTypeT for Pawn {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
     fn movement(

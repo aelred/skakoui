@@ -4,8 +4,8 @@ use crate::{Bitboard, Board, BoardFlags, File, PieceType, PlayerT, Square, Squar
 use lazy_static::lazy_static;
 
 #[derive(Default)]
-pub struct KingType;
-impl PieceTypeT for KingType {
+pub struct King;
+impl PieceTypeT for King {
     const PIECE_TYPE: PieceType = PieceType::King;
 
     fn movement(
@@ -37,8 +37,8 @@ impl PieceTypeT for KingType {
     }
 }
 
-pub type Moves<P> = MovesIter<P, KingType, AllMoves<P>>;
-pub type Attacks<P> = MovesIter<P, KingType, CapturingMoves<P>>;
+pub type Moves<P> = MovesIter<P, King, AllMoves<P>>;
+pub type Attacks<P> = MovesIter<P, King, CapturingMoves<P>>;
 
 pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
     MovesIter::new(board, PieceT::default(), AllMoves(player), mask)

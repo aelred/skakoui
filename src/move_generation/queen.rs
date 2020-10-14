@@ -5,8 +5,8 @@ use crate::move_generation::{AllMoves, CapturingMoves};
 use crate::{Bitboard, Board, PieceType, PlayerT, Square};
 
 #[derive(Default)]
-pub struct QueenType;
-impl PieceTypeT for QueenType {
+pub struct Queen;
+impl PieceTypeT for Queen {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
     fn attacks(&self, source: Square, occupancy: Bitboard, _: impl PlayerT) -> Bitboard {
@@ -17,8 +17,8 @@ impl PieceTypeT for QueenType {
     }
 }
 
-pub type Moves<P> = MovesIter<P, QueenType, AllMoves<P>>;
-pub type Attacks<P> = MovesIter<P, QueenType, CapturingMoves<P>>;
+pub type Moves<P> = MovesIter<P, Queen, AllMoves<P>>;
+pub type Attacks<P> = MovesIter<P, Queen, CapturingMoves<P>>;
 
 pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
     MovesIter::new(board, PieceT::default(), AllMoves(player), mask)
