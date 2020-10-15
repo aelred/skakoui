@@ -1,5 +1,5 @@
 use crate::search::LOW_SCORE;
-use crate::{Bitboard, Board, BoardFlags, Move, PieceMap, Player};
+use crate::{Bitboard, Board, BoardFlags, Move, PieceMap, PlayerV};
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
@@ -103,7 +103,7 @@ impl TranspositionTable {
     }
 }
 
-pub type Key = (PieceMap<Bitboard>, Player, BoardFlags);
+pub type Key = (PieceMap<Bitboard>, PlayerV, BoardFlags);
 
 #[derive(Debug, Copy, Clone, Serialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Node {

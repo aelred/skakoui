@@ -1,12 +1,12 @@
-use crate::{Board, BoardFlags, GameState, Move, Piece, PieceType, Player};
+use crate::{Board, BoardFlags, GameState, Move, Piece, PieceType, PlayerV};
 use arrayvec::ArrayVec;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
 use proptest::prelude::*;
 use proptest::sample::{select, Index};
 
-pub fn arb_player() -> impl Strategy<Value = Player> {
-    const PLAYERS: &[Player] = &[Player::White, Player::Black];
+pub fn arb_player() -> impl Strategy<Value = PlayerV> {
+    const PLAYERS: &[PlayerV] = &[PlayerV::White, PlayerV::Black];
     select(PLAYERS)
 }
 

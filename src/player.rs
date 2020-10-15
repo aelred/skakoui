@@ -4,118 +4,139 @@ use enum_map::Enum;
 use std::fmt;
 use std::str::FromStr;
 
+pub trait Player: Sized + Copy {
+    type Opp: Player;
+
+    fn value(self) -> PlayerV;
+    fn opponent(self) -> Self::Opp;
+    fn back_rank(self) -> Rank;
+    fn pawn_rank(self) -> Rank;
+    fn castle_kingside_clear(self) -> Bitboard;
+    fn castle_queenside_clear(self) -> Bitboard;
+    fn castle_kingside_flag(self) -> u8;
+    fn castle_queenside_flag(self) -> u8;
+    fn castle_flags(self) -> u8 {
+        self.castle_kingside_flag() | self.castle_queenside_flag()
+    }
+    fn multiplier(self) -> i8;
+    fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard;
+    fn char(self) -> char;
+}
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
-pub enum Player {
+pub enum PlayerV {
     White,
     Black,
 }
 
-impl Player {
-    pub const fn opponent(self) -> Self {
+impl Player for PlayerV {
+    type Opp = PlayerV;
+
+    fn value(self) -> PlayerV {
+        self
+    }
+
+    fn opponent(self) -> Self {
         match self {
-            Player::White => Player::Black,
-            Player::Black => Player::White,
+            Self::White => Self::Black,
+            Self::Black => Self::White,
         }
     }
 
-    pub const fn as_char(self) -> char {
+    fn back_rank(self) -> Rank {
         match self {
-            Player::White => 'W',
-            Player::Black => 'B',
+            Self::White => Rank::_1,
+            Self::Black => Rank::_8,
         }
     }
 
-    pub const fn multiplier(self) -> i8 {
+    fn pawn_rank(self) -> Rank {
         match self {
-            Player::White => 1,
-            Player::Black => -1,
+            Self::White => Rank::_2,
+            Self::Black => Rank::_7,
         }
     }
 
-    pub const fn back_rank(self) -> Rank {
-        match self {
-            Player::White => Rank::_1,
-            Player::Black => Rank::_8,
-        }
-    }
-
-    pub const fn pawn_rank(self) -> Rank {
-        match self {
-            Player::White => Rank::_2,
-            Player::Black => Rank::_7,
-        }
-    }
-
-    pub const fn promoting_rank(self) -> Rank {
-        self.opponent().back_rank()
-    }
-
-    pub const fn castle_kingside_flag(self) -> u8 {
-        match self {
-            Player::White => 0b1000_0000,
-            Player::Black => 0b0010_0000,
-        }
-    }
-
-    pub const fn castle_queenside_flag(self) -> u8 {
-        match self {
-            Player::White => 0b0100_0000,
-            Player::Black => 0b0001_0000,
-        }
-    }
-
-    pub const fn castle_kingside_clear(self) -> Bitboard {
+    fn castle_kingside_clear(self) -> Bitboard {
         const CLEAR: Bitboard = Bitboard::new(0b_01100000);
         match self {
-            Player::White => CLEAR,
-            Player::Black => CLEAR.reverse(),
+            Self::White => CLEAR,
+            Self::Black => CLEAR.reverse(),
         }
     }
 
-    pub const fn castle_queenside_clear(self) -> Bitboard {
+    fn castle_queenside_clear(self) -> Bitboard {
         const CLEAR: Bitboard = Bitboard::new(0b_00001110);
         match self {
-            Player::White => CLEAR,
-            Player::Black => CLEAR.reverse(),
+            Self::White => CLEAR,
+            Self::Black => CLEAR.reverse(),
         }
     }
 
-    pub const fn castle_flags(self) -> u8 {
-        self.castle_kingside_flag() | self.castle_queenside_flag()
+    fn castle_kingside_flag(self) -> u8 {
+        match self {
+            Self::White => 0b1000_0000,
+            Self::Black => 0b0010_0000,
+        }
     }
 
-    pub fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
+    fn castle_queenside_flag(self) -> u8 {
         match self {
-            Player::White => bitboard.shift_rank(1),
-            Player::Black => bitboard.shift_rank_neg(1),
+            Self::White => 0b0100_0000,
+            Self::Black => 0b0001_0000,
+        }
+    }
+
+    fn multiplier(self) -> i8 {
+        match self {
+            Self::White => 1,
+            Self::Black => -1,
+        }
+    }
+
+    fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
+        match self {
+            Self::White => bitboard.shift_rank(1),
+            Self::Black => bitboard.shift_rank_neg(1),
+        }
+    }
+
+    fn char(self) -> char {
+        match self {
+            Self::White => 'W',
+            Self::Black => 'B',
         }
     }
 }
 
-impl FromStr for Player {
+impl FromStr for PlayerV {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Player::from_fen(s)
+        Self::from_fen(s)
     }
 }
 
-impl fmt::Display for Player {
+impl fmt::Display for PlayerV {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_fen())
     }
 }
 
-pub trait PlayerT: Sized + Copy + Default {
+pub trait PlayerT: Copy + Default {
     type Opp: PlayerT;
-    const PLAYER: Player;
+    const PLAYER: PlayerV;
+}
 
-    fn value(self) -> Player {
+impl<T: PlayerT> Player for T {
+    type Opp = <Self as PlayerT>::Opp;
+
+    fn value(self) -> PlayerV {
         Self::PLAYER
     }
 
     fn opponent(self) -> Self::Opp {
-        Self::Opp::default()
+        <Self as PlayerT>::Opp::default()
     }
 
     fn back_rank(self) -> Rank {
@@ -124,10 +145,6 @@ pub trait PlayerT: Sized + Copy + Default {
 
     fn pawn_rank(self) -> Rank {
         Self::PLAYER.pawn_rank()
-    }
-
-    fn promoting_rank(self) -> Rank {
-        Self::PLAYER.promoting_rank()
     }
 
     fn castle_kingside_clear(self) -> Bitboard {
@@ -153,6 +170,10 @@ pub trait PlayerT: Sized + Copy + Default {
     fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
         Self::PLAYER.advance_bitboard(bitboard)
     }
+
+    fn char(self) -> char {
+        Self::PLAYER.char()
+    }
 }
 
 #[derive(Copy, Clone, Default)]
@@ -163,10 +184,10 @@ pub struct Black;
 
 impl PlayerT for White {
     type Opp = Black;
-    const PLAYER: Player = Player::White;
+    const PLAYER: PlayerV = PlayerV::White;
 }
 
 impl PlayerT for Black {
     type Opp = White;
-    const PLAYER: Player = Player::Black;
+    const PLAYER: PlayerV = PlayerV::Black;
 }

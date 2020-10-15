@@ -1,14 +1,12 @@
 mod tree;
 
-use crate::{Black, Board, PlayerT};
-use crate::{Move, Player, White};
-
-use crate::search::tree::SearchTree;
+use crate::{Black, Board, Move, Player, PlayerV, White};
 use arrayvec::ArrayVec;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::{fs, thread};
+use tree::SearchTree;
 use ttable::{Key, Node, NodeType, TranspositionTable};
 
 mod ttable;
@@ -217,8 +215,8 @@ impl<'a> ThreadSearcher<'a> {
             self.leftmost = true;
 
             match self.board.player() {
-                Player::White => self.search(White, self.max_depth, LOW_SCORE, HIGH_SCORE),
-                Player::Black => self.search(Black, self.max_depth, LOW_SCORE, HIGH_SCORE),
+                PlayerV::White => self.search(White, self.max_depth, LOW_SCORE, HIGH_SCORE),
+                PlayerV::Black => self.search(Black, self.max_depth, LOW_SCORE, HIGH_SCORE),
             };
 
             let pv = self
@@ -235,7 +233,7 @@ impl<'a> ThreadSearcher<'a> {
 
     // alpha = lower bound for value of child nodes
     // beta = upper bound for value of child nodes
-    fn search(&mut self, player: impl PlayerT, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
+    fn search(&mut self, player: impl Player, depth: u16, mut alpha: i32, mut beta: i32) -> i32 {
         log_search!(self, depth, "search, alpha = {}, beta = {}", alpha, beta);
 
         let key = self.board.key();
@@ -276,7 +274,7 @@ impl<'a> ThreadSearcher<'a> {
             .copied();
         let other_moves = self
             .board
-            .pseudo_legal_moves_for_typed(player)
+            .pseudo_legal_moves_for(player)
             .filter(|mov| pv != Some(*mov));
 
         for mov in pv.into_iter().chain(other_moves) {
@@ -355,7 +353,7 @@ impl<'a> ThreadSearcher<'a> {
     /// The idea is that a board with lots going on is worth investigating more deeply.
     /// This helps prevent the AI picking bad moves because the board "looks" good, even if an important
     /// piece could be taken in the next turn.
-    fn quiesce(&mut self, player: impl PlayerT, mut alpha: i32, beta: i32, depth: i16) -> i32 {
+    fn quiesce(&mut self, player: impl Player, mut alpha: i32, beta: i32, depth: i16) -> i32 {
         // hard cut-off to depth of quiescent search
         if depth <= -1 {
             log_search!(self, depth, "woah that's deep enough");
@@ -396,7 +394,7 @@ impl<'a> ThreadSearcher<'a> {
                 beta
             );
             // When in check, assess all moves that get out of check, not just captures
-            moves = self.board.pseudo_legal_moves_for_typed(player).collect();
+            moves = self.board.pseudo_legal_moves_for(player).collect();
         }
 
         let mut no_legal_moves = true;

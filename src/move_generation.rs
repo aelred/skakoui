@@ -1,12 +1,7 @@
-use crate::Board;
-use crate::Move;
-use crate::Piece;
-use crate::PieceType;
-use crate::Player;
-use crate::PlayerT;
-use crate::White;
-use crate::{Bitboard, Square};
-use crate::{Black, BoardFlags};
+use crate::{
+    Bitboard, Board, BoardFlags, Move, Piece, PieceType, PieceType::King, Player, PlayerV, Square,
+};
+use piece_type::PieceTypeT;
 
 mod bishop;
 mod king;
@@ -16,8 +11,6 @@ mod piece_type;
 mod queen;
 mod rook;
 
-use crate::move_generation::piece_type::PieceTypeT;
-use crate::piece::PieceType::King;
 use std::iter::Chain;
 
 impl Board {
@@ -28,7 +21,7 @@ impl Board {
     }
 
     /// See [pseudo_legal_moves_for]
-    pub fn pseudo_legal_moves(&self) -> Box<dyn Iterator<Item = Move>> {
+    pub fn pseudo_legal_moves(&self) -> impl Iterator<Item = Move> {
         self.pseudo_legal_moves_for(self.player())
     }
 
@@ -36,27 +29,16 @@ impl Board {
     /// 1. Check
     /// 2. King captures
     /// 3. Castling through check
-    pub fn pseudo_legal_moves_for(&self, player: Player) -> Box<dyn Iterator<Item = Move>> {
-        match player {
-            Player::White => Box::new(self.moves_of_type(AllMoves(White))),
-            Player::Black => Box::new(self.moves_of_type(AllMoves(Black))),
-        }
-    }
-
-    /// Lazy iterator of all pseudo-legal moves. Pseudo-legal means they ignore:
-    /// 1. Check
-    /// 2. King captures
-    /// 3. Castling through check
-    pub fn pseudo_legal_moves_for_typed(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
+    pub fn pseudo_legal_moves_for(&self, player: impl Player) -> impl Iterator<Item = Move> {
         self.moves_of_type(AllMoves(player))
     }
 
     /// Lazy iterator of all capturing moves
-    pub fn capturing_moves(&self, player: impl PlayerT) -> impl Iterator<Item = Move> {
+    pub fn capturing_moves(&self, player: impl Player) -> impl Iterator<Item = Move> {
         self.moves_of_type(CapturingMoves(player))
     }
 
-    fn moves_of_type<P: PlayerT, M: Movement<P>>(&self, movement: M) -> impl Iterator<Item = Move> {
+    fn moves_of_type(&self, movement: impl Movement) -> impl Iterator<Item = Move> {
         movement.moves(self)
     }
 
@@ -78,7 +60,7 @@ impl Board {
         !(in_check || captured_king)
     }
 
-    pub fn check(&self, king_player: Player) -> bool {
+    pub fn check(&self, king_player: PlayerV) -> bool {
         let king = Piece::new(king_player, PieceType::King);
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
             self.pseudo_legal_moves_for(king_player.opponent())
@@ -102,7 +84,7 @@ impl Board {
     }
 }
 
-pub trait Movement<P: PlayerT> {
+pub trait Movement {
     type Moves: Iterator<Item = Move>;
 
     fn movement(
@@ -118,7 +100,7 @@ pub trait Movement<P: PlayerT> {
 
 pub struct AllMoves<P>(P);
 
-impl<P: PlayerT> Movement<P> for AllMoves<P> {
+impl<P: Player> Movement for AllMoves<P> {
     #[allow(clippy::type_complexity)]
     type Moves = Chain6<
         king::Moves<P>,
@@ -159,7 +141,7 @@ impl<P: PlayerT> Movement<P> for AllMoves<P> {
 
 pub struct CapturingMoves<P>(P);
 
-impl<P: PlayerT> Movement<P> for CapturingMoves<P> {
+impl<P: Player> Movement for CapturingMoves<P> {
     #[allow(clippy::type_complexity)]
     type Moves = Chain6<
         king::Attacks<P>,
@@ -205,6 +187,7 @@ type Chain6<K, Q, R, B, N, P> = Chain<Chain<Chain<Chain<Chain<K, Q>, R>, B>, N>,
 mod tests {
     use super::*;
     use crate::board::tests::fen;
+    use crate::White;
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 

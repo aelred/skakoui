@@ -1,17 +1,7 @@
-use crate::moves::PlayedMove;
-use crate::piece::PieceType::Pawn;
-use crate::Move;
-use crate::Piece;
-use crate::PieceMap;
-use crate::PieceType;
-use crate::Player;
-use crate::Rank;
-use crate::Square;
-use crate::SquareColor;
-use crate::SquareMap;
-use crate::{bitboards, PlayerT};
-use crate::{Bitboard, White};
-use crate::{Black, File};
+use crate::{
+    bitboards, moves::PlayedMove, Bitboard, Black, File, Move, Piece, PieceMap, PieceType,
+    PieceType::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
+};
 use anyhow::Error;
 use enum_map::EnumMap;
 use serde::export::Formatter;
@@ -26,13 +16,13 @@ pub struct Board {
     /// Bitboards for every piece
     bitboards: PieceMap<Bitboard>,
     /// The player whose turn it is
-    player: Player,
+    player: PlayerV,
     /// Square-wise representation: lookup what piece is on a particular square
     pieces: SquareMap<Option<Piece>>,
     /// Count for each piece
     piece_count: PieceMap<u8>,
     /// Occupancy for white and black
-    occupancy_player: EnumMap<Player, Bitboard>,
+    occupancy_player: EnumMap<PlayerV, Bitboard>,
     /// Occupancy for all pieces
     occupancy: Bitboard,
     /// Castling rights
@@ -41,7 +31,11 @@ pub struct Board {
 
 impl Board {
     /// Create a new board from piece positions and player turn
-    pub fn new(pieces: [[Option<Piece>; 8]; 8], player: Player, mut flags: BoardFlags) -> Self {
+    pub fn new(
+        pieces: [[Option<Piece>; 8]; 8],
+        player: impl Player,
+        mut flags: BoardFlags,
+    ) -> Self {
         let pieces = SquareMap::from(|square: Square| {
             pieces[square.rank().to_index() as usize][square.file().to_index() as usize]
         });
@@ -65,7 +59,11 @@ impl Board {
         Self::with_states(pieces, player, flags)
     }
 
-    fn with_states(pieces: SquareMap<Option<Piece>>, player: Player, flags: BoardFlags) -> Self {
+    fn with_states(
+        pieces: SquareMap<Option<Piece>>,
+        player: impl Player,
+        flags: BoardFlags,
+    ) -> Self {
         let mut bitboards = PieceMap::from(|_| bitboards::EMPTY);
 
         for (square, optional_piece) in pieces.iter() {
@@ -89,7 +87,7 @@ impl Board {
 
         Board {
             bitboards,
-            player,
+            player: player.value(),
             pieces,
             piece_count,
             occupancy_player,
@@ -104,7 +102,7 @@ impl Board {
     }
 
     /// Get whose turn it is
-    pub fn player(&self) -> Player {
+    pub fn player(&self) -> PlayerV {
         self.player
     }
 
@@ -151,7 +149,7 @@ impl Board {
         self.occupancy.set(to);
         self.occupancy_player[player].move_bit(from, to);
 
-        fn castle_flags(player: Player, square: Square) -> u8 {
+        fn castle_flags(player: impl Player, square: Square) -> u8 {
             if player.back_rank() == square.rank() {
                 match square.file() {
                     File::E => player.castle_flags(),
@@ -320,8 +318,8 @@ impl Board {
         self.occupancy
     }
 
-    pub fn occupancy_player(&self, player: Player) -> Bitboard {
-        self.occupancy_player[player]
+    pub fn occupancy_player(&self, player: impl Player) -> Bitboard {
+        self.occupancy_player[player.value()]
     }
 
     pub fn flags(&self) -> BoardFlags {
@@ -352,21 +350,21 @@ impl Board {
 
     /// Check this move is possible - not legal - just that it moves a piece of the right colour
     /// to a space without a friendly piece
-    fn assert_can_move(&self, player: Player, from: Square, to: Square) {
+    fn assert_can_move(&self, player: impl Player, from: Square, to: Square) {
         debug_assert_eq!(
             self.pieces[from].map(Piece::player),
-            Some(player),
+            Some(player.value()),
             "{} should have a {} piece, but was {:?}",
             from,
-            player,
+            player.value(),
             self.pieces[from]
         );
         debug_assert_ne!(
             self.pieces[to].map(Piece::player),
-            Some(player),
+            Some(player.value()),
             "{} should not have a {} piece, but was {:?}",
             to,
-            player,
+            player.value(),
             self.pieces[to]
         );
     }
@@ -399,7 +397,7 @@ impl Default for Board {
                 [BP, BP, BP, BP, BP, BP, BP, BP],
                 [BR, BN, BB, BQ, BK, BB, BN, BR],
             ],
-            Player::White,
+            White,
             BoardFlags::default(),
         )
     }
@@ -595,7 +593,7 @@ pub mod tests {
     #[test]
     fn white_can_castle_kingside() {
         let mut board = fen("8/8/8/8/8/8/8/4K2R w K");
-        board.make_move(Move::castle_kingside(Player::White));
+        board.make_move(Move::castle_kingside(White));
 
         let expect = fen("8/8/8/8/8/8/8/5RK1 b -");
         assert_eq!(board, expect);
@@ -604,7 +602,7 @@ pub mod tests {
     #[test]
     fn black_can_castle_kingside() {
         let mut board = fen("4k2r/8/8/8/8/8/8/8 b k");
-        board.make_move(Move::castle_kingside(Player::Black));
+        board.make_move(Move::castle_kingside(Black));
 
         let expect = fen("5rk1/8/8/8/8/8/8/8 w -");
         assert_eq!(board, expect);
@@ -613,7 +611,7 @@ pub mod tests {
     #[test]
     fn white_can_castle_queenside() {
         let mut board = fen("8/8/8/8/8/8/8/R3K3 w Q");
-        board.make_move(Move::castle_queenside(Player::White));
+        board.make_move(Move::castle_queenside(White));
 
         let expect = fen("8/8/8/8/8/8/8/2KR4 b -");
         assert_eq!(board, expect);
@@ -622,7 +620,7 @@ pub mod tests {
     #[test]
     fn black_can_castle_queenside() {
         let mut board = fen("r3k3/8/8/8/8/8/8/8 b q");
-        board.make_move(Move::castle_queenside(Player::Black));
+        board.make_move(Move::castle_queenside(Black));
 
         let expect = fen("2kr4/8/8/8/8/8/8/8 w -");
         assert_eq!(board, expect);

@@ -24,7 +24,7 @@ pub use crate::{
     moves::{Move, PlayedMove},
     piece::{Piece, PieceType},
     piece_map::PieceMap,
-    player::{Black, Player, PlayerT, White},
+    player::{Black, Player, PlayerV, White},
     rank::{Rank, RankMap},
     search::Searcher,
     square::{Square, SquareColor, SquareMap},

@@ -1,15 +1,15 @@
-use crate::move_generation::piece_type::{
-    slide, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT,
+use crate::{
+    move_generation::piece_type::{slide, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT},
+    move_generation::{AllMoves, CapturingMoves},
+    Bitboard, Board, PieceType, Player, Square,
 };
-use crate::move_generation::{AllMoves, CapturingMoves};
-use crate::{Bitboard, Board, PieceType, PlayerT, Square};
 
 #[derive(Default)]
 pub struct Rook;
 impl PieceTypeT for Rook {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
-    fn attacks(&self, source: Square, occupancy: Bitboard, _: impl PlayerT) -> Bitboard {
+    fn attacks(&self, source: Square, occupancy: Bitboard, _: impl Player) -> Bitboard {
         slide(NorthSouth, source, occupancy) | slide(EastWest, source, occupancy)
     }
 }
@@ -17,12 +17,17 @@ impl PieceTypeT for Rook {
 pub type Moves<P> = MovesIter<P, Rook, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Rook, CapturingMoves<P>>;
 
-pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
-    MovesIter::new(board, PieceT::default(), AllMoves(player), mask)
+pub fn moves<P: Player>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
+    MovesIter::new(board, PieceT::new(player, Rook), AllMoves(player), mask)
 }
 
-pub fn attacks<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
-    MovesIter::new(board, PieceT::default(), CapturingMoves(player), mask)
+pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
+    MovesIter::new(
+        board,
+        PieceT::new(player, Rook),
+        CapturingMoves(player),
+        mask,
+    )
 }
 
 #[cfg(test)]

@@ -1,9 +1,7 @@
-use crate::bitboard::SquareIterator;
-use crate::move_generation::Movement;
-use crate::Square;
-use crate::{bitboards, Board, Move, PlayerT};
-use crate::{Bitboard, Piece};
-use crate::{BoardFlags, PieceType};
+use crate::{
+    bitboard::SquareIterator, bitboards, move_generation::Movement, Bitboard, Board, BoardFlags,
+    Move, Piece, PieceType, Player, Square,
+};
 
 #[derive(Default)]
 pub struct PieceT<P, PT> {
@@ -11,7 +9,11 @@ pub struct PieceT<P, PT> {
     pub piece_type: PT,
 }
 
-impl<P: PlayerT, PT: PieceTypeT> PieceT<P, PT> {
+impl<P: Player, PT: PieceTypeT> PieceT<P, PT> {
+    pub(crate) fn new(player: P, piece_type: PT) -> Self {
+        Self { player, piece_type }
+    }
+
     fn value(&self) -> Piece {
         Piece::new(self.player.value(), self.piece_type.value())
     }
@@ -32,7 +34,7 @@ pub trait PieceTypeT: Sized + Default {
         &self,
         source: Square,
         occupancy: Bitboard,
-        player: impl PlayerT,
+        player: impl Player,
         _: BoardFlags,
     ) -> Bitboard {
         self.attacks(source, occupancy, player)
@@ -42,7 +44,7 @@ pub trait PieceTypeT: Sized + Default {
     ///
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
-    fn attacks(&self, source: Square, occupancy: Bitboard, player: impl PlayerT) -> Bitboard;
+    fn attacks(&self, source: Square, occupancy: Bitboard, player: impl Player) -> Bitboard;
 }
 
 pub struct MovesIter<P, PT, M> {
@@ -56,7 +58,7 @@ pub struct MovesIter<P, PT, M> {
     flags: BoardFlags,
 }
 
-impl<P: PlayerT, PT: PieceTypeT, M: Movement<P>> MovesIter<P, PT, M> {
+impl<P: Player, PT: PieceTypeT, M: Movement> MovesIter<P, PT, M> {
     pub(crate) fn new(board: &Board, piece: PieceT<P, PT>, movement: M, mask: Bitboard) -> Self {
         // arbitrary source square with no targets to avoid empty case
         let source = Square::A1;
@@ -74,7 +76,7 @@ impl<P: PlayerT, PT: PieceTypeT, M: Movement<P>> MovesIter<P, PT, M> {
     }
 }
 
-impl<P: PlayerT, PT: PieceTypeT, M: Movement<P>> Iterator for MovesIter<P, PT, M> {
+impl<P: Player, PT: PieceTypeT, M: Movement> Iterator for MovesIter<P, PT, M> {
     type Item = Move;
 
     fn next(&mut self) -> Option<Self::Item> {

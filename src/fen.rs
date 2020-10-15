@@ -1,4 +1,4 @@
-use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerT, White};
+use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerV, White};
 use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use std::borrow::Borrow;
@@ -45,7 +45,7 @@ impl Board {
         let player = fields
             .next()
             .context("Expected player after pieces")?
-            .parse::<Player>()?;
+            .parse::<PlayerV>()?;
 
         let flags = fields.next().map(|castling| {
             let mut set_flags = 0u8;
@@ -132,9 +132,9 @@ impl Board {
     }
 }
 
-impl Player {
+impl PlayerV {
     pub fn to_fen(self) -> String {
-        self.as_char().to_ascii_lowercase().to_string()
+        self.char().to_ascii_lowercase().to_string()
     }
 
     pub fn from_fen(s: &str) -> Result<Self, Error> {
@@ -150,7 +150,7 @@ impl Player {
 impl Piece {
     pub fn to_fen(&self) -> String {
         let c = self.piece_type().to_fen();
-        if self.player() == Player::White {
+        if self.player() == PlayerV::White {
             c.to_ascii_uppercase()
         } else {
             c.to_ascii_lowercase()

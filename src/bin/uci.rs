@@ -1,4 +1,4 @@
-use skakoui::{Board, Move, Player, Searcher};
+use skakoui::{Board, Move, PlayerV, Searcher};
 use std::error::Error;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
@@ -102,8 +102,8 @@ impl<W: Write> UCI<W> {
 
                     if !ponder {
                         let clock = match board.player() {
-                            Player::White => wtime,
-                            Player::Black => btime,
+                            PlayerV::White => wtime,
+                            PlayerV::Black => btime,
                         };
 
                         if let Some(clock) = clock {

@@ -1,4 +1,4 @@
-use crate::Player;
+use crate::{Player, PlayerV};
 use anyhow::Error;
 use enum_map::Enum;
 use std::fmt;
@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Ord, PartialOrd)]
 pub struct Piece {
-    player: Player,
+    player: PlayerV,
     piece_type: PieceType,
 }
 
@@ -22,59 +22,62 @@ pub enum PieceType {
 
 impl Piece {
     pub const WK: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::King,
     };
     pub const WQ: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::Queen,
     };
     pub const WR: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::Rook,
     };
     pub const WB: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::Bishop,
     };
     pub const WN: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::Knight,
     };
     pub const WP: Self = Self {
-        player: Player::White,
+        player: PlayerV::White,
         piece_type: PieceType::Pawn,
     };
     pub const BK: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::King,
     };
     pub const BQ: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::Queen,
     };
     pub const BR: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::Rook,
     };
     pub const BB: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::Bishop,
     };
     pub const BN: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::Knight,
     };
     pub const BP: Self = Self {
-        player: Player::Black,
+        player: PlayerV::Black,
         piece_type: PieceType::Pawn,
     };
 
-    pub fn new(player: Player, piece_type: PieceType) -> Self {
-        Self { player, piece_type }
+    pub fn new(player: impl Player, piece_type: PieceType) -> Self {
+        Self {
+            player: player.value(),
+            piece_type,
+        }
     }
 
-    pub fn player(self) -> Player {
+    pub fn player(self) -> PlayerV {
         self.player
     }
 
@@ -93,7 +96,7 @@ impl FromStr for Piece {
 
 impl fmt::Debug for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        let player_char = self.player.as_char();
+        let player_char = self.player.char();
         let piece_char = self.piece_type.to_char();
         f.write_fmt(format_args!("Piece::{}{}", player_char, piece_char))
     }
@@ -102,7 +105,7 @@ impl fmt::Debug for Piece {
 impl fmt::Display for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let symbol = match self.player {
-            Player::White => match self.piece_type {
+            PlayerV::White => match self.piece_type {
                 PieceType::King => "♔",
                 PieceType::Queen => "♕",
                 PieceType::Rook => "♖",
@@ -110,7 +113,7 @@ impl fmt::Display for Piece {
                 PieceType::Knight => "♘",
                 PieceType::Pawn => "♙",
             },
-            Player::Black => match self.piece_type {
+            PlayerV::Black => match self.piece_type {
                 PieceType::King => "♚",
                 PieceType::Queen => "♛",
                 PieceType::Rook => "♜",
@@ -154,6 +157,7 @@ impl FromStr for PieceType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Black;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -174,8 +178,8 @@ mod tests {
 
     #[test]
     fn can_get_player_for_a_piece() {
-        assert_eq!(Piece::WK.player(), Player::White);
-        assert_eq!(Piece::BB.player(), Player::Black);
+        assert_eq!(Piece::WK.player(), PlayerV::White);
+        assert_eq!(Piece::BB.player(), PlayerV::Black);
     }
 
     #[test]
@@ -186,6 +190,6 @@ mod tests {
 
     #[test]
     fn can_create_piece_from_player_and_type() {
-        assert_eq!(Piece::new(Player::Black, PieceType::Rook), Piece::BR);
+        assert_eq!(Piece::new(Black, PieceType::Rook), Piece::BR);
     }
 }

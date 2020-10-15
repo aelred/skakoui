@@ -1,6 +1,4 @@
-use crate::{BoardFlags, PlayerT};
-use crate::{File, PieceType};
-use crate::{Player, Square};
+use crate::{BoardFlags, File, PieceType, Player, Rank, Square};
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
@@ -29,7 +27,7 @@ impl Move {
         }
     }
 
-    pub fn castle_kingside(player: Player) -> Self {
+    pub fn castle_kingside(player: impl Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),
             to: Square::new(File::G, player.back_rank()),
@@ -37,7 +35,7 @@ impl Move {
         }
     }
 
-    pub fn castle_queenside(player: Player) -> Self {
+    pub fn castle_queenside(player: impl Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),
             to: Square::new(File::C, player.back_rank()),
@@ -57,9 +55,9 @@ impl Move {
         self.promoting
     }
 
-    pub fn with_valid_promotions<P: PlayerT>(self) -> Vec<Move> {
-        let player = P::default();
-        if self.to.rank() == player.promoting_rank() {
+    pub fn with_valid_promotions(self) -> Vec<Move> {
+        let to_rank = self.to.rank();
+        if to_rank == Rank::_1 || to_rank == Rank::_8 {
             vec![
                 Move {
                     promoting: Some(PieceType::Queen),

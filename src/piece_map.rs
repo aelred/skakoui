@@ -1,15 +1,13 @@
-use crate::Piece;
-use crate::PieceType;
-use crate::Player;
+use crate::{Piece, PieceType, PlayerV};
 use enum_map::EnumMap;
 use std::ops::Index;
 use std::ops::IndexMut;
 
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Hash)]
-pub struct PieceMap<T>(EnumMap<Player, EnumMap<PieceType, T>>);
+pub struct PieceMap<T>(EnumMap<PlayerV, EnumMap<PieceType, T>>);
 
 impl<T> PieceMap<T> {
-    pub fn for_player(&self, player: Player) -> &EnumMap<PieceType, T> {
+    pub fn for_player(&self, player: PlayerV) -> &EnumMap<PieceType, T> {
         &self.0[player]
     }
 

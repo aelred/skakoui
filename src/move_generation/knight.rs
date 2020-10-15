@@ -1,6 +1,8 @@
-use crate::move_generation::piece_type::{MovesIter, PieceT, PieceTypeT};
-use crate::move_generation::{AllMoves, CapturingMoves};
-use crate::{Bitboard, Board, PieceType, PlayerT, Square, SquareMap};
+use crate::{
+    move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
+    move_generation::{AllMoves, CapturingMoves},
+    Bitboard, Board, PieceType, Player, Square, SquareMap,
+};
 use lazy_static::lazy_static;
 
 #[derive(Default)]
@@ -8,7 +10,7 @@ pub struct Knight;
 impl PieceTypeT for Knight {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
-    fn attacks(&self, source: Square, _: Bitboard, _: impl PlayerT) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard, _: impl Player) -> Bitboard {
         KNIGHT_MOVES[source]
     }
 }
@@ -16,12 +18,17 @@ impl PieceTypeT for Knight {
 pub type Moves<P> = MovesIter<P, Knight, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Knight, CapturingMoves<P>>;
 
-pub fn moves<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
-    MovesIter::new(board, PieceT::default(), AllMoves(player), mask)
+pub fn moves<P: Player>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
+    MovesIter::new(board, PieceT::new(player, Knight), AllMoves(player), mask)
 }
 
-pub fn attacks<P: PlayerT>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
-    MovesIter::new(board, PieceT::default(), CapturingMoves(player), mask)
+pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
+    MovesIter::new(
+        board,
+        PieceT::new(player, Knight),
+        CapturingMoves(player),
+        mask,
+    )
 }
 
 lazy_static! {
