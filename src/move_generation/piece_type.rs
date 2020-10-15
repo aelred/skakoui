@@ -101,28 +101,28 @@ impl<P: Player, PT: PieceTypeT, M: Movement> Iterator for MovesIter<P, PT, M> {
         Some(Move::new(self.source, target))
     }
 }
-
-/// Slide a piece from the source square in the given direction.
-pub fn slide(dir: impl SlideDirection, source: Square, occupancy: Bitboard) -> Bitboard {
-    let pos_movement = dir.positive_bitboard(source);
-    let mut blockers = pos_movement & occupancy;
-    // Set the last square so there is always a blocking square (no need to branch)
-    blockers.set(Square::H8);
-    let blocking_square = blockers.first_set();
-    let pos_movement = pos_movement ^ dir.positive_bitboard(blocking_square);
-
-    let neg_movement = dir.negative_bitboard(source);
-    let mut blockers = neg_movement & occupancy;
-    // Set the last square so there is always a blocking square (no need to branch)
-    blockers.set(Square::A1);
-    let blocking_square = blockers.last_set();
-    let neg_movement = neg_movement ^ dir.negative_bitboard(blocking_square);
-
-    pos_movement | neg_movement
-}
-pub trait SlideDirection {
+pub trait SlideDirection: Sized {
     fn positive_bitboard(&self, source: Square) -> Bitboard;
     fn negative_bitboard(&self, source: Square) -> Bitboard;
+
+    /// Slide a piece from the source square in the given direction.
+    fn slide(self, source: Square, occupancy: Bitboard) -> Bitboard {
+        let pos_movement = self.positive_bitboard(source);
+        let mut blockers = pos_movement & occupancy;
+        // Set the last square so there is always a blocking square (no need to branch)
+        blockers.set(Square::H8);
+        let blocking_square = blockers.first_set();
+        let pos_movement = pos_movement ^ self.positive_bitboard(blocking_square);
+
+        let neg_movement = self.negative_bitboard(source);
+        let mut blockers = neg_movement & occupancy;
+        // Set the last square so there is always a blocking square (no need to branch)
+        blockers.set(Square::A1);
+        let blocking_square = blockers.last_set();
+        let neg_movement = neg_movement ^ self.negative_bitboard(blocking_square);
+
+        pos_movement | neg_movement
+    }
 }
 
 pub struct NorthSouth;

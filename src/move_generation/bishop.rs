@@ -1,5 +1,6 @@
+use crate::move_generation::piece_type::SlideDirection;
 use crate::{
-    move_generation::piece_type::{slide, AntiDiagonal, Diagonal, MovesIter, PieceT, PieceTypeT},
+    move_generation::piece_type::{AntiDiagonal, Diagonal, MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, PieceType, Player, Square,
 };
@@ -11,7 +12,7 @@ impl PieceTypeT for Bishop {
     const PIECE_TYPE: PieceType = PieceType::Bishop;
 
     fn attacks(&self, source: Square, occupancy: Bitboard, _: impl Player) -> Bitboard {
-        slide(Diagonal, source, occupancy) | slide(AntiDiagonal, source, occupancy)
+        Diagonal.slide(source, occupancy) | AntiDiagonal.slide(source, occupancy)
     }
 }
 

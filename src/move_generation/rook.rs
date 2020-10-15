@@ -1,5 +1,6 @@
+use crate::move_generation::piece_type::SlideDirection;
 use crate::{
-    move_generation::piece_type::{slide, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT},
+    move_generation::piece_type::{EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, PieceType, Player, Square,
 };
@@ -10,7 +11,7 @@ impl PieceTypeT for Rook {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
     fn attacks(&self, source: Square, occupancy: Bitboard, _: impl Player) -> Bitboard {
-        slide(NorthSouth, source, occupancy) | slide(EastWest, source, occupancy)
+        NorthSouth.slide(source, occupancy) | EastWest.slide(source, occupancy)
     }
 }
 
