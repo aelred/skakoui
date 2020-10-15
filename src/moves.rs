@@ -1,4 +1,4 @@
-use crate::{BoardFlags, File, PieceType, Player, Rank, Square};
+use crate::{BoardFlags, File, PieceType, Player, Square};
 use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
@@ -55,30 +55,8 @@ impl Move {
         self.promoting
     }
 
-    pub fn with_valid_promotions(self) -> Vec<Move> {
-        let to_rank = self.to.rank();
-        if to_rank == Rank::_1 || to_rank == Rank::_8 {
-            vec![
-                Move {
-                    promoting: Some(PieceType::Queen),
-                    ..self
-                },
-                Move {
-                    promoting: Some(PieceType::Rook),
-                    ..self
-                },
-                Move {
-                    promoting: Some(PieceType::Bishop),
-                    ..self
-                },
-                Move {
-                    promoting: Some(PieceType::Knight),
-                    ..self
-                },
-            ]
-        } else {
-            vec![self]
-        }
+    pub fn mut_promoting(&mut self) -> &mut Option<PieceType> {
+        &mut self.promoting
     }
 }
 

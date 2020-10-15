@@ -1,6 +1,6 @@
 use crate::{
-    bitboard::SquareIterator, bitboards, move_generation::piece_type::PieceTypeT, Bitboard, Board,
-    BoardFlags, Move, Piece, PieceType, Player, Square,
+    bitboard::SquareIterator, bitboards, move_generation::piece_type::PieceTypeT, Bitboard, Black,
+    Board, BoardFlags, Move, Piece, PieceType, Player, Square, White,
 };
 use std::iter::FlatMap;
 
@@ -26,15 +26,15 @@ impl PieceTypeT for Pawn {
     }
 }
 
-pub type Moves<P> = FlatMap<PawnMovesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
-pub type Attacks<P> = FlatMap<PawnCapturesIter<P>, Vec<Move>, fn(Move) -> Vec<Move>>;
+pub type Moves<P> = FlatMap<PawnMovesIter<P>, Promotions, fn(Move) -> Promotions>;
+pub type Attacks<P> = FlatMap<PawnCapturesIter<P>, Promotions, fn(Move) -> Promotions>;
 
 pub fn moves<P: Player>(player: P, board: &Board, _: Bitboard) -> Moves<P> {
-    PawnMovesIter::from_board(board, player).flat_map(Move::with_valid_promotions)
+    PawnMovesIter::from_board(board, player).flat_map(Promotions::new)
 }
 
 pub fn attacks<P: Player>(player: P, board: &Board, _: Bitboard) -> Attacks<P> {
-    PawnCapturesIter::from_board(board, player).flat_map(Move::with_valid_promotions)
+    PawnCapturesIter::from_board(board, player).flat_map(Promotions::new)
 }
 
 pub struct PawnMovesIter<P> {
@@ -131,6 +131,43 @@ impl<P: Player> Iterator for PawnCapturesIter<P> {
         }
 
         None
+    }
+}
+
+const PROMOTIONS: [Option<PieceType>; 4] = [
+    Some(PieceType::Queen),
+    Some(PieceType::Rook),
+    Some(PieceType::Bishop),
+    Some(PieceType::Knight),
+];
+
+const NO_PROMOTION: [Option<PieceType>; 1] = [None];
+
+pub struct Promotions {
+    mov: Move,
+    promotions: std::slice::Iter<'static, Option<PieceType>>,
+}
+
+impl Promotions {
+    fn new(mov: Move) -> Self {
+        let rank = mov.to().rank();
+        let promotions = if rank == White.back_rank() || rank == Black.back_rank() {
+            PROMOTIONS.iter()
+        } else {
+            NO_PROMOTION.iter()
+        };
+        Self { mov, promotions }
+    }
+}
+
+impl Iterator for Promotions {
+    type Item = Move;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.promotions.next().map(|piece_type| {
+            *self.mov.mut_promoting() = *piece_type;
+            self.mov
+        })
     }
 }
 
