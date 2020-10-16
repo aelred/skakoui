@@ -1,6 +1,6 @@
 mod tree;
 
-use crate::{Black, Board, Move, Player, PlayerV, White};
+use crate::{typed_player, Board, Move, Player};
 use arrayvec::ArrayVec;
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::Sender;
@@ -214,10 +214,12 @@ impl<'a> ThreadSearcher<'a> {
 
             self.leftmost = true;
 
-            match self.board.player() {
-                PlayerV::White => self.search(White, self.max_depth, LOW_SCORE, HIGH_SCORE),
-                PlayerV::Black => self.search(Black, self.max_depth, LOW_SCORE, HIGH_SCORE),
-            };
+            typed_player!(self.board.player(), |p| self.search(
+                p,
+                self.max_depth,
+                LOW_SCORE,
+                HIGH_SCORE
+            ));
 
             let pv = self
                 .transposition_table

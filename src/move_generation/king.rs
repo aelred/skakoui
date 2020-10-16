@@ -1,4 +1,5 @@
 use crate::{
+    bitboards,
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, BoardFlags, File, PieceType, Player, Square, SquareMap,
@@ -10,32 +11,32 @@ pub struct King;
 impl PieceTypeT for King {
     const PIECE_TYPE: PieceType = PieceType::King;
 
-    fn movement(
+    fn attacks(&self, source: Square, _: Bitboard, _: impl Player) -> Bitboard {
+        KING_MOVES[source]
+    }
+
+    fn other_moves(
         &self,
-        source: Square,
+        _: Square,
         occupancy: Bitboard,
         player: impl Player,
         flags: BoardFlags,
     ) -> Bitboard {
-        let mut movement = self.attacks(source, occupancy, player);
+        let mut castles = bitboards::EMPTY;
 
         if flags.is_set(player.castle_kingside_flag())
             && (player.castle_kingside_clear() & occupancy).is_empty()
         {
-            movement.set(Square::new(File::G, player.back_rank()));
+            castles.set(Square::new(File::G, player.back_rank()));
         }
 
         if flags.is_set(player.castle_queenside_flag())
             && (player.castle_queenside_clear() & occupancy).is_empty()
         {
-            movement.set(Square::new(File::C, player.back_rank()));
+            castles.set(Square::new(File::C, player.back_rank()));
         }
 
-        movement
-    }
-
-    fn attacks(&self, source: Square, _: Bitboard, _: impl Player) -> Bitboard {
-        KING_MOVES[source]
+        castles
     }
 }
 

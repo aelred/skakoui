@@ -9,7 +9,12 @@ pub struct Pawn;
 impl PieceTypeT for Pawn {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
-    fn movement(
+    fn attacks(&self, source: Square, _: Bitboard, player: impl Player) -> Bitboard {
+        let (captures_east, captures_west) = capture_boards(source.into(), bitboards::FULL, player);
+        captures_east | captures_west
+    }
+
+    fn other_moves(
         &self,
         source: Square,
         occupancy: Bitboard,
@@ -17,12 +22,7 @@ impl PieceTypeT for Pawn {
         _: BoardFlags,
     ) -> Bitboard {
         let (pushes, double_pushes) = move_boards(source.into(), occupancy, player);
-        self.attacks(source, occupancy, player) | pushes | double_pushes
-    }
-
-    fn attacks(&self, source: Square, occupancy: Bitboard, player: impl Player) -> Bitboard {
-        let (captures_east, captures_west) = capture_boards(source.into(), occupancy, player);
-        captures_east | captures_west
+        pushes | double_pushes
     }
 }
 

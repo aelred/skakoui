@@ -23,6 +23,16 @@ pub trait Player: Sized + Copy {
     fn char(self) -> char;
 }
 
+#[macro_export]
+macro_rules! typed_player {
+    ($p:expr, $f:expr) => {
+        match $p {
+            $crate::PlayerV::White => $f($crate::White),
+            $crate::PlayerV::Black => $f($crate::Black),
+        }
+    };
+}
+
 #[derive(Debug, Eq, PartialEq, Copy, Clone, Enum, Ord, PartialOrd, Hash)]
 pub enum PlayerV {
     White,

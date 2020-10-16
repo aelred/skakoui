@@ -1,5 +1,6 @@
 use crate::{
-    Bitboard, Board, BoardFlags, Move, Piece, PieceType, PieceType::King, Player, PlayerV, Square,
+    bitboards, typed_player, Bitboard, Board, BoardFlags, Move, Piece, PieceType, Player, PlayerV,
+    Square,
 };
 use piece_type::PieceTypeT;
 
@@ -11,6 +12,13 @@ mod piece_type;
 mod queen;
 mod rook;
 
+use crate::move_generation::bishop::Bishop;
+use crate::move_generation::king::King;
+use crate::move_generation::knight::Knight;
+use crate::move_generation::pawn::Pawn;
+use crate::move_generation::piece_type::PieceT;
+use crate::move_generation::queen::Queen;
+use crate::move_generation::rook::Rook;
 use std::iter::Chain;
 
 impl Board {
@@ -55,7 +63,7 @@ impl Board {
 
         let pmov = self.make_move(mov);
         let in_check = self.check(me);
-        let captured_king = pmov.capture() == Some(King);
+        let captured_king = pmov.capture() == Some(PieceType::King);
         self.unmake_move(pmov);
         !(in_check || captured_king)
     }
@@ -81,6 +89,30 @@ impl Board {
             }
         }
         true
+    }
+
+    pub fn attacks(&self) -> Bitboard {
+        typed_player!(self.player(), |player| self.attacks_for(player))
+    }
+
+    pub fn attacks_for(&self, player: impl Player) -> Bitboard {
+        let king = self.attacks_for_piece(PieceT::new(player, King));
+        let queen = self.attacks_for_piece(PieceT::new(player, Queen));
+        let rook = self.attacks_for_piece(PieceT::new(player, Rook));
+        let bishop = self.attacks_for_piece(PieceT::new(player, Bishop));
+        let knight = self.attacks_for_piece(PieceT::new(player, Knight));
+        let pawn = self.attacks_for_piece(PieceT::new(player, Pawn));
+        king | queen | rook | bishop | knight | pawn
+    }
+
+    fn attacks_for_piece<P: Player, PT: PieceTypeT>(&self, piece: PieceT<P, PT>) -> Bitboard {
+        let mut attacks = bitboards::EMPTY;
+        for source in self.bitboard_piece(piece.value()).squares() {
+            attacks |= piece
+                .piece_type
+                .attacks(source, self.occupancy(), piece.player);
+        }
+        attacks
     }
 }
 
@@ -264,5 +296,19 @@ mod tests {
             .collect();
 
         assert_eq!(capturing_moves, expected);
+    }
+
+    #[test]
+    fn attacked_squares_are_all_squares_that_could_be_captured() {
+        let board = fen("8/5P2/K7/8/8/2Q5/1R4BN/8 w");
+        let expect = Bitboard::new(
+            0b_11010111_01000111_00100110_00011111_01011110_11111011_01111111_10110110,
+        );
+        let attacks = board.attacks();
+        assert_eq!(
+            attacks, expect,
+            "\nAttacks:\n{}\nExpected:\n{}\nBoard:\n{}",
+            attacks, expect, board
+        );
     }
 }

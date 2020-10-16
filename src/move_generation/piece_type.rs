@@ -14,7 +14,7 @@ impl<P: Player, PT: PieceTypeT> PieceT<P, PT> {
         Self { player, piece_type }
     }
 
-    fn value(&self) -> Piece {
+    pub fn value(&self) -> Piece {
         Piece::new(self.player.value(), self.piece_type.value())
     }
 }
@@ -35,9 +35,9 @@ pub trait PieceTypeT: Sized + Default {
         source: Square,
         occupancy: Bitboard,
         player: impl Player,
-        _: BoardFlags,
+        flags: BoardFlags,
     ) -> Bitboard {
-        self.attacks(source, occupancy, player)
+        self.attacks(source, occupancy, player) | self.other_moves(source, occupancy, player, flags)
     }
 
     /// Returns all squares this piece can attack when placed at the given square.
@@ -45,6 +45,11 @@ pub trait PieceTypeT: Sized + Default {
     /// This assumes that any occupied square can be captured - even though it might be friendly.
     /// Friendly captures are filtered out later.
     fn attacks(&self, source: Square, occupancy: Bitboard, player: impl Player) -> Bitboard;
+
+    /// Any non-attacking moves
+    fn other_moves(&self, _: Square, _: Bitboard, _: impl Player, _: BoardFlags) -> Bitboard {
+        bitboards::EMPTY
+    }
 }
 
 pub struct MovesIter<P, PT, M> {

@@ -223,6 +223,7 @@ pub mod bitboards {
     use lazy_static::lazy_static;
 
     pub const EMPTY: Bitboard = Bitboard(0);
+    pub const FULL: Bitboard = Bitboard(u64::MAX);
 
     pub const FILES: FileMap<Bitboard> = FileMap::new([
         Bitboard(0b_00000001_00000001_00000001_00000001_00000001_00000001_00000001_00000001),
