@@ -1,7 +1,8 @@
-use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerV, White};
+use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerV, Square, White};
 use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use std::borrow::Borrow;
+use std::str::FromStr;
 
 impl Board {
     /// Parse a board from
@@ -47,26 +48,31 @@ impl Board {
             .context("Expected player after pieces")?
             .parse::<PlayerV>()?;
 
-        let flags = fields.next().map(|castling| {
-            let mut set_flags = 0u8;
+        let mut flags = BoardFlags::default();
+
+        if let Some(castling) = fields.next() {
             if castling.contains('K') {
-                set_flags |= White.castle_kingside_flag();
+                flags.set(White.castle_kingside_flag());
             }
             if castling.contains('Q') {
-                set_flags |= White.castle_queenside_flag();
+                flags.set(White.castle_queenside_flag());
             }
             if castling.contains('k') {
-                set_flags |= Black.castle_kingside_flag();
+                flags.set(Black.castle_kingside_flag());
             }
             if castling.contains('q') {
-                set_flags |= Black.castle_queenside_flag();
+                flags.set(Black.castle_queenside_flag());
             }
-            BoardFlags::new(set_flags)
-        });
+        }
 
-        // TODO: also parse en passant and number of moves
+        if let Some(ep) = fields.next().filter(|e| e != &"-") {
+            let ep_square = Square::from_str(ep)?;
+            flags.set_en_passant_file(Some(ep_square.file()));
+        }
 
-        Ok(Self::new(pieces_array, player, flags.unwrap_or_default()))
+        // TODO: also parse number of moves
+
+        Ok(Self::new(pieces_array, player, flags))
     }
 
     pub fn to_fen(&self) -> String {
@@ -125,6 +131,16 @@ impl Board {
             can_castle = true;
         }
         if !can_castle {
+            fen.push('-');
+        }
+
+        fen.push(' ');
+        if let Some(file) = self.flags().en_passant_file() {
+            let opp = self.player().opponent();
+            let rank = opp.pawn_rank() + opp.multiplier();
+            let square = Square::new(file, rank);
+            fen.push_str(&square.to_string());
+        } else {
             fen.push('-');
         }
 

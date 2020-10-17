@@ -55,6 +55,14 @@ impl Sub<i8> for Rank {
     }
 }
 
+impl Sub<Rank> for Rank {
+    type Output = i8;
+
+    fn sub(self, rhs: Rank) -> Self::Output {
+        self.0 as i8 - rhs.0 as i8
+    }
+}
+
 impl fmt::Debug for Rank {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         f.write_char('_')?;

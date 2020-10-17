@@ -202,6 +202,14 @@ impl Board {
             }
         }
 
+        let en_passant_file =
+            if piece.piece_type() == PieceType::Pawn && (from.rank() - to.rank()).abs() > 1 {
+                Some(from.file())
+            } else {
+                None
+            };
+        self.flags.set_en_passant_file(en_passant_file);
+
         self.player = self.player.opponent();
 
         PlayedMove::new(mov, captured_piece_type, prev_flags)
@@ -324,6 +332,10 @@ impl Board {
 
     pub fn flags(&self) -> BoardFlags {
         self.flags
+    }
+
+    pub fn en_passant_file(&self) -> Option<File> {
+        self.flags.en_passant_file()
     }
 
     pub fn eval(&self) -> i32 {
@@ -454,13 +466,14 @@ impl TryFrom<&str> for Board {
     }
 }
 
-/// Bits: 0bKQkq_xxxx
+/// Bits: 0bKQkq_eEEE
 ///
 /// K = White can castle kingside
 /// Q = White can castle queenside
 /// k = Black can castle kingside
 /// q = Black can castle queenside
-/// x = unused
+/// e = en-passant file is set
+/// E = en-passant file
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
 pub struct BoardFlags(u8);
 
@@ -477,6 +490,9 @@ impl fmt::Debug for BoardFlags {
 }
 
 impl BoardFlags {
+    const EN_PASSANT: u8 = 0b00001000;
+    const EN_PASSANT_FILE: u8 = 0b00000111;
+
     pub fn new(x: u8) -> Self {
         BoardFlags(x)
     }
@@ -492,11 +508,32 @@ impl BoardFlags {
     pub fn unset(&mut self, mask: u8) {
         self.0 &= !mask;
     }
+
+    pub fn en_passant_file(self) -> Option<File> {
+        if self.is_set(Self::EN_PASSANT) {
+            Some(File::from_index(self.0 & Self::EN_PASSANT_FILE))
+        } else {
+            None
+        }
+    }
+
+    pub fn set_en_passant_file(&mut self, file: Option<File>) {
+        if let Some(file) = file {
+            self.set(Self::EN_PASSANT);
+            self.unset(Self::EN_PASSANT_FILE);
+            let index = file.to_index();
+            debug_assert!(index < 8); // we should never set the upper bits
+            self.set(index);
+        } else {
+            self.unset(Self::EN_PASSANT);
+        }
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use crate::mov;
     use crate::strategies::*;
     use pretty_assertions::assert_eq;
     use proptest::proptest;
@@ -664,6 +701,21 @@ pub mod tests {
         let expect = fen("Q3k2r/8/8/8/8/8/8/8 b k");
         board.make_move(Move::new(Square::A7, Square::A8));
         assert_eq!(board, expect);
+    }
+
+    #[test]
+    fn when_making_a_double_push_record_the_en_passant_file() {
+        let mut board = Board::default();
+        board.make_move(mov!(a2a4));
+        assert_eq!(board.en_passant_file(), Some(File::A));
+    }
+
+    #[test]
+    fn en_passant_file_is_unset_on_the_next_move() {
+        let mut board = fen("k7/8/8/8/P7/8/8/K7 b - a3");
+        assert_eq!(board.en_passant_file(), Some(File::A));
+        board.make_move(mov!(a8b8));
+        assert_eq!(board.en_passant_file(), None);
     }
 
     #[ignore]
