@@ -3,7 +3,7 @@ use std::error::Error;
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Move {
     from: Square,
     to: Square,
@@ -30,7 +30,7 @@ impl Move {
     pub fn castle_kingside(player: impl Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),
-            to: Square::new(File::G, player.back_rank()),
+            to: Square::new(File::KINGSIDE, player.back_rank()),
             promoting: None,
         }
     }
@@ -38,7 +38,7 @@ impl Move {
     pub fn castle_queenside(player: impl Player) -> Self {
         Self {
             from: Square::new(File::E, player.back_rank()),
-            to: Square::new(File::C, player.back_rank()),
+            to: Square::new(File::QUEENSIDE, player.back_rank()),
             promoting: None,
         }
     }
@@ -57,6 +57,14 @@ impl Move {
 
     pub fn mut_promoting(&mut self) -> &mut Option<PieceType> {
         &mut self.promoting
+    }
+}
+
+impl fmt::Debug for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "mov!(")?;
+        fmt::Display::fmt(self, f)?;
+        write!(f, ")")
     }
 }
 
@@ -99,6 +107,13 @@ impl FromStr for Move {
             promoting,
         })
     }
+}
+
+#[macro_export]
+macro_rules! mov {
+    ($mov:expr) => {
+        stringify!($mov).parse::<$crate::Move>().unwrap()
+    };
 }
 
 /// Move that has been played with extra information so it can be un-done.

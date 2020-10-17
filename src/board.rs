@@ -166,8 +166,8 @@ impl Board {
         self.flags.unset(unset_flags);
 
         if piece.piece_type() == PieceType::King && from.file() == File::E {
-            let kingside_castling = to.file() == File::G;
-            let queenside_castling = to.file() == File::C;
+            let kingside_castling = to.file() == File::KINGSIDE;
+            let queenside_castling = to.file() == File::QUEENSIDE;
 
             if kingside_castling || queenside_castling {
                 let (rook_from_file, rook_to_file, flag) = if kingside_castling {
@@ -262,8 +262,8 @@ impl Board {
         let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
 
         if maybe_castling {
-            let kingside_castling = to.file() == File::G;
-            let queenside_castling = to.file() == File::C;
+            let kingside_castling = to.file() == File::KINGSIDE;
+            let queenside_castling = to.file() == File::QUEENSIDE;
 
             if kingside_castling || queenside_castling {
                 let (rook_from_file, rook_to_file) = if kingside_castling {

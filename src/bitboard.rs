@@ -189,7 +189,17 @@ impl BitXorAssign for Bitboard {
 
 impl fmt::Debug for Bitboard {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("Bitboard({:b})", self.0))
+        write!(f, "Bitboard(0b")?;
+
+        for rank in Rank::VALUES.iter().rev() {
+            write!(f, "_")?;
+            for file in File::VALUES.iter().rev() {
+                let square = Square::new(*file, *rank);
+                let char = if self.get(square) { '1' } else { '0' };
+                write!(f, "{}", char)?;
+            }
+        }
+        write!(f, ")")
     }
 }
 

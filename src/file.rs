@@ -32,6 +32,9 @@ impl File {
 
     const STRS: FileMap<&'static str> = FileMap::new(["a", "b", "c", "d", "e", "f", "g", "h"]);
 
+    pub const QUEENSIDE: File = File::C;
+    pub const KINGSIDE: File = File::G;
+
     pub fn from_index(index: u8) -> Self {
         File(index)
     }

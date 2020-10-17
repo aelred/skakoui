@@ -1,6 +1,6 @@
 use crate::{
-    bitboards, typed_player, Bitboard, Board, BoardFlags, Move, Piece, PieceType, Player, PlayerV,
-    Square,
+    bitboards, typed_player, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, Player,
+    PlayerV, Square,
 };
 use piece_type::PieceTypeT;
 
@@ -54,11 +54,21 @@ impl Board {
         // TODO: this is a very inefficient way to confirm if in check
         let me = self.player();
 
-        // TODO: disallow castling through check
         let king_move = self.pieces()[mov.from()].map(Piece::piece_type) == Some(PieceType::King);
         let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
-        if castling && self.check(me) {
-            return false;
+        if castling {
+            let through = if mov.to().file() == File::KINGSIDE {
+                me.castle_kingside_clear()
+            } else {
+                me.castle_queenside_clear()
+            };
+            let source: Bitboard = mov.from().into();
+            let attacks = self.attacks_for(me.opponent());
+            dbg!(through, source, attacks);
+
+            if !((through | source) & attacks).is_empty() {
+                return false;
+            }
         }
 
         let pmov = self.make_move(mov);
@@ -219,16 +229,9 @@ type Chain6<K, Q, R, B, N, P> = Chain<Chain<Chain<Chain<Chain<K, Q>, R>, B>, N>,
 mod tests {
     use super::*;
     use crate::board::tests::fen;
-    use crate::White;
+    use crate::{mov, White};
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
-
-    #[macro_export]
-    macro_rules! mov {
-        ($mov:expr) => {
-            stringify!($mov).parse::<$crate::Move>().unwrap()
-        };
-    }
 
     #[macro_export]
     macro_rules! assert_moves {
@@ -241,7 +244,7 @@ mod tests {
             ].iter().cloned().collect();
             expected_moves.sort();
 
-            assert_eq!(moves, expected_moves, "\n{}", $board);
+            assert_eq!(moves, expected_moves, "\n{:?}", $board);
         };
     }
 

@@ -27,13 +27,13 @@ impl PieceTypeT for King {
         if flags.is_set(player.castle_kingside_flag())
             && (player.castle_kingside_clear() & occupancy).is_empty()
         {
-            castles.set(Square::new(File::G, player.back_rank()));
+            castles.set(Square::new(File::KINGSIDE, player.back_rank()));
         }
 
         if flags.is_set(player.castle_queenside_flag())
             && (player.castle_queenside_clear() & occupancy).is_empty()
         {
-            castles.set(Square::new(File::C, player.back_rank()));
+            castles.set(Square::new(File::QUEENSIDE, player.back_rank()));
         }
 
         castles
@@ -110,6 +110,20 @@ mod tests {
         assert_moves!(
             board,
             [e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
+        );
+    }
+
+    #[test]
+    fn king_cannot_castle_through_check() {
+        let mut board = fen("8/8/8/8/8/8/r5pr/R3K2R w");
+        assert_moves!(
+            board,
+            [e1c1, e1d1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
+        );
+        let mut board = fen("r3k2r/R1P4R/8/8/8/8/8/8 b");
+        assert_moves!(
+            board,
+            [e8g8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
         );
     }
 }
