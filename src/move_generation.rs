@@ -64,7 +64,6 @@ impl Board {
             };
             let source: Bitboard = mov.from().into();
             let attacks = self.attacks_for(me.opponent());
-            dbg!(through, source, attacks);
 
             if !((through | source) & attacks).is_empty() {
                 return false;
