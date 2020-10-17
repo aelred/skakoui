@@ -51,10 +51,11 @@ impl Board {
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
-        // TODO: this is a very inefficient way to confirm if in check
         let me = self.player();
 
-        let king_move = self.pieces()[mov.from()].map(Piece::piece_type) == Some(PieceType::King);
+        let my_king = Piece::new(me, PieceType::King);
+
+        let king_move = self.pieces()[mov.from()] == Some(my_king);
         let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
         if castling {
             let through = if mov.to().file() == File::KINGSIDE {
@@ -70,8 +71,11 @@ impl Board {
             }
         }
 
+        // TODO: can we avoid actually making the move?
         let pmov = self.make_move(mov);
-        let in_check = self.check(me);
+        let king_square = self.bitboard_piece(my_king).squares().next();
+        let attacks = self.attacks_for(me.opponent());
+        let in_check = king_square.map(|sq| attacks.get(sq)).unwrap_or(false);
         let captured_king = pmov.capture() == Some(PieceType::King);
         self.unmake_move(pmov);
         !(in_check || captured_king)
