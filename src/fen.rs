@@ -63,6 +63,9 @@ impl Board {
             if castling.contains('q') {
                 flags.set(Black.castle_queenside_flag());
             }
+            if castling == "-" {
+                flags.unset(White.castle_flags() | Black.castle_flags());
+            }
         }
 
         if let Some(ep) = fields.next().filter(|e| e != &"-") {
