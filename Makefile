@@ -15,7 +15,9 @@ test-all:
 	cargo test --benches --release
 
 bench:
-	cargo bench -- --output-format bencher
+	# Explicitly specify benchmarks because of a conflict between libtest and criterion
+	# https://bheisler.github.io/criterion.rs/book/faq.html#cargo-bench-gives-unrecognized-option-errors-for-valid-command-line-options
+	cargo bench --bench searcher --bench perft -- --output-format bencher
 
 build:
 	docker build --tag $(image) --tag $(tagged) .

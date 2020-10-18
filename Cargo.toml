@@ -38,16 +38,3 @@ harness = false
 [[bench]]
 name = "perft"
 harness = false
-
-# This bench = false stuff is because of a conflict between libtest and criterion
-# https://bheisler.github.io/criterion.rs/book/faq.html#cargo-bench-gives-unrecognized-option-errors-for-valid-command-line-options
-[lib]
-bench = false
-
-[[bin]]
-name = "cli"
-bench = false
-
-[[bin]]
-name = "uci"
-bench = false
