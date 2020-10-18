@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1603024065582,
+  "lastUpdate": 1603033119814,
   "repoUrl": "https://github.com/aelred/skakoui",
   "entries": {
     "Benchmark": [
@@ -71,6 +71,78 @@ window.BENCHMARK_DATA = {
             "name": "mate/in3",
             "value": 2356493433,
             "range": "± 102836733",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aelred717@gmail.com",
+            "name": "Felix Chapman",
+            "username": "aelred"
+          },
+          "committer": {
+            "email": "aelred717@gmail.com",
+            "name": "Felix Chapman",
+            "username": "aelred"
+          },
+          "distinct": true,
+          "id": "f3801c5dd875bf7cf1acca1b124809b76a6bf7d2",
+          "message": "Unset impossible en-passant flags",
+          "timestamp": "2020-10-18T15:53:58+01:00",
+          "tree_id": "90de18f85e21100c48cbfeb68fa2048c1b4be57f",
+          "url": "https://github.com/aelred/skakoui/commit/f3801c5dd875bf7cf1acca1b124809b76a6bf7d2"
+        },
+        "date": 1603033116827,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "perft_init/1",
+            "value": 4225,
+            "range": "± 210",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/2",
+            "value": 85850,
+            "range": "± 2263",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/3",
+            "value": 1881048,
+            "range": "± 64353",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/4",
+            "value": 42497002,
+            "range": "± 1465390",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_kiwipete/1",
+            "value": 8731,
+            "range": "± 463",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in1",
+            "value": 120400792,
+            "range": "± 3604612",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in2",
+            "value": 1822808462,
+            "range": "± 27471715",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in3",
+            "value": 2738195615,
+            "range": "± 38415135",
             "unit": "ns/iter"
           }
         ]
