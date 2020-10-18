@@ -43,6 +43,7 @@ jobs:
           output-file-path: output.txt
           github-token: ${{ secrets.GITHUB_TOKEN }}
           gh-pages-branch: criterion
+          benchmark-data-dir-path: .
           auto-push: true
           alert-threshold: '200%'
           fail-on-alert: true
