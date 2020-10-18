@@ -36,16 +36,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: make bench | tee output.txt
-      - uses: actions/upload-artifact@v2
-        with:
-          name: criterion
-          path: target/criterion
-      - uses: JamesIves/github-pages-deploy-action@3.6.2
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: criterion
-          FOLDER: target/criterion
-          CLEAN: false
       - uses: rhysd/github-action-benchmark@v1
         with:
           name: Benchmark
