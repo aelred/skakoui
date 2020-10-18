@@ -92,16 +92,9 @@ impl Board {
     }
 
     pub fn checkmate(&mut self) -> bool {
-        let me = self.player();
-        for mov in self.pseudo_legal_moves() {
-            let pmov = self.make_move(mov);
-            let check = self.check(me);
-            self.unmake_move(pmov);
-            if !check {
-                return false;
-            }
-        }
-        true
+        let in_check = self.check(self.player());
+        let mut no_legal_moves = || self.moves().next().is_none();
+        in_check && no_legal_moves()
     }
 
     pub fn attacks(&self) -> Bitboard {
