@@ -40,21 +40,29 @@ impl Board {
             pieces[square.rank().to_index() as usize][square.file().to_index() as usize]
         });
 
-        let mut unset_flags = 0;
-        // Remove any impossible castling options
+        // Remove any impossible flags
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::H1] != Some(Piece::WR) {
-            unset_flags |= White.castle_kingside_flag();
+            flags.unset(White.castle_kingside_flag());
         }
         if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::A1] != Some(Piece::WR) {
-            unset_flags |= White.castle_queenside_flag();
+            flags.unset(White.castle_queenside_flag());
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::H8] != Some(Piece::BR) {
-            unset_flags |= Black.castle_kingside_flag();
+            flags.unset(Black.castle_kingside_flag());
         }
         if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::A8] != Some(Piece::BR) {
-            unset_flags |= Black.castle_queenside_flag();
+            flags.unset(Black.castle_queenside_flag());
         }
-        flags.unset(unset_flags);
+        if let Some(file) = flags.en_passant_file() {
+            let opp = player.opponent();
+            let rank = opp.pawn_rank();
+            let pawn = Piece::new(opp, PieceType::Pawn);
+            let pawn_square = Square::new(file, rank + opp.multiplier() * 2);
+            let target_square = Square::new(file, rank + opp.multiplier());
+            if pieces[pawn_square] != Some(pawn) || pieces[target_square].is_some() {
+                flags.set_en_passant_file(None);
+            }
+        }
 
         Self::with_states(pieces, player, flags)
     }
@@ -718,7 +726,6 @@ pub mod tests {
         assert_eq!(board.en_passant_file(), None);
     }
 
-    #[ignore]
     #[test]
     fn when_making_an_en_passant_move_the_pawn_is_taken() {
         let mut board = fen("8/8/8/8/1p6/8/P7/8 w");
