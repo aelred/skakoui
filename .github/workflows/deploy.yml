@@ -35,12 +35,7 @@ jobs:
             ~/.cargo/git
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: dawidd6/action-download-artifact@v2
-        with:
-          workflow: deploy.yml
-          name: criterion
-          path: target/criterion
-      - run: make bench
+      - run: make bench | tee output.txt
       - uses: actions/upload-artifact@v2
         with:
           name: criterion
@@ -51,6 +46,16 @@ jobs:
           BRANCH: criterion
           FOLDER: target/criterion
           CLEAN: false
+      - uses: rhysd/github-action-benchmark@v1
+        with:
+          name: Benchmark
+          tool: 'cargo'
+          output-file-path: output.txt
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          gh-pages-branch: criterion
+          auto-push: true
+          alert-threshold: '200%'
+          fail-on-alert: true
 
   deploy:
     if: github.ref == 'refs/heads/master'

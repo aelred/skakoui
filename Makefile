@@ -15,7 +15,7 @@ test-all:
 	cargo test --benches --release
 
 bench:
-	cargo bench
+	cargo bench -- --output-format bencher
 
 build:
 	docker build --tag $(image) --tag $(tagged) .
