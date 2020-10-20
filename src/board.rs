@@ -22,7 +22,7 @@ pub struct Board {
     /// Count for each piece
     piece_count: PieceMap<u8>,
     /// Occupancy for white and black
-    occupancy_player: EnumMap<PlayerV, Bitboard>,
+    occupancy: EnumMap<PlayerV, Bitboard>,
     /// Castling rights
     flags: BoardFlags,
 }
@@ -92,7 +92,7 @@ impl Board {
             player: player.value(),
             pieces,
             piece_count,
-            occupancy_player,
+            occupancy: occupancy_player,
             flags,
         }
     }
@@ -121,14 +121,14 @@ impl Board {
 
         let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
-            self.occupancy_player[player.opponent()].reset(to);
+            self.occupancy[player.opponent()].reset(to);
             self.piece_count[captured_piece] -= 1;
             (Some(captured_piece.piece_type()), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             if let Some(captured_piece) = self.get(cap_square) {
                 self.bitboard_piece_mut(captured_piece).reset(cap_square);
-                self.occupancy_player[player.opponent()].reset(cap_square);
+                self.occupancy[player.opponent()].reset(cap_square);
                 self.pieces[cap_square] = None;
                 self.piece_count[captured_piece] -= 1;
                 (Some(captured_piece.piece_type()), true)
@@ -157,7 +157,7 @@ impl Board {
             self.pieces[to] = Some(piece);
         }
 
-        self.occupancy_player[player].move_bit(from, to);
+        self.occupancy[player].move_bit(from, to);
 
         fn castle_flags(player: impl Player, square: Square) -> u8 {
             if player.back_rank() == square.rank() {
@@ -207,7 +207,7 @@ impl Board {
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
                 self.bitboard_piece_mut(rook).move_bit(rook_from, rook_to);
-                self.occupancy_player[player].move_bit(rook_from, rook_to);
+                self.occupancy[player].move_bit(rook_from, rook_to);
             }
         }
 
@@ -266,7 +266,7 @@ impl Board {
 
             self.piece_count[captured_piece] += 1;
             self.bitboard_piece_mut(captured_piece).set(captured_square);
-            self.occupancy_player[opp].set(captured_square);
+            self.occupancy[opp].set(captured_square);
             self.pieces[captured_square] = Some(captured_piece);
         } else {
             self.pieces[to] = None;
@@ -286,7 +286,7 @@ impl Board {
 
         self.pieces[from] = Some(piece);
 
-        self.occupancy_player[player].move_bit(to, from);
+        self.occupancy[player].move_bit(to, from);
 
         let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
 
@@ -321,7 +321,7 @@ impl Board {
                 self.pieces[rook_from] = Some(rook);
                 self.pieces[rook_to] = None;
                 self.bitboard_piece_mut(rook).move_bit(rook_to, rook_from);
-                self.occupancy_player[player].move_bit(rook_to, rook_from);
+                self.occupancy[player].move_bit(rook_to, rook_from);
             }
         }
     }
@@ -343,13 +343,11 @@ impl Board {
     }
 
     pub fn occupancy(&self) -> Bitboard {
-        self.occupancy_player
-            .values()
-            .fold(bitboards::EMPTY, BitOr::bitor)
+        self.occupancy.values().fold(bitboards::EMPTY, BitOr::bitor)
     }
 
     pub fn occupancy_player(&self, player: impl Player) -> Bitboard {
-        self.occupancy_player[player.value()]
+        self.occupancy[player.value()]
     }
 
     pub fn flags(&self) -> BoardFlags {
@@ -824,7 +822,7 @@ pub mod tests {
                 }
 
                 let player_at_square = piece.map(Piece::player);
-                for (player, occupancy_player) in board.occupancy_player.iter() {
+                for (player, occupancy_player) in board.occupancy.iter() {
                     assert_eq!(
                         occupancy_player.get(square),
                         player_at_square == Some(player)
