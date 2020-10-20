@@ -23,8 +23,6 @@ pub struct Board {
     piece_count: PieceMap<u8>,
     /// Occupancy for white and black
     occupancy_player: EnumMap<PlayerV, Bitboard>,
-    /// Occupancy for all pieces
-    occupancy: Bitboard,
     /// Castling rights
     flags: BoardFlags,
 }
@@ -89,17 +87,12 @@ impl Board {
                 .fold(bitboards::EMPTY, BitOr::bitor)
         });
 
-        let occupancy = occupancy_player
-            .values()
-            .fold(bitboards::EMPTY, BitOr::bitor);
-
         Board {
             bitboards,
             player: player.value(),
             pieces,
             piece_count,
             occupancy_player,
-            occupancy,
             flags,
         }
     }
@@ -135,7 +128,6 @@ impl Board {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             if let Some(captured_piece) = self.get(cap_square) {
                 self.bitboard_piece_mut(captured_piece).reset(cap_square);
-                self.occupancy.reset(cap_square);
                 self.occupancy_player[player.opponent()].reset(cap_square);
                 self.pieces[cap_square] = None;
                 self.piece_count[captured_piece] -= 1;
@@ -165,8 +157,6 @@ impl Board {
             self.pieces[to] = Some(piece);
         }
 
-        self.occupancy.reset(from);
-        self.occupancy.set(to);
         self.occupancy_player[player].move_bit(from, to);
 
         fn castle_flags(player: impl Player, square: Square) -> u8 {
@@ -217,7 +207,6 @@ impl Board {
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
                 self.bitboard_piece_mut(rook).move_bit(rook_from, rook_to);
-                self.occupancy.move_bit(rook_from, rook_to);
                 self.occupancy_player[player].move_bit(rook_from, rook_to);
             }
         }
@@ -269,9 +258,7 @@ impl Board {
                     .en_passant_square()
                     .unwrap()
                     .shift_rank(opp.multiplier());
-                self.occupancy.reset(to);
                 self.pieces[to] = None;
-                self.occupancy.set(ep_square);
                 ep_square
             } else {
                 to
@@ -282,7 +269,6 @@ impl Board {
             self.occupancy_player[opp].set(captured_square);
             self.pieces[captured_square] = Some(captured_piece);
         } else {
-            self.occupancy.reset(to);
             self.pieces[to] = None;
         }
 
@@ -300,7 +286,6 @@ impl Board {
 
         self.pieces[from] = Some(piece);
 
-        self.occupancy.set(from);
         self.occupancy_player[player].move_bit(to, from);
 
         let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
@@ -336,7 +321,6 @@ impl Board {
                 self.pieces[rook_from] = Some(rook);
                 self.pieces[rook_to] = None;
                 self.bitboard_piece_mut(rook).move_bit(rook_to, rook_from);
-                self.occupancy.move_bit(rook_to, rook_from);
                 self.occupancy_player[player].move_bit(rook_to, rook_from);
             }
         }
@@ -359,7 +343,9 @@ impl Board {
     }
 
     pub fn occupancy(&self) -> Bitboard {
-        self.occupancy
+        self.occupancy_player
+            .values()
+            .fold(bitboards::EMPTY, BitOr::bitor)
     }
 
     pub fn occupancy_player(&self, player: impl Player) -> Bitboard {
@@ -836,8 +822,6 @@ pub mod tests {
                 if let Some(piece) = piece {
                     expected_piece_count[*piece] += 1;
                 }
-
-                assert_eq!(board.occupancy.get(square), piece.is_some());
 
                 let player_at_square = piece.map(Piece::player);
                 for (player, occupancy_player) in board.occupancy_player.iter() {
