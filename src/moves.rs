@@ -121,14 +121,21 @@ macro_rules! mov {
 pub struct PlayedMove {
     pub mov: Move,
     pub capture: Option<PieceType>,
+    pub en_passant_capture: bool,
     pub flags: BoardFlags,
 }
 
 impl PlayedMove {
-    pub fn new(mov: Move, capture: Option<PieceType>, flags: BoardFlags) -> Self {
+    pub fn new(
+        mov: Move,
+        capture: Option<PieceType>,
+        en_passant_capture: bool,
+        flags: BoardFlags,
+    ) -> Self {
         Self {
             mov,
             capture,
+            en_passant_capture,
             flags,
         }
     }

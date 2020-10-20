@@ -126,13 +126,25 @@ impl Board {
 
         let piece = self.get(from).unwrap();
 
-        let captured_piece_type = if let Some(captured_piece) = self.get(to) {
+        let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy_player[player.opponent()].reset(to);
             self.piece_count[captured_piece] -= 1;
-            Some(captured_piece.piece_type())
+            (Some(captured_piece.piece_type()), false)
+        } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
+            let cap_square = to.shift_rank(self.player.opponent().multiplier());
+            if let Some(captured_piece) = self.get(cap_square) {
+                self.bitboard_piece_mut(captured_piece).reset(cap_square);
+                self.occupancy.reset(cap_square);
+                self.occupancy_player[player.opponent()].reset(cap_square);
+                self.pieces[cap_square] = None;
+                self.piece_count[captured_piece] -= 1;
+                (Some(captured_piece.piece_type()), true)
+            } else {
+                (None, false)
+            }
         } else {
-            None
+            (None, false)
         };
 
         self.pieces[from] = None;
@@ -220,7 +232,7 @@ impl Board {
 
         self.player = self.player.opponent();
 
-        PlayedMove::new(mov, captured_piece_type, prev_flags)
+        PlayedMove::new(mov, captured_piece_type, en_passant_capture, prev_flags)
     }
 
     /// Undo a move on the board - opposite of [make_move]
@@ -228,6 +240,7 @@ impl Board {
         let PlayedMove {
             mov,
             capture,
+            en_passant_capture,
             flags,
         } = pmov;
 
@@ -244,13 +257,30 @@ impl Board {
         };
 
         self.flags = flags;
+        self.player = player;
 
         if let Some(captured_piece_type) = capture {
-            let captured_piece = Piece::new(player.opponent(), captured_piece_type);
-            self.bitboard_piece_mut(captured_piece).set(to);
-            self.occupancy_player[player.opponent()].set(to);
-            self.pieces[to] = Some(captured_piece);
+            let opp = player.opponent();
+
+            let captured_piece = Piece::new(opp, captured_piece_type);
+
+            let captured_square = if en_passant_capture {
+                let ep_square = self
+                    .en_passant_square()
+                    .unwrap()
+                    .shift_rank(opp.multiplier());
+                self.occupancy.reset(to);
+                self.pieces[to] = None;
+                self.occupancy.set(ep_square);
+                ep_square
+            } else {
+                to
+            };
+
             self.piece_count[captured_piece] += 1;
+            self.bitboard_piece_mut(captured_piece).set(captured_square);
+            self.occupancy_player[opp].set(captured_square);
+            self.pieces[captured_square] = Some(captured_piece);
         } else {
             self.occupancy.reset(to);
             self.pieces[to] = None;
@@ -272,8 +302,6 @@ impl Board {
 
         self.occupancy.set(from);
         self.occupancy_player[player].move_bit(to, from);
-
-        self.player = player;
 
         let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
 
@@ -344,6 +372,13 @@ impl Board {
 
     pub fn en_passant_file(&self) -> Option<File> {
         self.flags.en_passant_file()
+    }
+
+    pub fn en_passant_square(&self) -> Option<Square> {
+        let file = self.en_passant_file()?;
+        let player = self.player.opponent();
+        let rank = player.pawn_rank() + player.multiplier();
+        Some(Square::new(file, rank))
     }
 
     pub fn eval(&self) -> i32 {
@@ -736,6 +771,20 @@ pub mod tests {
         board.make_move(en_passant);
 
         let expected_board = fen("8/8/8/8/8/p7/8/8 w");
+        assert_eq!(board, expected_board);
+    }
+
+    #[test]
+    fn when_unmaking_an_en_passant_move_the_pawn_is_put_back() {
+        let mut board = fen("8/8/8/8/1p6/8/P7/8 w");
+
+        board.make_move(Move::new(Square::A2, Square::A4));
+
+        let en_passant = Move::new(Square::B4, Square::A3);
+        let pmov = board.make_move(en_passant);
+        board.unmake_move(pmov);
+
+        let expected_board = fen("8/8/8/8/Pp6/8/8/8 b - a3");
         assert_eq!(board, expected_board);
     }
 
