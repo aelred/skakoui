@@ -19,8 +19,6 @@ pub struct Board {
     player: PlayerV,
     /// Square-wise representation: lookup what piece is on a particular square
     pieces: SquareMap<Option<Piece>>,
-    /// Count for each piece
-    piece_count: PieceMap<u8>,
     /// Occupancy for white and black
     occupancy: EnumMap<PlayerV, Bitboard>,
     /// Castling rights
@@ -78,8 +76,6 @@ impl Board {
             }
         }
 
-        let piece_count = PieceMap::from(|piece| bitboards[piece].count());
-
         let occupancy_player = EnumMap::from(|player| {
             bitboards
                 .for_player(player)
@@ -91,7 +87,6 @@ impl Board {
             bitboards,
             player: player.value(),
             pieces,
-            piece_count,
             occupancy: occupancy_player,
             flags,
         }
@@ -122,7 +117,6 @@ impl Board {
         let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = self.get(to) {
             self.bitboard_piece_mut(captured_piece).reset(to);
             self.occupancy[player.opponent()].reset(to);
-            self.piece_count[captured_piece] -= 1;
             (Some(captured_piece.piece_type()), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
@@ -130,7 +124,6 @@ impl Board {
                 self.bitboard_piece_mut(captured_piece).reset(cap_square);
                 self.occupancy[player.opponent()].reset(cap_square);
                 self.pieces[cap_square] = None;
-                self.piece_count[captured_piece] -= 1;
                 (Some(captured_piece.piece_type()), true)
             } else {
                 (None, false)
@@ -149,8 +142,6 @@ impl Board {
             self.bitboard_piece_mut(promotion).set(to);
 
             self.pieces[to] = Some(promotion);
-            self.piece_count[piece] -= 1;
-            self.piece_count[promotion] += 1;
         } else {
             bitboard.move_bit(from, to);
 
@@ -264,7 +255,6 @@ impl Board {
                 to
             };
 
-            self.piece_count[captured_piece] += 1;
             self.bitboard_piece_mut(captured_piece).set(captured_square);
             self.occupancy[opp].set(captured_square);
             self.pieces[captured_square] = Some(captured_piece);
@@ -278,8 +268,6 @@ impl Board {
             let promotion = Piece::new(player, promotion_type);
             bitboard.set(from);
             self.bitboard_piece_mut(promotion).reset(to);
-            self.piece_count[piece] += 1;
-            self.piece_count[promotion] -= 1;
         } else {
             bitboard.move_bit(to, from);
         }
@@ -366,19 +354,23 @@ impl Board {
     }
 
     pub fn eval(&self) -> i32 {
-        let white_centric_score = 200 * (self.count(Piece::WK) - self.count(Piece::BK))
-            + 9 * (self.count(Piece::WQ) - self.count(Piece::BQ))
-            + 5 * (self.count(Piece::WR) - self.count(Piece::BR))
-            + 3 * (self.count(Piece::WB) - self.count(Piece::BB))
-            + 3 * (self.count(Piece::WN) - self.count(Piece::BN))
-            + (self.count(Piece::WP) - self.count(Piece::BP));
+        let white_centric_score = 200 * (self.ecount(Piece::WK) - self.ecount(Piece::BK))
+            + 9 * (self.ecount(Piece::WQ) - self.ecount(Piece::BQ))
+            + 5 * (self.ecount(Piece::WR) - self.ecount(Piece::BR))
+            + 3 * (self.ecount(Piece::WB) - self.ecount(Piece::BB))
+            + 3 * (self.ecount(Piece::WN) - self.ecount(Piece::BN))
+            + (self.ecount(Piece::WP) - self.ecount(Piece::BP));
 
         white_centric_score * self.player.multiplier() as i32 * 100
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
-    pub fn count(&self, piece: Piece) -> i32 {
-        i32::from(self.piece_count[piece])
+    fn ecount(&self, piece: Piece) -> i32 {
+        self.count(piece) as i32
+    }
+
+    pub fn count(&self, piece: Piece) -> u8 {
+        self.bitboard_piece(piece).count()
     }
 
     pub fn fen_url(&self) -> String {
@@ -829,8 +821,6 @@ pub mod tests {
                     );
                 }
             }
-
-            assert_eq!(board.piece_count, expected_piece_count);
         }
     }
 }
