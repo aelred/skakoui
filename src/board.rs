@@ -7,6 +7,7 @@ use enum_map::EnumMap;
 use serde::export::Formatter;
 use std::convert::TryFrom;
 use std::fmt;
+use std::ops::Index;
 use std::str::FromStr;
 
 /// Represents a game in-progress
@@ -86,11 +87,6 @@ impl Board {
         }
     }
 
-    /// Get the piece at a particular square
-    pub fn get(&self, square: Square) -> Option<Piece> {
-        self.pieces[square]
-    }
-
     /// Get whose turn it is
     pub fn player(&self) -> PlayerV {
         self.player
@@ -106,8 +102,8 @@ impl Board {
 
         self.assert_can_move(player, from, to);
 
-        let piece = self.get(from).unwrap();
-        let target = self.get(to);
+        let piece = self[from].unwrap();
+        let target = self[to];
 
         let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = target {
             let cap_type = captured_piece.piece_type();
@@ -116,7 +112,7 @@ impl Board {
             (Some(cap_type), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
-            if let Some(captured_piece) = self.get(cap_square) {
+            if let Some(captured_piece) = self[cap_square] {
                 let cap_type = captured_piece.piece_type();
                 self.piece_boards[cap_type].reset(cap_square);
                 self.player_boards[player.opponent()].reset(cap_square);
@@ -226,7 +222,7 @@ impl Board {
         let piece = if mov.promoting().is_some() {
             Piece::new(player, Pawn)
         } else {
-            self.get(to).unwrap()
+            self[to].unwrap()
         };
 
         self.flags = flags;
@@ -441,7 +437,7 @@ impl fmt::Display for Board {
             for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
 
-                let s = if let Some(piece) = self.get(square) {
+                let s = if let Some(piece) = self[square] {
                     piece.to_string()
                 } else {
                     let col = match square.color() {
@@ -472,6 +468,14 @@ impl TryFrom<&str> for Board {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Board::from_fen(value)
+    }
+}
+
+impl Index<Square> for Board {
+    type Output = Option<Piece>;
+
+    fn index(&self, square: Square) -> &Self::Output {
+        &self.pieces[square]
     }
 }
 
@@ -557,9 +561,9 @@ pub mod tests {
         let board = Board::default();
 
         // Check some known piece positions are right
-        assert_eq!(board.get(Square::A1), Some(Piece::WR));
-        assert_eq!(board.get(Square::A2), Some(Piece::WP));
-        assert_eq!(board.get(Square::E8), Some(Piece::BK));
+        assert_eq!(board[Square::A1], Some(Piece::WR));
+        assert_eq!(board[Square::A2], Some(Piece::WP));
+        assert_eq!(board[Square::E8], Some(Piece::BK));
     }
 
     #[test]
