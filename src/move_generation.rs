@@ -112,11 +112,10 @@ impl Board {
     }
 
     fn attacks_for_piece<P: Player, PT: PieceTypeT>(&self, piece: PieceT<P, PT>) -> Bitboard {
+        let pt = &piece.piece_type;
         let mut attacks = bitboards::EMPTY;
         for source in self.bitboard_piece(piece.value()).squares() {
-            attacks |= piece
-                .piece_type
-                .attacks(source, self.occupancy(), piece.player);
+            attacks |= pt.attacks(source, self.occupancy(), piece.player, self.flags());
         }
         attacks
     }
@@ -195,9 +194,9 @@ impl<P: Player> Movement for CapturingMoves<P> {
         piece_type: &impl PieceTypeT,
         source: Square,
         occupancy: Bitboard,
-        _: BoardFlags,
+        flags: BoardFlags,
     ) -> Bitboard {
-        piece_type.attacks(source, occupancy, self.0)
+        piece_type.attacks(source, occupancy, self.0, flags)
     }
 
     fn moves(&self, board: &Board) -> Self::Moves {

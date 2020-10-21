@@ -1,7 +1,7 @@
 use crate::{
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
-    Bitboard, Board, PieceType, Player, Square, SquareMap,
+    Bitboard, Board, BoardFlags, PieceType, Player, Square, SquareMap,
 };
 use lazy_static::lazy_static;
 
@@ -10,7 +10,7 @@ pub struct Knight;
 impl PieceTypeT for Knight {
     const PIECE_TYPE: PieceType = PieceType::Knight;
 
-    fn attacks(&self, source: Square, _: Bitboard, _: impl Player) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard, _: impl Player, _: BoardFlags) -> Bitboard {
         KNIGHT_MOVES[source]
     }
 }

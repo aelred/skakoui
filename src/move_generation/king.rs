@@ -11,7 +11,7 @@ pub struct King;
 impl PieceTypeT for King {
     const PIECE_TYPE: PieceType = PieceType::King;
 
-    fn attacks(&self, source: Square, _: Bitboard, _: impl Player) -> Bitboard {
+    fn attacks(&self, source: Square, _: Bitboard, _: impl Player, _: BoardFlags) -> Bitboard {
         KING_MOVES[source]
     }
 

@@ -328,15 +328,8 @@ impl Board {
         self.flags
     }
 
-    pub fn en_passant_file(&self) -> Option<File> {
-        self.flags.en_passant_file()
-    }
-
     pub fn en_passant_square(&self) -> Option<Square> {
-        let file = self.en_passant_file()?;
-        let player = self.player.opponent();
-        let rank = player.pawn_rank() + player.multiplier();
-        Some(Square::new(file, rank))
+        self.flags.en_passant_square(self.player)
     }
 
     pub fn eval(&self) -> i32 {
@@ -520,6 +513,13 @@ impl BoardFlags {
 
     pub fn unset(&mut self, mask: u8) {
         self.0 &= !mask;
+    }
+
+    pub fn en_passant_square(&self, player: impl Player) -> Option<Square> {
+        let file = self.en_passant_file()?;
+        let player = player.opponent();
+        let rank = player.pawn_rank() + player.multiplier();
+        Some(Square::new(file, rank))
     }
 
     pub fn en_passant_file(self) -> Option<File> {
@@ -720,15 +720,15 @@ pub mod tests {
     fn when_making_a_double_push_record_the_en_passant_file() {
         let mut board = Board::default();
         board.make_move(mov!(a2a4));
-        assert_eq!(board.en_passant_file(), Some(File::A));
+        assert_eq!(board.en_passant_square(), Some(Square::A3));
     }
 
     #[test]
     fn en_passant_file_is_unset_on_the_next_move() {
         let mut board = fen("k7/8/8/8/P7/8/8/K7 b - a3");
-        assert_eq!(board.en_passant_file(), Some(File::A));
+        assert_eq!(board.en_passant_square(), Some(Square::A3));
         board.make_move(mov!(a8b8));
-        assert_eq!(board.en_passant_file(), None);
+        assert_eq!(board.en_passant_square(), None);
     }
 
     #[test]

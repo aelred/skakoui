@@ -4,7 +4,7 @@ use crate::{
         AntiDiagonal, Diagonal, EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT,
     },
     move_generation::{AllMoves, CapturingMoves},
-    Bitboard, Board, PieceType, Player, Square,
+    Bitboard, Board, BoardFlags, PieceType, Player, Square,
 };
 
 #[derive(Default)]
@@ -12,7 +12,13 @@ pub struct Queen;
 impl PieceTypeT for Queen {
     const PIECE_TYPE: PieceType = PieceType::Queen;
 
-    fn attacks(&self, source: Square, occupancy: Bitboard, _: impl Player) -> Bitboard {
+    fn attacks(
+        &self,
+        source: Square,
+        occupancy: Bitboard,
+        _: impl Player,
+        _: BoardFlags,
+    ) -> Bitboard {
         NorthSouth.slide(source, occupancy)
             | EastWest.slide(source, occupancy)
             | Diagonal.slide(source, occupancy)

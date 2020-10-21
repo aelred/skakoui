@@ -9,8 +9,15 @@ pub struct Pawn;
 impl PieceTypeT for Pawn {
     const PIECE_TYPE: PieceType = PieceType::Pawn;
 
-    fn attacks(&self, source: Square, _: Bitboard, player: impl Player) -> Bitboard {
-        let (captures_east, captures_west) = capture_boards(source.into(), bitboards::FULL, player);
+    fn attacks(
+        &self,
+        source: Square,
+        _: Bitboard,
+        player: impl Player,
+        flags: BoardFlags,
+    ) -> Bitboard {
+        let (captures_east, captures_west) =
+            capture_boards(source.into(), bitboards::FULL, player, flags);
         captures_east | captures_west
     }
 
@@ -50,6 +57,7 @@ impl<P: Player> PawnMovesIter<P> {
         occupancy: Bitboard,
         opponent_occupancy: Bitboard,
         player: P,
+        flags: BoardFlags,
     ) -> Self {
         let free_spaces = !occupancy;
         let pawns_forward = player.advance_bitboard(sources);
@@ -61,7 +69,7 @@ impl<P: Player> PawnMovesIter<P> {
             player,
             pushes: pushes.squares(),
             double_pushes: double_pushes.squares(),
-            captures: PawnCapturesIter::new(sources, opponent_occupancy, player),
+            captures: PawnCapturesIter::new(sources, opponent_occupancy, player, flags),
         }
     }
 
@@ -69,7 +77,13 @@ impl<P: Player> PawnMovesIter<P> {
         let piece = Piece::new(player.value(), PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
-        Self::new(pawns, board.occupancy(), opponent_occupancy, player)
+        Self::new(
+            pawns,
+            board.occupancy(),
+            opponent_occupancy,
+            player,
+            board.flags(),
+        )
     }
 }
 
@@ -98,8 +112,8 @@ pub struct PawnCapturesIter<P> {
 }
 
 impl<P: Player> PawnCapturesIter<P> {
-    fn new(sources: Bitboard, occupancy: Bitboard, player: P) -> Self {
-        let (captures_east, captures_west) = capture_boards(sources, occupancy, player);
+    fn new(sources: Bitboard, occupancy: Bitboard, player: P, flags: BoardFlags) -> Self {
+        let (captures_east, captures_west) = capture_boards(sources, occupancy, player, flags);
 
         Self {
             player,
@@ -112,7 +126,7 @@ impl<P: Player> PawnCapturesIter<P> {
         let piece = Piece::new(player.value(), PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
-        Self::new(pawns, opponent_occupancy, player)
+        Self::new(pawns, opponent_occupancy, player, board.flags())
     }
 }
 
@@ -186,9 +200,13 @@ fn move_boards(
 
 fn capture_boards(
     sources: Bitboard,
-    targets: Bitboard,
+    mut targets: Bitboard,
     player: impl Player,
+    flags: BoardFlags,
 ) -> (Bitboard, Bitboard) {
+    if let Some(ep_square) = flags.en_passant_square(player) {
+        targets.set(ep_square);
+    }
     let pawns_forward = player.advance_bitboard(sources);
     (
         pawns_forward.shift_file_neg(1) & targets,
@@ -239,7 +257,6 @@ mod tests {
         assert_moves!(board, [a3a4]);
     }
 
-    #[ignore]
     #[test]
     fn pawn_can_take_another_pawn_en_passant_immediately_after_double_push() {
         let mut board = fen("8/8/8/8/1p6/1N6/P7/8 w");
@@ -247,7 +264,6 @@ mod tests {
         assert_moves!(board, [b4a3]);
     }
 
-    #[ignore]
     #[test]
     fn pawn_cannot_take_another_pawn_en_passant_in_other_situations() {
         let mut board = fen("8/8/8/8/1p6/PN6/8/8 w");
