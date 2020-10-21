@@ -8,7 +8,6 @@ mod move_generation;
 mod moves;
 pub mod pgn;
 mod piece;
-mod piece_map;
 mod player;
 mod rank;
 mod search;
@@ -23,7 +22,6 @@ pub use crate::{
     file::File,
     moves::{Move, PlayedMove},
     piece::{Piece, PieceType},
-    piece_map::PieceMap,
     player::{Black, Player, PlayerV, White},
     rank::{Rank, RankMap},
     search::Searcher,

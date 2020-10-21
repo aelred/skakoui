@@ -69,7 +69,7 @@ impl<P: Player> PawnMovesIter<P> {
         let piece = Piece::new(player.value(), PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
-        Self::new(*pawns, board.occupancy(), opponent_occupancy, player)
+        Self::new(pawns, board.occupancy(), opponent_occupancy, player)
     }
 }
 
@@ -112,7 +112,7 @@ impl<P: Player> PawnCapturesIter<P> {
         let piece = Piece::new(player.value(), PieceType::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
-        Self::new(*pawns, opponent_occupancy, player)
+        Self::new(pawns, opponent_occupancy, player)
     }
 }
 

@@ -1,26 +1,25 @@
 use crate::{
-    bitboards, moves::PlayedMove, Bitboard, Black, File, Move, Piece, PieceMap, PieceType,
-    PieceType::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
+    moves::PlayedMove, Bitboard, Black, File, Move, Piece, PieceType, PieceType::Pawn, Player,
+    PlayerV, Rank, Square, SquareColor, SquareMap, White,
 };
 use anyhow::Error;
 use enum_map::EnumMap;
 use serde::export::Formatter;
 use std::convert::TryFrom;
 use std::fmt;
-use std::ops::BitOr;
 use std::str::FromStr;
 
 /// Represents a game in-progress
 #[derive(Eq, PartialEq, Clone, Hash)]
 pub struct Board {
-    /// Bitboards for every piece
-    bitboards: PieceMap<Bitboard>,
     /// The player whose turn it is
     player: PlayerV,
     /// Square-wise representation: lookup what piece is on a particular square
     pieces: SquareMap<Option<Piece>>,
+    /// Occupancy for each piece type
+    piece_boards: EnumMap<PieceType, Bitboard>,
     /// Occupancy for white and black
-    occupancy: EnumMap<PlayerV, Bitboard>,
+    player_boards: EnumMap<PlayerV, Bitboard>,
     /// Castling rights
     flags: BoardFlags,
 }
@@ -68,26 +67,21 @@ impl Board {
         player: impl Player,
         flags: BoardFlags,
     ) -> Self {
-        let mut bitboards = PieceMap::from(|_| bitboards::EMPTY);
+        let mut piece_boards = EnumMap::<PieceType, Bitboard>::new();
+        let mut player_boards = EnumMap::<PlayerV, Bitboard>::new();
 
-        for (square, optional_piece) in pieces.iter() {
-            if let Some(piece) = optional_piece {
-                bitboards[*piece].set(square);
+        for (square, piece) in pieces.iter() {
+            if let Some(piece) = piece {
+                piece_boards[piece.piece_type()].set(square);
+                player_boards[piece.player()].set(square);
             }
         }
 
-        let occupancy_player = EnumMap::from(|player| {
-            bitboards
-                .for_player(player)
-                .values()
-                .fold(bitboards::EMPTY, BitOr::bitor)
-        });
-
         Board {
-            bitboards,
             player: player.value(),
             pieces,
-            occupancy: occupancy_player,
+            piece_boards,
+            player_boards,
             flags,
         }
     }
@@ -113,18 +107,21 @@ impl Board {
         self.assert_can_move(player, from, to);
 
         let piece = self.get(from).unwrap();
+        let target = self.get(to);
 
-        let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = self.get(to) {
-            self.bitboard_piece_mut(captured_piece).reset(to);
-            self.occupancy[player.opponent()].reset(to);
-            (Some(captured_piece.piece_type()), false)
+        let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = target {
+            let cap_type = captured_piece.piece_type();
+            self.piece_boards[cap_type].reset(to);
+            self.player_boards[player.opponent()].reset(to);
+            (Some(cap_type), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             if let Some(captured_piece) = self.get(cap_square) {
-                self.bitboard_piece_mut(captured_piece).reset(cap_square);
-                self.occupancy[player.opponent()].reset(cap_square);
+                let cap_type = captured_piece.piece_type();
+                self.piece_boards[cap_type].reset(cap_square);
+                self.player_boards[player.opponent()].reset(cap_square);
                 self.pieces[cap_square] = None;
-                (Some(captured_piece.piece_type()), true)
+                (Some(cap_type), true)
             } else {
                 (None, false)
             }
@@ -134,21 +131,17 @@ impl Board {
 
         self.pieces[from] = None;
 
-        let bitboard = self.bitboard_piece_mut(piece);
-
         if let Some(promotion_type) = mov.promoting() {
             let promotion = Piece::new(player, promotion_type);
-            bitboard.reset(from);
-            self.bitboard_piece_mut(promotion).set(to);
-
+            self.piece_boards[piece.piece_type()].reset(from);
+            self.piece_boards[promotion_type].set(to);
             self.pieces[to] = Some(promotion);
         } else {
-            bitboard.move_bit(from, to);
-
+            self.piece_boards[piece.piece_type()].move_bit(from, to);
             self.pieces[to] = Some(piece);
         }
 
-        self.occupancy[player].move_bit(from, to);
+        self.player_boards[player].move_bit(from, to);
 
         fn castle_flags(player: impl Player, square: Square) -> u8 {
             if player.back_rank() == square.rank() {
@@ -197,8 +190,8 @@ impl Board {
 
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
-                self.bitboard_piece_mut(rook).move_bit(rook_from, rook_to);
-                self.occupancy[player].move_bit(rook_from, rook_to);
+                self.piece_boards[PieceType::Rook].move_bit(rook_from, rook_to);
+                self.player_boards[player].move_bit(rook_from, rook_to);
             }
         }
 
@@ -239,6 +232,17 @@ impl Board {
         self.flags = flags;
         self.player = player;
 
+        if let Some(promotion_type) = mov.promoting() {
+            self.piece_boards[piece.piece_type()].set(from);
+            self.piece_boards[promotion_type].reset(to);
+        } else {
+            self.piece_boards[piece.piece_type()].move_bit(to, from);
+        }
+
+        self.pieces[from] = Some(piece);
+
+        self.player_boards[player].move_bit(to, from);
+
         if let Some(captured_piece_type) = capture {
             let opp = player.opponent();
 
@@ -255,26 +259,12 @@ impl Board {
                 to
             };
 
-            self.bitboard_piece_mut(captured_piece).set(captured_square);
-            self.occupancy[opp].set(captured_square);
+            self.piece_boards[captured_piece_type].set(captured_square);
+            self.player_boards[opp].set(captured_square);
             self.pieces[captured_square] = Some(captured_piece);
         } else {
             self.pieces[to] = None;
         }
-
-        let bitboard = self.bitboard_piece_mut(piece);
-
-        if let Some(promotion_type) = mov.promoting() {
-            let promotion = Piece::new(player, promotion_type);
-            bitboard.set(from);
-            self.bitboard_piece_mut(promotion).reset(to);
-        } else {
-            bitboard.move_bit(to, from);
-        }
-
-        self.pieces[from] = Some(piece);
-
-        self.occupancy[player].move_bit(to, from);
 
         let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
 
@@ -308,8 +298,8 @@ impl Board {
 
                 self.pieces[rook_from] = Some(rook);
                 self.pieces[rook_to] = None;
-                self.bitboard_piece_mut(rook).move_bit(rook_to, rook_from);
-                self.occupancy[player].move_bit(rook_to, rook_from);
+                self.piece_boards[PieceType::Rook].move_bit(rook_to, rook_from);
+                self.player_boards[player].move_bit(rook_to, rook_from);
             }
         }
     }
@@ -318,24 +308,24 @@ impl Board {
         &self.pieces
     }
 
-    pub fn bitboards(&self) -> &PieceMap<Bitboard> {
-        &self.bitboards
+    pub fn piece_boards(&self) -> &EnumMap<PieceType, Bitboard> {
+        &self.piece_boards
     }
 
-    pub fn bitboard_piece(&self, piece: Piece) -> &Bitboard {
-        &self.bitboards[piece]
+    pub fn player_boards(&self) -> &EnumMap<PlayerV, Bitboard> {
+        &self.player_boards
     }
 
-    fn bitboard_piece_mut(&mut self, piece: Piece) -> &mut Bitboard {
-        &mut self.bitboards[piece]
+    pub fn bitboard_piece(&self, piece: Piece) -> Bitboard {
+        self.player_boards[piece.player()] & self.piece_boards[piece.piece_type()]
     }
 
     pub fn occupancy(&self) -> Bitboard {
-        self.occupancy.values().fold(bitboards::EMPTY, BitOr::bitor)
+        self.player_boards[PlayerV::White] | self.player_boards[PlayerV::Black]
     }
 
     pub fn occupancy_player(&self, player: impl Player) -> Bitboard {
-        self.occupancy[player.value()]
+        self.player_boards[player.value()]
     }
 
     pub fn flags(&self) -> BoardFlags {
@@ -785,6 +775,11 @@ pub mod tests {
         }
 
         #[test]
+        fn arbitrary_boards_satisfy_invariants(board in arb_board()) {
+            assert_invariants(&board);
+        }
+
+        #[test]
         fn make_move_preserves_invariants((mut board, mov) in board_and_move(arb_board())) {
             board.make_move(mov);
             assert_invariants(&board);
@@ -800,26 +795,37 @@ pub mod tests {
 
     /// Check invariants for internal redundant board state (only enabled in debug).
     fn assert_invariants(board: &Board) {
-        if cfg!(debug_assertions) {
-            let mut expected_piece_count = PieceMap::from(|_| 0u8);
+        // Use `pieces` as the source-of-truth
+        for (square, piece) in board.pieces.iter() {
+            let pt_at_square = piece.map(Piece::piece_type);
+            let player_at_square = piece.map(Piece::player);
 
-            // Use `pieces` as the source-of-truth
-            for (square, piece) in board.pieces.iter() {
-                for (bb_piece, bitboard) in board.bitboards.iter() {
-                    assert_eq!(bitboard.get(square), *piece == Some(bb_piece));
-                }
+            for (bb_piece, piece_board) in board.piece_boards.iter() {
+                assert_eq!(
+                    piece_board.get(square),
+                    pt_at_square == Some(bb_piece),
+                    "Failure at {} for {}\n{}\nMeant to be {:?}, but {} is {}",
+                    square,
+                    bb_piece,
+                    piece_board,
+                    piece,
+                    square,
+                    piece_board.get(square)
+                );
+            }
 
-                if let Some(piece) = piece {
-                    expected_piece_count[*piece] += 1;
-                }
-
-                let player_at_square = piece.map(Piece::player);
-                for (player, occupancy_player) in board.occupancy.iter() {
-                    assert_eq!(
-                        occupancy_player.get(square),
-                        player_at_square == Some(player)
-                    );
-                }
+            for (player, player_board) in board.player_boards.iter() {
+                assert_eq!(
+                    player_board.get(square),
+                    player_at_square == Some(player),
+                    "Failure at {} for {}\n{}\nMeant to be {}, but {} is {}",
+                    square,
+                    player,
+                    player_board,
+                    player,
+                    square,
+                    player_board.get(square)
+                );
             }
         }
     }

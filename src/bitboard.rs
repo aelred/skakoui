@@ -11,7 +11,7 @@ use std::ops::BitXorAssign;
 use std::ops::Not;
 
 // TODO: it would be nice if bitboards were in the same order as FEN
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Bitboard(u64);
 
 impl Bitboard {

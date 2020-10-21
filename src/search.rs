@@ -28,7 +28,12 @@ macro_rules! log_search {
 
 impl Board {
     fn key(&self) -> Key {
-        (*self.bitboards(), self.player(), self.flags())
+        (
+            *self.piece_boards(),
+            *self.player_boards(),
+            self.player(),
+            self.flags(),
+        )
     }
 }
 
