@@ -55,7 +55,7 @@ impl Board {
 
         let my_king = Piece::new(me, PieceType::King);
 
-        let king_move = self.pieces()[mov.from()] == Some(my_king);
+        let king_move = self[mov.from()] == Some(my_king);
         let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
         if castling {
             let through = if mov.to().file() == File::KINGSIDE {

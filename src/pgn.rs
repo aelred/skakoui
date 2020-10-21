@@ -32,7 +32,7 @@ impl Algebraic {
                 target,
                 promoting,
             } => board.pseudo_legal_moves().find(|mov| {
-                if board.pieces()[mov.from()] != Some(Piece::new(board.player(), piece_type)) {
+                if board[mov.from()] != Some(Piece::new(board.player(), piece_type)) {
                     return false;
                 }
 

@@ -81,7 +81,7 @@ impl Board {
     pub fn to_fen(&self) -> String {
         let mut array: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
 
-        for (square, piece) in self.pieces().iter() {
+        for (square, piece) in self.iter() {
             array[square.rank().to_index() as usize][square.file().to_index() as usize] = *piece;
         }
 

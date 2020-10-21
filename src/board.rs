@@ -300,8 +300,8 @@ impl Board {
         }
     }
 
-    pub fn pieces(&self) -> &SquareMap<Option<Piece>> {
-        &self.pieces
+    pub fn iter(&self) -> impl Iterator<Item = (Square, &Option<Piece>)> {
+        self.pieces.iter()
     }
 
     pub fn piece_boards(&self) -> &EnumMap<PieceType, Bitboard> {

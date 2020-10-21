@@ -11,11 +11,7 @@ pub fn arb_player() -> impl Strategy<Value = PlayerV> {
 }
 
 pub fn all_pieces() -> Vec<Option<Piece>> {
-    Board::default()
-        .pieces()
-        .iter()
-        .map(|(_, piece)| *piece)
-        .collect()
+    Board::default().iter().map(|(_, piece)| *piece).collect()
 }
 
 pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
