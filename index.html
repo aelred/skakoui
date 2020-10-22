@@ -200,7 +200,9 @@
                     ticks: {
                       beginAtZero: true,
                       callback: function(value, index, values) {
-                        if (value >= 1_000_0000) {
+                        if (value >= 1_000_000_0000) {
+                          return value / 1_000_000_000 + "s";
+                        else if (value >= 1_000_0000) {
                           return value / 1_000_000 + "ms";
                         } else if (value >= 1_000) {
                           return value / 1_000 + "μs";
