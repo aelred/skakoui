@@ -13,6 +13,8 @@ pub trait Player: Sized + Copy {
     fn pawn_rank(self) -> Rank;
     fn castle_kingside_clear(self) -> Bitboard;
     fn castle_queenside_clear(self) -> Bitboard;
+    fn castle_kingside_through(self) -> Bitboard;
+    fn castle_queenside_through(self) -> Bitboard;
     fn castle_kingside_flag(self) -> u8;
     fn castle_queenside_flag(self) -> u8;
     fn castle_flags(self) -> u8 {
@@ -77,6 +79,22 @@ impl Player for PlayerV {
 
     fn castle_queenside_clear(self) -> Bitboard {
         const CLEAR: Bitboard = Bitboard::new(0b_00001110);
+        match self {
+            Self::White => CLEAR,
+            Self::Black => CLEAR.reverse(),
+        }
+    }
+
+    fn castle_kingside_through(self) -> Bitboard {
+        const CLEAR: Bitboard = Bitboard::new(0b_01110000);
+        match self {
+            Self::White => CLEAR,
+            Self::Black => CLEAR.reverse(),
+        }
+    }
+
+    fn castle_queenside_through(self) -> Bitboard {
+        const CLEAR: Bitboard = Bitboard::new(0b_00011100);
         match self {
             Self::White => CLEAR,
             Self::Black => CLEAR.reverse(),
@@ -163,6 +181,14 @@ impl<T: PlayerT> Player for T {
 
     fn castle_queenside_clear(self) -> Bitboard {
         Self::PLAYER.castle_queenside_clear()
+    }
+
+    fn castle_kingside_through(self) -> Bitboard {
+        Self::PLAYER.castle_kingside_through()
+    }
+
+    fn castle_queenside_through(self) -> Bitboard {
+        Self::PLAYER.castle_queenside_through()
     }
 
     fn castle_kingside_flag(self) -> u8 {

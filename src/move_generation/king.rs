@@ -126,4 +126,18 @@ mod tests {
             [e8g8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
         );
     }
+
+    #[test]
+    fn rook_can_castle_through_an_attacked_square() {
+        let mut board = fen("8/8/8/8/8/8/p6r/R3K2R w");
+        assert_moves!(
+            board,
+            [e1c1, e1g1, e1d1, e1f1, a1b1, a1c1, a1d1, a1a2, h1g1, h1f1, h1h2]
+        );
+        let mut board = fen("r3k2r/P6R/8/8/8/8/8/8 b");
+        assert_moves!(
+            board,
+            [e8c8, e8g8, e8d8, e8f8, a8b8, a8c8, a8d8, a8a7, h8g8, h8f8, h8h7]
+        );
+    }
 }

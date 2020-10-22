@@ -59,14 +59,13 @@ impl Board {
         let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
         if castling {
             let through = if mov.to().file() == File::KINGSIDE {
-                me.castle_kingside_clear()
+                me.castle_kingside_through()
             } else {
-                me.castle_queenside_clear()
+                me.castle_queenside_through()
             };
-            let source: Bitboard = mov.from().into();
             let attacks = self.attacks_for(me.opponent());
 
-            if !((through | source) & attacks).is_empty() {
+            if !(through & attacks).is_empty() {
                 return false;
             }
         }
