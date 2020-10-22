@@ -215,6 +215,8 @@ impl Board {
     }
 
     fn unmake_move_for(&mut self, pmov: PlayedMove, player: impl Player) {
+        debug_assert_eq!(player.value(), self.player.opponent());
+
         let PlayedMove {
             mov,
             capture,
