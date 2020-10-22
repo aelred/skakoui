@@ -201,7 +201,7 @@
                       beginAtZero: true,
                       callback: function(value, index, values) {
                         const tick = Math.min(...values.slice(0, -1));
-                        if (tick >= 100_000_0000) {
+                        if (tick >= 100_000_000) {
                           return value / 1_000_000_000 + "s";
                         } else if (tick >= 100_000) {
                           return value / 1_000_000 + "ms";
