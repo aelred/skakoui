@@ -12,7 +12,7 @@ fn number_of_moves_is_correct_for_initial_position(c: &mut Criterion) {
         "perft_init",
         c,
         Board::default(),
-        vec![20, 400, 8902, 197_281, 4_865_609, 119_060_324],
+        vec![20, 400, 8902, 197_281, 4_865_609],
     );
 }
 
@@ -23,7 +23,7 @@ fn number_of_moves_is_correct_for_kiwipete_position(c: &mut Criterion) {
         "perft_kiwipete",
         c,
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
-        vec![48, 2039, 97_862, 4_085_603, 193_690_690],
+        vec![48, 2039, 97_862, 4_085_603],
     );
 }
 
