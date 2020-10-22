@@ -177,7 +177,22 @@
                   label: name,
                   data: dataset.map(d => d.bench.value),
                   borderColor: color,
+                  fill: false
+                },
+                {
+                	label: "Upper",
+                  data: dataset.map(d => d.bench.value + parseInt(d.bench.range.substring(1))),
+                  fill: false,
+                  borderWidth: 0,
+                  radius: 0
+                },
+                {
+                	label: "Lower",
+                  data: dataset.map(d => d.bench.value - parseInt(d.bench.range.substring(1))),
                   backgroundColor: color + '60', // Add alpha for #rrggbbaa
+                  fill: 1,
+                  borderWidth: 0,
+                  radius: 0
                 }
               ],
             };
