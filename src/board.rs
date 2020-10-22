@@ -1,6 +1,6 @@
 use crate::{
-    moves::PlayedMove, Bitboard, Black, File, Move, Piece, PieceType, PieceType::Pawn, Player,
-    PlayerV, Rank, Square, SquareColor, SquareMap, White,
+    moves::PlayedMove, typed_player, Bitboard, Black, File, Move, Piece, PieceType,
+    PieceType::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
 };
 use anyhow::Error;
 use enum_map::EnumMap;
@@ -94,9 +94,14 @@ impl Board {
 
     /// Perform a move on the board, mutating the board
     pub fn make_move(&mut self, mov: Move) -> PlayedMove {
+        typed_player!(self.player, |p| self.make_move_for(mov, p))
+    }
+
+    fn make_move_for(&mut self, mov: Move, player: impl Player) -> PlayedMove {
+        debug_assert_eq!(player.value(), self.player);
+
         let prev_flags = self.flags;
 
-        let player = self.player();
         let from = mov.from();
         let to = mov.to();
 
@@ -108,14 +113,14 @@ impl Board {
         let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = target {
             let cap_type = captured_piece.piece_type();
             self.piece_boards[cap_type].reset(to);
-            self.player_boards[player.opponent()].reset(to);
+            self.player_boards[player.opponent().value()].reset(to);
             (Some(cap_type), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             if let Some(captured_piece) = self[cap_square] {
                 let cap_type = captured_piece.piece_type();
                 self.piece_boards[cap_type].reset(cap_square);
-                self.player_boards[player.opponent()].reset(cap_square);
+                self.player_boards[player.opponent().value()].reset(cap_square);
                 self.pieces[cap_square] = None;
                 (Some(cap_type), true)
             } else {
@@ -137,7 +142,7 @@ impl Board {
             self.pieces[to] = Some(piece);
         }
 
-        self.player_boards[player].move_bit(from, to);
+        self.player_boards[player.value()].move_bit(from, to);
 
         fn castle_flags(player: impl Player, square: Square) -> u8 {
             if player.back_rank() == square.rank() {
@@ -187,7 +192,7 @@ impl Board {
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
                 self.piece_boards[PieceType::Rook].move_bit(rook_from, rook_to);
-                self.player_boards[player].move_bit(rook_from, rook_to);
+                self.player_boards[player.value()].move_bit(rook_from, rook_to);
             }
         }
 
@@ -204,8 +209,12 @@ impl Board {
         PlayedMove::new(mov, captured_piece_type, en_passant_capture, prev_flags)
     }
 
-    /// Undo a move on the board - opposite of [make_move]
+    /// Perform a move on the board, mutating the board
     pub fn unmake_move(&mut self, pmov: PlayedMove) {
+        typed_player!(self.player.opponent(), |p| self.unmake_move_for(pmov, p))
+    }
+
+    fn unmake_move_for(&mut self, pmov: PlayedMove, player: impl Player) {
         let PlayedMove {
             mov,
             capture,
@@ -213,7 +222,6 @@ impl Board {
             flags,
         } = pmov;
 
-        let player = self.player().opponent();
         let from = mov.from();
         let to = mov.to();
 
@@ -226,7 +234,7 @@ impl Board {
         };
 
         self.flags = flags;
-        self.player = player;
+        self.player = player.value();
 
         if let Some(promotion_type) = mov.promoting() {
             self.piece_boards[piece.piece_type()].set(from);
@@ -237,7 +245,7 @@ impl Board {
 
         self.pieces[from] = Some(piece);
 
-        self.player_boards[player].move_bit(to, from);
+        self.player_boards[player.value()].move_bit(to, from);
 
         if let Some(captured_piece_type) = capture {
             let opp = player.opponent();
@@ -256,7 +264,7 @@ impl Board {
             };
 
             self.piece_boards[captured_piece_type].set(captured_square);
-            self.player_boards[opp].set(captured_square);
+            self.player_boards[opp.value()].set(captured_square);
             self.pieces[captured_square] = Some(captured_piece);
         } else {
             self.pieces[to] = None;
@@ -295,7 +303,7 @@ impl Board {
                 self.pieces[rook_from] = Some(rook);
                 self.pieces[rook_to] = None;
                 self.piece_boards[PieceType::Rook].move_bit(rook_to, rook_from);
-                self.player_boards[player].move_bit(rook_to, rook_from);
+                self.player_boards[player.value()].move_bit(rook_to, rook_from);
             }
         }
     }
