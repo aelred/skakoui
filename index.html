@@ -200,11 +200,12 @@
                     ticks: {
                       beginAtZero: true,
                       callback: function(value, index, values) {
-                        if (value >= 1_000_000_0000) {
+                        const tick = Math.min(...values.slice(0, -1));
+                        if (tick >= 1_000_000_0000) {
                           return value / 1_000_000_000 + "s";
-                        } else if (value >= 1_000_000) {
+                        } else if (tick >= 1_000_000) {
                           return value / 1_000_000 + "ms";
-                        } else if (value >= 1_000) {
+                        } else if (tick >= 1_000) {
                           return value / 1_000 + "μs";
                         } else {
                           return value + "ns";
