@@ -195,12 +195,18 @@
                   {
                     scaleLabel: {
                       display: true,
-                      labelString: dataset.length > 0 ? dataset[0].bench.unit : '',
+                      labelString: '/iter',
                     },
                     ticks: {
                       beginAtZero: true,
                       callback: function(value, index, values) {
-                        return value.toExponential();
+                        if (value >= 1_000_0000) {
+                          return value / 1_000_000 + "ms";
+                        } else if (value >= 1_000) {
+                          return value / 1_000 + "μs";
+                        } else {
+                          return value + "ns";
+                        }
                       }
                     }
                   }
