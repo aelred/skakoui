@@ -16,6 +16,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 struct UCI<W> {
     output: W,
+    board: Board,
+    ponder: Option<Move>,
     searcher: Searcher,
 }
 
@@ -23,8 +25,6 @@ impl<W: Write> UCI<W> {
     fn run(&mut self, input: impl BufRead) -> Result<(), std::io::Error> {
         let stderr = std::io::stderr();
         let mut stderr = stderr.lock();
-
-        let mut board = Board::default();
 
         for try_line in input.lines() {
             let line = try_line?;
@@ -47,11 +47,11 @@ impl<W: Write> UCI<W> {
                 "position" => {
                     if args.peek() == Some(&&"startpos") {
                         args.next();
-                        board = Board::default();
+                        self.board = Board::default();
                     } else if args.peek() == Some(&&"fen") {
                         args.next();
                         let fen = args.clone().take(6).collect::<Vec<&str>>().join(" ");
-                        board = Board::from_fen(fen).unwrap();
+                        self.board = Board::from_fen(fen).unwrap();
                         args.nth(5);
                     }
 
@@ -59,9 +59,15 @@ impl<W: Write> UCI<W> {
                         args.next();
                         for arg in args {
                             let mov = Move::from_str(arg).unwrap();
-                            board.make_move(mov);
+                            self.board.make_move(mov);
                         }
                     }
+                }
+                "ponderhit" => {
+                    if let Some(ponder) = self.ponder.take() {
+                        self.board.make_move(ponder);
+                    }
+                    self.go();
                 }
                 "go" => {
                     let mut movetime = None;
@@ -93,15 +99,15 @@ impl<W: Write> UCI<W> {
                         }
                     }
 
-                    self.searcher.go(&board, None);
+                    self.go();
 
                     if let Some(movetime) = movetime {
                         std::thread::sleep(movetime);
-                        self.stop(&mut board)?;
+                        self.stop()?;
                     }
 
                     if !ponder {
-                        let clock = match board.player() {
+                        let clock = match self.board.player() {
                             PlayerV::White => wtime,
                             PlayerV::Black => btime,
                         };
@@ -110,12 +116,12 @@ impl<W: Write> UCI<W> {
                             let max_wait = Duration::from_secs(5);
                             // Naively assume there's 40 moves to go in the game
                             std::thread::sleep((clock / 40).min(max_wait));
-                            self.stop(&mut board)?;
+                            self.stop()?;
                         }
                     }
                 }
                 "stop" => {
-                    self.stop(&mut board)?;
+                    self.stop()?;
                 }
                 _ => (), // Ignore unknown commands
             }
@@ -124,10 +130,14 @@ impl<W: Write> UCI<W> {
         Ok(())
     }
 
-    fn stop(&mut self, board: &mut Board) -> Result<(), std::io::Error> {
+    fn go(&mut self) {
+        self.searcher.go(&self.board, None);
+    }
+
+    fn stop(&mut self) -> Result<(), std::io::Error> {
         self.searcher.stop();
 
-        let pv = self.searcher.principal_variation(board);
+        let pv = self.searcher.principal_variation(&mut self.board);
         let pv_str = pv
             .iter()
             .map(|x| x.to_string())
@@ -136,13 +146,13 @@ impl<W: Write> UCI<W> {
         writeln!(self.output, "info pv {}", pv_str)?;
 
         let mov = pv.first();
-        let ponder = pv.get(1);
+        self.ponder = pv.get(1).copied();
         let mov_str = mov
             .map(|m| m.to_string())
             .unwrap_or_else(|| "0000".to_string());
 
         write!(self.output, "bestmove {}", mov_str)?;
-        if let Some(ponder) = ponder {
+        if let Some(ponder) = self.ponder {
             write!(self.output, " ponder {}", ponder)?;
         }
         writeln!(self.output)
@@ -152,6 +162,8 @@ impl<W: Write> UCI<W> {
 fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Error> {
     UCI {
         output,
+        board: Board::default(),
+        ponder: None,
         searcher: Searcher::default(),
     }
     .run(input)
