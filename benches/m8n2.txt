@@ -255,10 +255,9 @@ r4R2/1b2n1pp/p2Np1k1/1pn5/4pP1P/8/PPP1B1P1/2K4R w - - 1 0
 1. h5+ Kh6 2. Nf7#
 
 
-# TODO: tries to castle out of check
-# Heinz Helms vs Oscar Tenner, New York, 1942
-# r1bqk2r/bppp1ppp/8/PB2N3/3n4/B7/2PPQnPP/RN2K2R w KQkq - 1 0
-# 1. Nxd7+ Nxe2 2. Nf6#
+Heinz Helms vs Oscar Tenner, New York, 1942
+r1bqk2r/bppp1ppp/8/PB2N3/3n4/B7/2PPQnPP/RN2K2R w KQkq - 1 0
+1. Nxd7+ Nxe2 2. Nf6#
 
 
 Boris Ratner vs Alexander Konstantinopolsky, Moscow, 1945
@@ -591,10 +590,9 @@ Claudia Amura vs Carlos Bulcourf, Villa Ballester, 1996
 1. Rxg7+ Kxh5 2. Rg5#
 
 
-# TODO: tries to castle out of check
-# Ronald Bancod vs Richard Forster, Weilburg, 1996
-# r1b1k2r/1p2bppp/p3q3/1p2p1B1/8/3Q1N2/PPP2PPP/3R1RK1 w kq - 1 0
-# 1. Qd8+ Bxd8 2. Rxd8#
+Ronald Bancod vs Richard Forster, Weilburg, 1996
+r1b1k2r/1p2bppp/p3q3/1p2p1B1/8/3Q1N2/PPP2PPP/3R1RK1 w kq - 1 0
+1. Qd8+ Bxd8 2. Rxd8#
 
 
 Ferenc Berkes vs Diana Nemeth, Hungary, 1996
@@ -602,10 +600,9 @@ rn2k2r/pp2b2p/2p1Q1p1/5B2/1q3B2/8/PPP3PP/3RR2K w kq - 1 0
 1. Rd8+ Kxd8 2. Qc8#
 
 
-# TODO: tries to castle out of check
-# Georgios Efthimiou vs V Siametis, Mitilini, 1996
-# r1b1k2r/pp3ppp/2n1p3/6B1/2p1q3/Q7/PP2PPPP/3RKB1R w Kkq - 1 0
-# 1. Rd8+ Nxd8 2. Qe7#
+Georgios Efthimiou vs V Siametis, Mitilini, 1996
+r1b1k2r/pp3ppp/2n1p3/6B1/2p1q3/Q7/PP2PPPP/3RKB1R w Kkq - 1 0
+1. Rd8+ Nxd8 2. Qe7#
 
 
 Jindrich Kuba vs David Kanovsky, Svetla nad Sazavou, 1996
@@ -633,10 +630,9 @@ Alexander Riazantsev vs Artem Iljin, St. Petersburg, 1997
 1. Ng6+ R4xg6 2. Qxh7#
 
 
-# TODO: tries to castle out of check
-# Jonathan Rowson vs John Richardson, Staffordshire, 1997
-# 3rk2r/p1qn1pp1/1p2pb1p/7P/2Pp4/B1P1QP2/P1B1KP2/3R3R w k - 1 0
-# 1. Qxe6+ fxe6 2. Bg6#
+Jonathan Rowson vs John Richardson, Staffordshire, 1997
+3rk2r/p1qn1pp1/1p2pb1p/7P/2Pp4/B1P1QP2/P1B1KP2/3R3R w k - 1 0
+1. Qxe6+ fxe6 2. Bg6#
 
 
 Boris Spassky vs G Gilquin, Bastia, 1997
@@ -654,10 +650,9 @@ Emil Sutovsky vs Bogdan Grabarczyk, Koszalin, 1998
 1. Nh8+ Rxh8 2. Qg6#
 
 
-# TODO: tbh I have no idea why this fails
-# Veselin Topalov vs Garry Kasparov, Sofia, 1998
-# 8/p4pk1/6p1/3R4/3nqN1P/2Q3P1/5P2/3r1BK1 b - - 0 1
-# 1... Rxf1+ 2. Kxf1 Qh1#
+Veselin Topalov vs Garry Kasparov, Sofia, 1998
+8/p4pk1/6p1/3R4/3nqN1P/2Q3P1/5P2/3r1BK1 b - - 0 1
+1... Rxf1+ 2. Kxf1 Qh1#
 
 
 Etienne Bacrot vs Laurent Fressinet, Besancon, 1999
@@ -865,16 +860,14 @@ Rainer Polzin vs Alexander Motylev, Germany, 2008
 1... Qh1+ 2. Kxh1 Bf2#
 
 
-# TODO: requires an en-passant capture
-# Eltaj Safarli vs Bela Khotenashvili, Baku, 2008
-# 5r2/7p/3R4/p3pk2/1p2N2p/1P2BP2/6PK/4r3 w - - 1 0
-# 1. g4+ hxg3+ 2. Nxg3#
+Eltaj Safarli vs Bela Khotenashvili, Baku, 2008
+5r2/7p/3R4/p3pk2/1p2N2p/1P2BP2/6PK/4r3 w - - 1 0
+1. g4+ hxg3+ 2. Nxg3#
 
 
-# TODO: does something stupid, dunno why
-# Alexei Shirov vs Dmitry Andreikin, Sochi, 2008
-# 7r/3kbp1p/1Q3R2/3p3q/p2P3B/1P5K/P6P/8 w - - 1 0
-# 1. Qc6+ Kd8 2. Rd6#
+Alexei Shirov vs Dmitry Andreikin, Sochi, 2008
+7r/3kbp1p/1Q3R2/3p3q/p2P3B/1P5K/P6P/8 w - - 1 0
+1. Qc6+ Kd8 2. Rd6#
 
 
 Sanan Sjugirov vs Maxim Matlakov, St. Petersburg, 2008

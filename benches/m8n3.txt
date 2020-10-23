@@ -10,10 +10,9 @@ Madame de Remusat vs Napoleon I, Paris, 1802
 r1b1kb1r/pppp1ppp/5q2/4n3/3KP3/2N3PN/PPP4P/R1BQ1B1R b kq - 0 1
 1... Bc5+ 2. Kxc5 Qb6+ 3. Kd5 Qd6#
 
-# TODO: tries to castle out of check
-# William Evans vs Alexander MacDonnell, London, 1826
-# r3k2r/ppp2Npp/1b5n/4p2b/2B1P2q/BQP2P2/P5PP/RN5K w kq - 1 0
-# 1. Bb5+ c6 2. Qe6+ Qe7 3. Qxe7#
+William Evans vs Alexander MacDonnell, London, 1826
+r3k2r/ppp2Npp/1b5n/4p2b/2B1P2q/BQP2P2/P5PP/RN5K w kq - 1 0
+1. Bb5+ c6 2. Qe6+ Qe7 3. Qxe7#
 
 
 William Evans vs Alexander MacDonnell, London, 1829
@@ -121,10 +120,9 @@ Mikhail Chigorin vs Yakubovich, corr., 1879
 1. Qxh7+ Kxh7 2. Rh3+ Bh4 3. Rxh4#
 
 
-# TODO: tries to castle out of check
-# Joseph Blackburne vs Smith, Simul, 1882
-# r1nk3r/2b2ppp/p3bq2/3pN3/Q2P4/B1NB4/P4PPP/4R1K1 w - - 1 0
-# 1. Nc6+ Kd7 2. Na5+ Kd8 3. Nb7#
+Joseph Blackburne vs Smith, Simul, 1882
+r1nk3r/2b2ppp/p3bq2/3pN3/Q2P4/B1NB4/P4PPP/4R1K1 w - - 1 0
+1. Nc6+ Kd7 2. Na5+ Kd8 3. Nb7#
 
 
 Joseph Blackburne vs Wilhelm Steinitz, London, 1883
