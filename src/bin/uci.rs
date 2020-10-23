@@ -1,8 +1,10 @@
+use anyhow::anyhow;
 use skakoui::{Board, Move, PlayerV, Searcher};
 use std::error::Error;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
 use std::time::Duration;
+use Command::{Go, IsReady, PonderHit, Position, Quit, Stop};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdin = std::io::stdin();
@@ -23,82 +25,50 @@ struct UCI<W> {
 
 impl<W: Write> UCI<W> {
     fn run(&mut self, input: impl BufRead) -> Result<(), std::io::Error> {
-        let stderr = std::io::stderr();
-        let mut stderr = stderr.lock();
-
         for try_line in input.lines() {
             let line = try_line?;
-            writeln!(stderr, "{}", line)?;
-            let words: Vec<&str> = line.split_whitespace().collect();
-            let mut args = words.into_iter().peekable();
-            let command = args.next().unwrap();
+            eprintln!("{}", line);
+
+            let command = match line.parse::<Command>() {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("{}", e);
+                    continue;
+                }
+            };
 
             match command {
-                "uci" => {
+                Command::UCI => {
                     writeln!(self.output, "id name skakoui")?;
                     writeln!(self.output, "id author Felix Chapman")?;
                     writeln!(self.output, "option name Ponder type check default true")?;
                     writeln!(self.output, "uciok")?;
                 }
-                "isready" => {
+                IsReady => {
                     writeln!(self.output, "readyok")?;
                 }
-                "quit" => break,
-                "position" => {
-                    if args.peek() == Some(&&"startpos") {
-                        args.next();
-                        self.board = Board::default();
-                    } else if args.peek() == Some(&&"fen") {
-                        args.next();
-                        let fen = args.clone().take(6).collect::<Vec<&str>>().join(" ");
-                        self.board = Board::from_fen(fen).unwrap();
-                        args.nth(5);
+                Quit => break,
+                Position { board, moves } => {
+                    if let Some(board) = board {
+                        self.board = *board;
                     }
 
-                    if args.peek() == Some(&&"moves") {
-                        args.next();
-                        for arg in args {
-                            let mov = Move::from_str(arg).unwrap();
-                            self.board.make_move(mov);
-                        }
+                    for mov in moves {
+                        self.board.make_move(mov);
                     }
                 }
-                "ponderhit" => {
+                PonderHit => {
                     if let Some(ponder) = self.ponder.take() {
                         self.board.make_move(ponder);
                     }
                     self.go();
                 }
-                "go" => {
-                    let mut movetime = None;
-                    let mut wtime = None;
-                    let mut btime = None;
-                    let mut ponder = false;
-
-                    while let Some(arg) = args.next() {
-                        match arg {
-                            "movetime" => {
-                                movetime.replace(Duration::from_millis(
-                                    args.next().unwrap().parse::<u64>().unwrap(),
-                                ));
-                            }
-                            "wtime" => {
-                                wtime.replace(Duration::from_millis(
-                                    args.next().unwrap().parse::<u64>().unwrap(),
-                                ));
-                            }
-                            "btime" => {
-                                btime.replace(Duration::from_millis(
-                                    args.next().unwrap().parse::<u64>().unwrap(),
-                                ));
-                            }
-                            "ponder" => {
-                                ponder = true;
-                            }
-                            arg => writeln!(stderr, "Unrecognised arg: {}", arg)?,
-                        }
-                    }
-
+                Go {
+                    movetime,
+                    wtime,
+                    btime,
+                    ponder,
+                } => {
                     self.go();
 
                     if let Some(movetime) = movetime {
@@ -120,10 +90,9 @@ impl<W: Write> UCI<W> {
                         }
                     }
                 }
-                "stop" => {
+                Stop => {
                     self.stop()?;
                 }
-                _ => (), // Ignore unknown commands
             }
         }
 
@@ -157,6 +126,106 @@ impl<W: Write> UCI<W> {
         }
         writeln!(self.output)
     }
+}
+
+enum Command {
+    UCI,
+    IsReady,
+    Quit,
+    Position {
+        board: Option<Box<Board>>,
+        moves: Vec<Move>,
+    },
+    PonderHit,
+    Go {
+        movetime: Option<Duration>,
+        wtime: Option<Duration>,
+        btime: Option<Duration>,
+        ponder: bool,
+    },
+    Stop,
+}
+
+impl FromStr for Command {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut args = s.split_whitespace().peekable();
+        let command = args.next().ok_or_else(|| anyhow!("No command name"))?;
+
+        let command = match command {
+            "uci" => Command::UCI,
+            "isready" => IsReady,
+            "quit" => Quit,
+            "position" => {
+                let board = match args.peek() {
+                    Some(&"startpos") => {
+                        args.next();
+                        Some(Box::new(Board::default()))
+                    }
+                    Some(&"fen") => {
+                        args.next();
+                        let fen = args.clone().take(6).collect::<Vec<&str>>().join(" ");
+                        args.nth(5);
+                        Some(Box::new(Board::from_fen(fen)?))
+                    }
+                    _ => None,
+                };
+
+                let mut moves = vec![];
+
+                if args.peek() == Some(&&"moves") {
+                    args.next();
+                    for arg in args {
+                        moves.push(Move::from_str(arg)?);
+                    }
+                }
+
+                Position { board, moves }
+            }
+            "ponderhit" => PonderHit,
+            "go" => {
+                let mut movetime = None;
+                let mut wtime = None;
+                let mut btime = None;
+                let mut ponder = false;
+
+                while let Some(arg) = args.next() {
+                    match arg {
+                        "movetime" => {
+                            movetime.replace(read_duration(&mut args)?);
+                        }
+                        "wtime" => {
+                            wtime.replace(read_duration(&mut args)?);
+                        }
+                        "btime" => {
+                            btime.replace(read_duration(&mut args)?);
+                        }
+                        "ponder" => {
+                            ponder = true;
+                        }
+                        arg => eprintln!("Unrecognised arg: {}", arg),
+                    }
+                }
+
+                Go {
+                    movetime,
+                    wtime,
+                    btime,
+                    ponder,
+                }
+            }
+            "stop" => Stop,
+            _ => return Err(anyhow!("Unrecognised command {}", command)),
+        };
+
+        Ok(command)
+    }
+}
+
+fn read_duration<'a>(args: &mut impl Iterator<Item = &'a str>) -> Result<Duration, anyhow::Error> {
+    let value = args.next().ok_or_else(|| anyhow!("No argument value"))?;
+    Ok(Duration::from_millis(value.parse::<u64>()?))
 }
 
 fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Error> {

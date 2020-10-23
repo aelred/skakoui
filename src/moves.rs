@@ -1,5 +1,5 @@
 use crate::{BoardFlags, File, PieceType, Player, Square};
-use std::error::Error;
+use anyhow::{anyhow, Error};
 use std::fmt;
 use std::str::FromStr;
 
@@ -79,16 +79,16 @@ impl fmt::Display for Move {
 }
 
 impl FromStr for Move {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Box<dyn Error>> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let from = s
             .get(0..2)
-            .ok_or("couldn't index string")?
+            .ok_or_else(|| anyhow!("couldn't index string"))?
             .parse::<Square>()?;
         let to = s
             .get(2..4)
-            .ok_or("couldn't index string")?
+            .ok_or_else(|| anyhow!("couldn't index string"))?
             .parse::<Square>()?;
 
         let promoting = if let Some(promoting_str) = s.get(4..) {
