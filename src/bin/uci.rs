@@ -163,8 +163,7 @@ impl FromStr for Command {
                     }
                     Some(&"fen") => {
                         args.next();
-                        let fen = args.clone().take(6).collect::<Vec<&str>>().join(" ");
-                        args.nth(5);
+                        let fen = args.by_ref().take(6).collect::<Vec<&str>>().join(" ");
                         Some(Box::new(Board::from_fen(fen)?))
                     }
                     _ => None,
