@@ -1,10 +1,15 @@
 use anyhow::anyhow;
 use skakoui::{Board, Move, PlayerV, Searcher};
 use std::error::Error;
+use std::fmt;
 use std::io::{BufRead, BufReader, Write};
 use std::str::FromStr;
 use std::time::Duration;
 use Command::{Go, IsReady, PonderHit, Position, Quit, Stop};
+use Info::PV;
+use Message::{BestMove, ReadyOK, UCIOK};
+use OptionType::{Button, Check, Combo, Spin, String};
+use ID::{Author, Name};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let stdin = std::io::stdin();
@@ -39,13 +44,13 @@ impl<W: Write> UCI<W> {
 
             match command {
                 Command::UCI => {
-                    writeln!(self.output, "id name skakoui")?;
-                    writeln!(self.output, "id author Felix Chapman")?;
-                    writeln!(self.output, "option name Ponder type check default true")?;
-                    writeln!(self.output, "uciok")?;
+                    self.send(Message::ID(Name, "skakoui"))?;
+                    self.send(Message::ID(Author, "Felix Chapman"))?;
+                    self.send(Message::option("Ponder", Check, "true"))?;
+                    self.send(UCIOK)?;
                 }
                 IsReady => {
-                    writeln!(self.output, "readyok")?;
+                    self.send(ReadyOK)?;
                 }
                 Quit => break,
                 Position { board, moves } => {
@@ -99,32 +104,25 @@ impl<W: Write> UCI<W> {
         Ok(())
     }
 
+    fn send(&mut self, message: Message) -> Result<(), std::io::Error> {
+        writeln!(self.output, "{}", message)
+    }
+
     fn go(&mut self) {
         self.searcher.go(&self.board, None);
     }
 
     fn stop(&mut self) -> Result<(), std::io::Error> {
         self.searcher.stop();
-
         let pv = self.searcher.principal_variation(&mut self.board);
-        let pv_str = pv
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<String>>()
-            .join(" ");
-        writeln!(self.output, "info pv {}", pv_str)?;
+        let mov = pv.first().copied();
+        let ponder = pv.get(1).copied();
 
-        let mov = pv.first();
-        self.ponder = pv.get(1).copied();
-        let mov_str = mov
-            .map(|m| m.to_string())
-            .unwrap_or_else(|| "0000".to_string());
+        self.send(Message::Info(vec![PV(pv)]))?;
+        self.send(BestMove { mov, ponder })?;
 
-        write!(self.output, "bestmove {}", mov_str)?;
-        if let Some(ponder) = self.ponder {
-            write!(self.output, " ponder {}", ponder)?;
-        }
-        writeln!(self.output)
+        self.ponder = ponder;
+        Ok(())
     }
 }
 
@@ -220,6 +218,108 @@ impl FromStr for Command {
         };
 
         Ok(command)
+    }
+}
+
+enum Message<'a> {
+    ID(ID, &'a str),
+    UCIOK,
+    ReadyOK,
+    BestMove {
+        mov: Option<Move>,
+        ponder: Option<Move>,
+    },
+    Info(Vec<Info>),
+    Option {
+        name: &'a str,
+        typ: OptionType,
+        default: &'a str,
+    },
+}
+
+impl<'a> Message<'a> {
+    fn option(name: &'a str, typ: OptionType, default: &'a str) -> Self {
+        Message::Option { name, typ, default }
+    }
+}
+
+impl<'a> fmt::Display for Message<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Message::ID(id, value) => write!(f, "{} {}", id, value)?,
+            UCIOK => write!(f, "uciok")?,
+            ReadyOK => write!(f, "readyok")?,
+            BestMove { mov, ponder } => {
+                write!(f, "bestmove ")?;
+                match mov {
+                    None => write!(f, "0000"),
+                    Some(mov) => write!(f, "{}", mov),
+                }?;
+                if let Some(ponder) = ponder {
+                    write!(f, " {}", ponder)?;
+                }
+            }
+            Message::Info(info) => {
+                for i in info {
+                    write!(f, "{} ", i)?;
+                }
+            }
+            Message::Option { name, typ, default } => {
+                write!(f, "option name {} type {} default {}", name, typ, default)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+enum ID {
+    Name,
+    Author,
+}
+
+impl fmt::Display for ID {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Name => write!(f, "name"),
+            Author => write!(f, "author"),
+        }
+    }
+}
+
+enum Info {
+    PV(Vec<Move>),
+}
+
+impl fmt::Display for Info {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PV(moves) => {
+                for mov in moves {
+                    write!(f, "{} ", mov)?;
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+enum OptionType {
+    Check,
+    Spin,
+    Combo,
+    Button,
+    String,
+}
+
+impl fmt::Display for OptionType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Check => write!(f, "check"),
+            Spin => write!(f, "spin"),
+            Combo => write!(f, "combo"),
+            Button => write!(f, "button"),
+            String => write!(f, "string"),
+        }
     }
 }
 
