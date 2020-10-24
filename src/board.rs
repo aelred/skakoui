@@ -176,18 +176,8 @@ impl Board {
                 let rook_to = Square::new(rook_to_file, to.rank());
 
                 let rook = Piece::new(player, PieceType::Rook);
-                debug_assert_eq!(
-                    self.pieces[rook_from],
-                    Some(rook),
-                    "Expected {} at {}",
-                    rook,
-                    rook_from
-                );
-                debug_assert_eq!(
-                    self.pieces[rook_to], None,
-                    "Expected {} to be empty",
-                    rook_to
-                );
+                debug_assert_eq!(self.pieces[rook_from], Some(rook));
+                debug_assert_eq!(self.pieces[rook_to], None);
 
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
