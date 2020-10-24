@@ -6,6 +6,7 @@ mod fen;
 mod file;
 mod move_generation;
 mod moves;
+mod perft;
 pub mod pgn;
 mod piece;
 mod player;

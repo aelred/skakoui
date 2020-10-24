@@ -53,7 +53,7 @@ fn run_perft(
 }
 
 fn expect_moves(board: &mut Board, depth: usize, expected_moves: usize) {
-    let actual_moves = count_moves(board, depth);
+    let actual_moves = board.perft(depth);
     assert_eq!(
         expected_moves,
         actual_moves,
@@ -65,7 +65,7 @@ fn expect_moves(board: &mut Board, depth: usize, expected_moves: usize) {
             let mut move_counts = String::new();
             for mov in moves {
                 let pmov = board.make_move(mov);
-                let num_moves = count_moves(board, depth - 1);
+                let num_moves = board.perft(depth - 1);
                 move_counts.push_str(&format!("{}: {}\n", mov, num_moves));
                 board.unmake_move(pmov);
             }
@@ -73,27 +73,4 @@ fn expect_moves(board: &mut Board, depth: usize, expected_moves: usize) {
         },
         board
     );
-}
-
-fn count_moves(board: &mut Board, depth: usize) -> usize {
-    if depth == 0 {
-        return 1;
-    }
-
-    let mut count = 0;
-
-    let moves: Vec<Move> = board.moves().collect();
-
-    // Optimisation - skip making and un-making last moves
-    if depth == 1 {
-        return moves.len();
-    }
-
-    for mov in moves {
-        let pmov = board.make_move(mov);
-        count += count_moves(board, depth - 1);
-        board.unmake_move(pmov);
-    }
-
-    count
 }
