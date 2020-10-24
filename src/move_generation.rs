@@ -34,8 +34,7 @@ impl Board {
     }
 
     /// Lazy iterator of all pseudo-legal moves. Pseudo-legal means they ignore:
-    /// 1. Check
-    /// 2. King captures
+    /// 1. Moving into check
     /// 3. Castling through check
     pub fn pseudo_legal_moves_for(&self, player: impl Player) -> impl Iterator<Item = Move> {
         self.moves_of_type(AllMoves(player))
@@ -75,9 +74,8 @@ impl Board {
         let king_square = self.bitboard_piece(my_king).squares().next();
         let attacks = self.attacks_for(me.opponent());
         let in_check = king_square.map(|sq| attacks.get(sq)).unwrap_or(false);
-        let captured_king = pmov.capture() == Some(PieceType::King);
         self.unmake_move(pmov);
-        !(in_check || captured_king)
+        !in_check
     }
 
     pub fn check(&self, king_player: PlayerV) -> bool {
