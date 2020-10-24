@@ -4,7 +4,6 @@ use anyhow::anyhow;
 use std::borrow::Borrow;
 use std::fmt;
 use std::hash::Hash;
-use std::hash::Hasher;
 use std::ops::Index;
 use std::ops::IndexMut;
 use std::str::FromStr;
@@ -145,6 +144,7 @@ impl FromStr for Square {
     }
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct SquareMap<T>([T; 64]);
 
 impl<T> SquareMap<T> {
@@ -178,41 +178,6 @@ impl<T, S: Borrow<Square>> IndexMut<S> for SquareMap<T> {
         &mut self.0[square.borrow().to_index() as usize]
     }
 }
-
-impl<T: fmt::Debug> fmt::Debug for SquareMap<T> {
-    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        f.write_fmt(format_args!("SquareMap(["))?;
-        let mut str = "";
-        for item in self.0.iter() {
-            f.write_str(str)?;
-            item.fmt(f)?;
-            str = ", ";
-        }
-        f.write_str("])")
-    }
-}
-
-impl<T: Hash> Hash for SquareMap<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        for item in self.0.iter() {
-            item.hash(state);
-        }
-    }
-}
-
-impl<T: Copy> Clone for SquareMap<T> {
-    fn clone(&self) -> Self {
-        SquareMap(self.0)
-    }
-}
-
-impl<T: PartialEq> PartialEq for SquareMap<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0[..] == other.0[..]
-    }
-}
-
-impl<T: Eq> Eq for SquareMap<T> {}
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SquareColor {
