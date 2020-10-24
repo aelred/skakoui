@@ -45,13 +45,13 @@ impl<W: Write> UCI<W> {
 
             match command {
                 Command::UCI => {
-                    self.send(Message::ID(Name, "skakoui"))?;
-                    self.send(Message::ID(Author, "Felix Chapman"))?;
-                    self.send(Message::option("Ponder", Check, "true"))?;
-                    self.send(UCIOK)?;
+                    self.send(&Message::ID(Name, "skakoui"))?;
+                    self.send(&Message::ID(Author, "Felix Chapman"))?;
+                    self.send(&Message::option("Ponder", Check, "true"))?;
+                    self.send(&UCIOK)?;
                 }
                 IsReady => {
-                    self.send(ReadyOK)?;
+                    self.send(&ReadyOK)?;
                 }
                 Quit => break,
                 Position { board, moves } => {
@@ -109,7 +109,7 @@ impl<W: Write> UCI<W> {
         Ok(())
     }
 
-    fn send(&mut self, message: Message) -> Result<(), std::io::Error> {
+    fn send(&mut self, message: &Message) -> Result<(), std::io::Error> {
         writeln!(self.output, "{}", message)
     }
 
@@ -123,8 +123,8 @@ impl<W: Write> UCI<W> {
         let mov = pv.first().copied();
         let ponder = pv.get(1).copied();
 
-        self.send(Message::Info(vec![PV(pv)]))?;
-        self.send(BestMove { mov, ponder })?;
+        self.send(&Message::Info(vec![PV(pv)]))?;
+        self.send(&BestMove { mov, ponder })?;
 
         self.ponder = ponder;
         Ok(())

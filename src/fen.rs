@@ -79,6 +79,13 @@ impl Board {
     }
 
     pub fn to_fen(&self) -> String {
+        fn push_empty_count(fen: &mut String, empty_count: &mut i32) {
+            if *empty_count != 0 {
+                fen.push_str(&empty_count.to_string());
+                *empty_count = 0;
+            }
+        }
+
         let mut array: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
 
         for (square, piece) in self.iter() {
@@ -87,13 +94,6 @@ impl Board {
 
         let mut fen = String::new();
         let mut empty_count = 0;
-
-        fn push_empty_count(fen: &mut String, empty_count: &mut i32) {
-            if *empty_count != 0 {
-                fen.push_str(&empty_count.to_string());
-                *empty_count = 0;
-            }
-        }
 
         for rank in array.iter().rev() {
             if !fen.is_empty() {
@@ -167,7 +167,7 @@ impl PlayerV {
 }
 
 impl Piece {
-    pub fn to_fen(&self) -> String {
+    pub fn to_fen(self) -> String {
         let c = self.piece_type().to_fen();
         if self.player() == PlayerV::White {
             c.to_ascii_uppercase()

@@ -140,11 +140,11 @@ impl PlayedMove {
         }
     }
 
-    pub fn mov(&self) -> Move {
+    pub fn mov(self) -> Move {
         self.mov
     }
 
-    pub fn capture(&self) -> Option<PieceType> {
+    pub fn capture(self) -> Option<PieceType> {
         self.capture
     }
 }

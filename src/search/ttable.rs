@@ -23,7 +23,7 @@ impl TranspositionTable {
     }
 
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let hkey: u64 = self.hash_key(&key);
+        let hkey: u64 = hash_key(&key);
         let index = hkey as usize % self.table.len();
         let hnode = self.table[index].1.load(Relaxed);
         if self.table[index].0.load(Relaxed) ^ hnode == hkey {
@@ -34,17 +34,11 @@ impl TranspositionTable {
     }
 
     pub fn insert(&self, key: Key, node: Node) {
-        let hkey: u64 = self.hash_key(&key);
+        let hkey: u64 = hash_key(&key);
         let hnode: u64 = node.into();
         let index = hkey as usize % self.table.len();
         self.table[index].0.store(hkey ^ hnode, Relaxed);
         self.table[index].1.store(hnode, Relaxed);
-    }
-
-    fn hash_key(&self, key: &Key) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        key.hash(&mut hasher);
-        hasher.finish()
     }
 
     pub fn principal_variation(&self, board: &mut Board) -> Vec<Move> {
@@ -110,6 +104,12 @@ pub type Key = (
     PlayerV,
     BoardFlags,
 );
+
+fn hash_key(key: &Key) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    key.hash(&mut hasher);
+    hasher.finish()
+}
 
 #[derive(Debug, Copy, Clone, Serialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Node {

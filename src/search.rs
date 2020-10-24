@@ -369,7 +369,19 @@ impl<'a> ThreadSearcher<'a> {
 
         let moves: Vec<Move>;
 
-        if !self.board.check(player) {
+        if self.board.check(player) {
+            // We don't want to use the "standing pat" if we're in check, because it may well be
+            // that ANY move is worse than the current state.
+            log_search!(
+                self,
+                depth,
+                "quiesce: check, alpha={}, beta={}",
+                alpha,
+                beta
+            );
+            // When in check, assess all moves that get out of check, not just captures
+            moves = self.board.pseudo_legal_moves_for(player).collect();
+        } else {
             // "standing pat" is a heuristic based on current board state.
             // It's assumed that there is always some move that will improve our position, so we use
             // it as our lower-bound.
@@ -390,18 +402,6 @@ impl<'a> ThreadSearcher<'a> {
 
             alpha = alpha.max(stand_pat);
             moves = self.board.capturing_moves(player).collect();
-        } else {
-            // We don't want to use the "standing pat" if we're in check, because it may well be
-            // that ANY move is worse than the current state.
-            log_search!(
-                self,
-                depth,
-                "quiesce: check, alpha={}, beta={}",
-                alpha,
-                beta
-            );
-            // When in check, assess all moves that get out of check, not just captures
-            moves = self.board.pseudo_legal_moves_for(player).collect();
         }
 
         let mut no_legal_moves = true;

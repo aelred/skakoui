@@ -6,7 +6,7 @@ use std::fmt;
 use std::str::FromStr;
 
 /// A move in
-/// [Standard Algebraic Notation](https://en.wikipedia.org/wiki/Algebraic_notation_(chess).
+/// [Standard Algebraic Notation](https://en.wikipedia.org/wiki/Algebraic_notation_(chess)).
 #[derive(Copy, Clone)]
 pub enum Algebraic {
     Move {
@@ -111,10 +111,10 @@ impl FromStr for Algebraic {
                     return Ok(Self::CastleQueenside);
                 }
 
-                let piece_type = c
-                    .name("pt")
-                    .map(|m| m.as_str().parse::<PieceType>().unwrap())
-                    .unwrap_or(PieceType::Pawn);
+                let piece_type = match c.name("pt") {
+                    Some(m) => m.as_str().parse::<PieceType>().unwrap(),
+                    None => PieceType::Pawn,
+                };
                 let source_file = c.name("sf").map(|m| m.as_str().parse::<File>().unwrap());
                 let source_rank = c.name("sr").map(|m| m.as_str().parse::<Rank>().unwrap());
                 let capturing = c.name("cap").is_some();

@@ -80,11 +80,11 @@ impl Board {
 
     pub fn check(&self, king_player: impl Player) -> bool {
         let king = Piece::new(king_player, PieceType::King);
-        if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
-            self.pseudo_legal_moves_for(king_player.opponent())
-                .any(|mov| mov.to() == king_pos)
-        } else {
-            false
+        match self.bitboard_piece(king).squares().next() {
+            Some(king_pos) => self
+                .pseudo_legal_moves_for(king_player.opponent())
+                .any(|mov| mov.to() == king_pos),
+            None => false,
         }
     }
 
@@ -118,7 +118,7 @@ impl Board {
     }
 }
 
-pub trait Movement {
+pub trait Movement: Copy {
     type Moves: Iterator<Item = Move>;
 
     fn movement(
@@ -132,6 +132,7 @@ pub trait Movement {
     fn moves(&self, board: &Board) -> Self::Moves;
 }
 
+#[derive(Copy, Clone)]
 pub struct AllMoves<P>(P);
 
 impl<P: Player> Movement for AllMoves<P> {
@@ -173,6 +174,7 @@ impl<P: Player> Movement for AllMoves<P> {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct CapturingMoves<P>(P);
 
 impl<P: Player> Movement for CapturingMoves<P> {

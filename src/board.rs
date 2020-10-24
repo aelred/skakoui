@@ -98,6 +98,19 @@ impl Board {
     }
 
     fn make_move_for(&mut self, mov: Move, player: impl Player) -> PlayedMove {
+        fn castle_flags(player: impl Player, square: Square) -> u8 {
+            if player.back_rank() == square.rank() {
+                match square.file() {
+                    File::E => player.castle_flags(),
+                    File::H => player.castle_kingside_flag(),
+                    File::A => player.castle_queenside_flag(),
+                    _ => 0,
+                }
+            } else {
+                0
+            }
+        }
+
         debug_assert_eq!(player.value(), self.player);
 
         let prev_flags = self.flags;
@@ -117,14 +130,15 @@ impl Board {
             (Some(cap_type), false)
         } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
-            if let Some(captured_piece) = self[cap_square] {
-                let cap_type = captured_piece.piece_type();
-                self.piece_boards[cap_type].reset(cap_square);
-                self.player_boards[player.opponent().value()].reset(cap_square);
-                self.pieces[cap_square] = None;
-                (Some(cap_type), true)
-            } else {
-                (None, false)
+            match self[cap_square] {
+                Some(captured_piece) => {
+                    let cap_type = captured_piece.piece_type();
+                    self.piece_boards[cap_type].reset(cap_square);
+                    self.player_boards[player.opponent().value()].reset(cap_square);
+                    self.pieces[cap_square] = None;
+                    (Some(cap_type), true)
+                }
+                None => (None, false),
             }
         } else {
             (None, false)
@@ -143,19 +157,6 @@ impl Board {
         }
 
         self.player_boards[player.value()].move_bit(from, to);
-
-        fn castle_flags(player: impl Player, square: Square) -> u8 {
-            if player.back_rank() == square.rank() {
-                match square.file() {
-                    File::E => player.castle_flags(),
-                    File::H => player.castle_kingside_flag(),
-                    File::A => player.castle_queenside_flag(),
-                    _ => 0,
-                }
-            } else {
-                0
-            }
-        }
 
         let unset_flags = castle_flags(player, from) | castle_flags(player.opponent(), to);
         self.flags.unset(unset_flags);
@@ -430,14 +431,15 @@ impl fmt::Display for Board {
             for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
 
-                let s = if let Some(piece) = self[square] {
-                    piece.to_string()
-                } else {
-                    let col = match square.color() {
-                        SquareColor::White => " ",
-                        SquareColor::Black => "█",
-                    };
-                    col.to_string()
+                let s = match self[square] {
+                    Some(piece) => piece.to_string(),
+                    None => {
+                        let col = match square.color() {
+                            SquareColor::White => " ",
+                            SquareColor::Black => "█",
+                        };
+                        col.to_string()
+                    }
                 };
                 f.write_str(&s)?;
             }
@@ -515,7 +517,7 @@ impl BoardFlags {
         self.0 &= !mask;
     }
 
-    pub fn en_passant_square(&self, player: impl Player) -> Option<Square> {
+    pub fn en_passant_square(self, player: impl Player) -> Option<Square> {
         let file = self.en_passant_file()?;
         let player = player.opponent();
         let rank = player.pawn_rank() + player.multiplier();
