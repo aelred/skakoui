@@ -1,3 +1,4 @@
+use crate::Command::Perft;
 use anyhow::anyhow;
 use skakoui::{Board, Move, PlayerV, Searcher};
 use std::error::Error;
@@ -98,6 +99,10 @@ impl<W: Write> UCI<W> {
                 Stop => {
                     self.stop()?;
                 }
+                Perft(depth) => {
+                    let count = self.board.perft(depth);
+                    writeln!(self.output, "{}", count)?;
+                }
             }
         }
 
@@ -142,6 +147,7 @@ enum Command {
         ponder: bool,
     },
     Stop,
+    Perft(usize),
 }
 
 impl FromStr for Command {
@@ -149,7 +155,9 @@ impl FromStr for Command {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut args = s.split_whitespace().peekable();
-        let command = args.next().ok_or_else(|| anyhow!("No command name"))?;
+        let mut arg = |name| args.next().ok_or_else(|| anyhow!("Expected {}", name));
+
+        let command = arg("command name")?;
 
         let command = match command {
             "uci" => Command::UCI,
@@ -213,6 +221,7 @@ impl FromStr for Command {
                 }
             }
             "stop" => Stop,
+            "perft" => Perft(arg("depth")?.parse::<usize>()?),
             _ => return Err(anyhow!("Unrecognised command {}", command)),
         };
 
