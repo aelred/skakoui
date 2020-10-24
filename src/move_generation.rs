@@ -1,6 +1,6 @@
 use crate::{
     bitboards, typed_player, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, Player,
-    PlayerV, Square,
+    Square,
 };
 use piece_type::PieceTypeT;
 
@@ -78,7 +78,7 @@ impl Board {
         out_of_check
     }
 
-    pub fn check(&self, king_player: PlayerV) -> bool {
+    pub fn check(&self, king_player: impl Player) -> bool {
         let king = Piece::new(king_player, PieceType::King);
         if let Some(king_pos) = self.bitboard_piece(king).squares().next() {
             self.pseudo_legal_moves_for(king_player.opponent())

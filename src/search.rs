@@ -369,7 +369,7 @@ impl<'a> ThreadSearcher<'a> {
 
         let moves: Vec<Move>;
 
-        if !self.board.check(self.board.player()) {
+        if !self.board.check(player) {
             // "standing pat" is a heuristic based on current board state.
             // It's assumed that there is always some move that will improve our position, so we use
             // it as our lower-bound.
