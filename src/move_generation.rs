@@ -71,11 +71,11 @@ impl Board {
 
         // TODO: can we avoid actually making the move?
         let pmov = self.make_move(mov);
-        let king_square = self.bitboard_piece(my_king).squares().next();
+        let king_board = self.bitboard_piece(my_king);
         let attacks = self.attacks_for(me.opponent());
-        let in_check = king_square.map(|sq| attacks.get(sq)).unwrap_or(false);
+        let out_of_check = (king_board & attacks).is_empty();
         self.unmake_move(pmov);
-        !in_check
+        out_of_check
     }
 
     pub fn check(&self, king_player: PlayerV) -> bool {
