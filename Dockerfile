@@ -1,4 +1,4 @@
-FROM rust:1.46-alpine as skakoui-builder
+FROM rust:1.47-alpine as skakoui-builder
 RUN apk add musl-dev
 WORKDIR /usr/src/skakoui
 ENV USER docker
