@@ -223,7 +223,7 @@ type Chain6<K, Q, R, B, N, P> = Chain<Chain<Chain<Chain<Chain<K, Q>, R>, B>, N>,
 mod tests {
     use super::*;
     use crate::board::tests::fen;
-    use crate::{mov, White};
+    use crate::{bitboard, mov, White};
     use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 
@@ -298,9 +298,16 @@ mod tests {
     #[test]
     fn attacked_squares_are_all_squares_that_could_be_captured() {
         let board = fen("8/5P2/K7/8/8/2Q5/1R4BN/8 w");
-        let expect = Bitboard::new(
-            0b_11010111_01000111_00100110_00011111_01011110_11111011_01111111_10110110,
-        );
+        let expect = bitboard! {
+            X X X . X . X X
+            X X X . . . X .
+            . X X . . X . .
+            X X X X X . . .
+            . X X X X . X .
+            X X . X X X X X
+            X X X X X X X .
+            . X X . X X . X
+        };
         let attacks = board.attacks();
         assert_eq!(
             attacks, expect,

@@ -129,6 +129,12 @@ impl From<Square> for Bitboard {
     }
 }
 
+impl From<Bitboard> for u64 {
+    fn from(bitboard: Bitboard) -> Self {
+        bitboard.0
+    }
+}
+
 impl Not for Bitboard {
     type Output = Self;
 
@@ -189,23 +195,24 @@ impl BitXorAssign for Bitboard {
 
 impl fmt::Debug for Bitboard {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        write!(f, "Bitboard(0b")?;
+        writeln!(f, "bitboard! {{")?;
 
         for rank in Rank::VALUES.iter().rev() {
-            write!(f, "_")?;
-            for file in File::VALUES.iter().rev() {
+            write!(f, "\t")?;
+            for file in File::VALUES.iter() {
                 let square = Square::new(*file, *rank);
-                let char = if self.get(square) { '1' } else { '0' };
-                write!(f, "{}", char)?;
+                let char = if self.get(square) { 'X' } else { '.' };
+                write!(f, "{} ", char)?;
             }
+            writeln!(f)?;
         }
-        write!(f, ")")
+        writeln!(f, "}}")
     }
 }
 
 impl fmt::Display for Bitboard {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
-        let files_str: String = File::VALUES.iter().map(File::to_string).collect();
+        let files_str: String = File::VALUES.iter().map(|f| format!("{} ", f)).collect();
         f.write_fmt(format_args!("  {}\n", files_str))?;
 
         for rank in Rank::VALUES.iter().rev() {
@@ -213,13 +220,53 @@ impl fmt::Display for Bitboard {
             for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
 
-                f.write_str(if self.get(square) { "█" } else { " " })?;
+                f.write_str(if self.get(square) { "X " } else { ". " })?;
             }
-            f.write_fmt(format_args!(" {}\n", rank))?;
+            f.write_fmt(format_args!("{}\n", rank))?;
         }
 
         f.write_fmt(format_args!("  {}", files_str))
     }
+}
+
+/// Example usage:
+///
+/// ```
+/// use skakoui::bitboard;
+///
+/// bitboard! {
+///     . . . . . . . .
+///     . . . . . . . .
+///     . . X . . X . .
+///     . . . . . . . .
+///     . . . . . . . .
+///     . X . . . . X .
+///     . . X X X X . .
+///     . . . . . . . .
+/// };
+/// ```
+#[macro_export]
+macro_rules! bitboard {
+    ($($square:tt)*) => {
+    {
+        let mut bb = $crate::bitboards::EMPTY;
+        let mut square = $crate::Square::A8;
+        let bits = vec![$(stringify!($square)),*];
+
+        for bit in bits {
+            if bit != "." {
+                bb.set(square);
+            }
+            if (square.file() != $crate::File::H) {
+                square = square.shift_file(1);
+            } else if (square.rank() > $crate::Rank::_1){
+                square = $crate::Square::new($crate::File::A, square.rank() - 1);
+            }
+        }
+
+        bb
+        }
+    };
 }
 
 pub mod bitboards {
