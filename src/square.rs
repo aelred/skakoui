@@ -77,6 +77,10 @@ impl Square {
     pub const G8: Square = Square(62);
     pub const H8: Square = Square(63);
 
+    pub fn all() -> impl Iterator<Item = Self> {
+        (0..64).map(Square::from_index)
+    }
+
     pub fn new(file: File, rank: Rank) -> Self {
         let index = file.to_index() + rank.to_index() * 8;
         Self::from_index(index)

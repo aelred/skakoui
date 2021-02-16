@@ -7,6 +7,7 @@ use piece_type::PieceTypeT;
 mod bishop;
 mod king;
 mod knight;
+pub mod magic;
 mod pawn;
 mod piece_type;
 mod queen;
