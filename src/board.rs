@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::Error;
 use enum_map::EnumMap;
-use serde::export::Formatter;
+use std::fmt::Formatter;
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::Index;
