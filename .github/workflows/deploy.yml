@@ -47,6 +47,8 @@ jobs:
 
   deploy:
     if: github.ref == 'refs/heads/master'
+    env:
+      IMAGE: aelred/skakoui
     needs: test
     runs-on: ubuntu-latest
     steps:
@@ -66,5 +68,5 @@ jobs:
         with:
           push: true
           tags: ${{ env.IMAGE }}:${{ steps.prep.outputs.BUILD_ID }}
-          cache-from: aelred/skakoui-stages
-          cache-to: aelred/skakoui-stages
+          cache-from: ${{ env.IMAGE }}-stages
+          cache-to: ${{ env.IMAGE }}-stages
