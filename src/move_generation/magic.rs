@@ -1,44 +1,32 @@
-use super::piece_type::{AntiDiagonal, Diagonal, EastWest, NorthSouth, SlideDirection};
+use crate::move_generation::bishop::Bishop;
+use crate::move_generation::rook::Rook;
 use crate::{
     bitboards,
     bitboards::{ANTIDIAGONALS, DIAGONALS, FILES, RANKS},
     Bitboard, File, Rank, Square, SquareMap,
 };
-use anyhow::anyhow;
 use lazy_static::lazy_static;
-use std::str::FromStr;
+use std::ops::Deref;
 
 pub fn queen_moves(square: Square, occupancy: Bitboard) -> Bitboard {
     rook_moves(square, occupancy) | bishop_moves(square, occupancy)
 }
 
 pub fn rook_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    ROOK_ATTACKS[square][rook_index(square, occupancy)]
+    moves(Rook, square, occupancy)
 }
 
 pub fn bishop_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    BISHOP_ATTACKS[square][bishop_index(square, occupancy)]
+    moves(Bishop, square, occupancy)
 }
 
-fn rook_index(square: Square, occupancy: Bitboard) -> usize {
-    to_index(
-        ROOK_TARGETS[square],
-        occupancy,
-        ROOK_MAGICS[square],
-        ROOK_BITS[square],
-    )
+fn moves(piece: impl Magic + Copy, square: Square, occupancy: Bitboard) -> Bitboard {
+    piece.attacks(square)[index(piece, square, occupancy)]
 }
 
-fn bishop_index(square: Square, occupancy: Bitboard) -> usize {
-    to_index(
-        BISHOP_TARGETS[square],
-        occupancy,
-        BISHOP_MAGICS[square],
-        BISHOP_BITS[square],
-    )
-}
-
-fn to_index(targets: Bitboard, occupancy: Bitboard, magic: u64, index_bits: u8) -> usize {
+fn index(piece: impl Magic, square: Square, occupancy: Bitboard) -> usize {
+    let targets = piece.mask(square);
+    let (magic, index_bits) = piece.magic(square);
     transform(targets & occupancy, magic, index_bits)
 }
 
@@ -48,45 +36,50 @@ fn transform(occupied: Bitboard, magic: u64, index_bits: u8) -> usize {
         .wrapping_shr(64 - index_bits as u32)) as usize
 }
 
-#[derive(Copy, Clone)]
-pub enum MagicPiece {
-    Bishop,
-    Rook,
+pub trait Magic {
+    fn mask(&self, square: Square) -> Bitboard;
+    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000];
+    fn magic(&self, square: Square) -> (u64, u8);
+    fn calc_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard;
 }
 
-impl MagicPiece {
+impl Magic for Bishop {
     fn mask(&self, square: Square) -> Bitboard {
-        match self {
-            MagicPiece::Bishop => BISHOP_TARGETS[square],
-            MagicPiece::Rook => ROOK_TARGETS[square],
-        }
+        BISHOP_TARGETS[square]
+    }
+
+    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000] {
+        &BISHOP_ATTACKS[square]
+    }
+
+    fn magic(&self, square: Square) -> (u64, u8) {
+        (BISHOP_MAGICS[square], BISHOP_BITS[square])
     }
 
     fn calc_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard {
-        match self {
-            MagicPiece::Bishop => {
-                Diagonal.slide(square, occupancy) | AntiDiagonal.slide(square, occupancy)
-            }
-            MagicPiece::Rook => {
-                NorthSouth.slide(square, occupancy) | EastWest.slide(square, occupancy)
-            }
-        }
+        Diagonal.slide(square, occupancy) | AntiDiagonal.slide(square, occupancy)
     }
 }
 
-impl FromStr for MagicPiece {
-    type Err = anyhow::Error;
+impl Magic for Rook {
+    fn mask(&self, square: Square) -> Bitboard {
+        ROOK_TARGETS[square]
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "bishop" => Ok(MagicPiece::Bishop),
-            "rook" => Ok(MagicPiece::Rook),
-            s => Err(anyhow!("'{}' was not 'bishop' or 'rook'", s)),
-        }
+    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000] {
+        &ROOK_ATTACKS[square]
+    }
+
+    fn magic(&self, square: Square) -> (u64, u8) {
+        (ROOK_MAGICS[square], ROOK_BITS[square])
+    }
+
+    fn calc_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard {
+        NorthSouth.slide(square, occupancy) | EastWest.slide(square, occupancy)
     }
 }
 
-pub fn find_magic(piece: MagicPiece, square: Square, bits: Option<u8>, tries: u64) -> Option<u64> {
+pub fn find_magic(piece: impl Magic, square: Square, bits: Option<u8>, tries: u64) -> Option<u64> {
     let mask = piece.mask(square);
     let bits = bits.unwrap_or_else(|| piece.mask(square).count());
 
@@ -129,6 +122,58 @@ fn valid_magic(
     }
 
     true
+}
+
+trait SlideDirection: Sized {
+    fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>);
+
+    /// Slide a piece from the source square in the given direction.
+    fn slide(self, source: Square, occupancy: Bitboard) -> Bitboard {
+        let (positive_bitboard, negative_bitboard) = self.bitboards();
+        let pos_movement = positive_bitboard[source];
+        let mut blockers = pos_movement & occupancy;
+        // Set the last square so there is always a blocking square (no need to branch)
+        blockers.set(Square::H8);
+        let blocking_square = blockers.first_set();
+        let pos_movement = pos_movement ^ positive_bitboard[blocking_square];
+
+        let neg_movement = negative_bitboard[source];
+        let mut blockers = neg_movement & occupancy;
+        // Set the last square so there is always a blocking square (no need to branch)
+        blockers.set(Square::A1);
+        let blocking_square = blockers.last_set();
+        let neg_movement = neg_movement ^ negative_bitboard[blocking_square];
+
+        pos_movement | neg_movement
+    }
+}
+
+struct NorthSouth;
+impl SlideDirection for NorthSouth {
+    fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>) {
+        (&bitboards::NORTH, &bitboards::SOUTH)
+    }
+}
+
+struct EastWest;
+impl SlideDirection for EastWest {
+    fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>) {
+        (&bitboards::EAST, &bitboards::WEST)
+    }
+}
+
+struct Diagonal;
+impl SlideDirection for Diagonal {
+    fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>) {
+        (&bitboards::NORTH_EAST, &bitboards::SOUTH_WEST)
+    }
+}
+
+struct AntiDiagonal;
+impl SlideDirection for AntiDiagonal {
+    fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>) {
+        (&bitboards::NORTH_WEST, &bitboards::SOUTH_EAST)
+    }
 }
 
 const ROOK_MAGICS: SquareMap<u64> = SquareMap::new([
@@ -296,7 +341,7 @@ lazy_static! {
         SquareMap::from(|square| {
             let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
             for occupancy in ROOK_TARGETS[square].powerset() {
-                attacks[rook_index(square, occupancy)] = MagicPiece::Rook.calc_moves(square, occupancy);
+                attacks[index(Rook, square, occupancy)] = Rook.calc_moves(square, occupancy);
             }
             attacks
         });
@@ -306,7 +351,7 @@ lazy_static! {
         SquareMap::from(|square| {
             let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
             for occupancy in BISHOP_TARGETS[square].powerset() {
-                attacks[bishop_index(square, occupancy)] = MagicPiece::Bishop.calc_moves(square, occupancy);
+                attacks[index(Bishop, square, occupancy)] = Bishop.calc_moves(square, occupancy);
             }
             attacks
         });
@@ -350,7 +395,7 @@ mod tests {
             let occupancy = Bitboard::new(rand::random());
 
             for square in Square::all() {
-                let calculated = MagicPiece::Rook.calc_moves(square, occupancy);
+                let calculated = Rook.calc_moves(square, occupancy);
                 let magicked = rook_moves(square, occupancy);
                 assert_eq!(
                     calculated, magicked,
@@ -367,7 +412,7 @@ mod tests {
             let occupancy = Bitboard::new(rand::random());
 
             for square in Square::all() {
-                let calculated = MagicPiece::Bishop.calc_moves(square, occupancy);
+                let calculated = Bishop.calc_moves(square, occupancy);
                 let magicked = bishop_moves(square, occupancy);
                 assert_eq!(
                     calculated, magicked,

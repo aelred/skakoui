@@ -5,8 +5,9 @@ use crate::{
     Bitboard, Board, BoardFlags, PieceType, Player, Square,
 };
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Rook;
+
 impl PieceTypeT for Rook {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 

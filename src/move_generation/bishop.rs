@@ -5,7 +5,7 @@ use crate::{
     Bitboard, Board, BoardFlags, PieceType, Player, Square,
 };
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Bishop;
 
 impl PieceTypeT for Bishop {

@@ -1,11 +1,12 @@
-use skakoui::magic::MagicPiece;
-use skakoui::{magic, Square};
+use skakoui::magic::{Magic, MagicPiece};
+use skakoui::{magic, Bishop, Rook, Square};
+use std::borrow::Borrow;
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
 #[structopt(name = "magics", about = "Generate magic numbers")]
 struct Opt {
-    piece: MagicPiece,
+    piece: String,
     squares: Vec<Square>,
     #[structopt(long, short)]
     bits: Option<u8>,
@@ -22,12 +23,21 @@ fn main() {
         opt.squares
     };
 
-    let piece = opt.piece;
+    let bishop = match opt.piece.borrow() {
+        "bishop" => true,
+        "rook" => false,
+        s => panic!("Piece should be either 'bishop' or 'rook', not '{}'", s),
+    };
+
     let bits = opt.bits;
     let tries = opt.tries;
 
     for square in squares {
-        let result = magic::find_magic(piece, square, bits, tries);
+        let result = if bishop {
+            magic::find_magic(Bishop, square, bits, tries)
+        } else {
+            magic::find_magic(Rook, square, bits, tries)
+        };
         let magic = result.expect("Couldn't find a magic!");
         println!("{}: {:#x?}", square, magic);
     }
