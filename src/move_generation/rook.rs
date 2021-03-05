@@ -1,4 +1,4 @@
-use crate::magic;
+use crate::magic::Magic;
 use crate::{
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
@@ -18,7 +18,7 @@ impl PieceTypeT for Rook {
         _: impl Player,
         _: BoardFlags,
     ) -> Bitboard {
-        magic::rook_moves(source, occupancy)
+        Rook.magic_moves(source, occupancy)
     }
 }
 

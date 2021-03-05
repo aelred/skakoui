@@ -1,4 +1,4 @@
-use skakoui::magic::{Magic, MagicPiece};
+use skakoui::magic::Magic;
 use skakoui::{magic, Bishop, Rook, Square};
 use std::borrow::Borrow;
 use structopt::StructOpt;
@@ -34,9 +34,9 @@ fn main() {
 
     for square in squares {
         let result = if bishop {
-            magic::find_magic(Bishop, square, bits, tries)
+            Bishop.find_magic(square, bits, tries)
         } else {
-            magic::find_magic(Rook, square, bits, tries)
+            Rook.find_magic(square, bits, tries)
         };
         let magic = result.expect("Couldn't find a magic!");
         println!("{}: {:#x?}", square, magic);

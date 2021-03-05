@@ -1,8 +1,7 @@
-use crate::magic;
 use crate::{
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
-    Bitboard, Board, BoardFlags, PieceType, Player, Square,
+    Bishop, Bitboard, Board, BoardFlags, PieceType, Player, Rook, Square,
 };
 
 #[derive(Default)]
@@ -13,11 +12,11 @@ impl PieceTypeT for Queen {
     fn attacks(
         &self,
         source: Square,
-        occupancy: Bitboard,
-        _: impl Player,
-        _: BoardFlags,
+        occ: Bitboard,
+        player: impl Player,
+        flags: BoardFlags,
     ) -> Bitboard {
-        magic::queen_moves(source, occupancy)
+        Rook.attacks(source, occ, player, flags) | Bishop.attacks(source, occ, player, flags)
     }
 }
 

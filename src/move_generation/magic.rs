@@ -6,39 +6,49 @@ use crate::{
     Bitboard, File, Rank, Square, SquareMap,
 };
 use lazy_static::lazy_static;
-use std::ops::Deref;
-
-pub fn queen_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    rook_moves(square, occupancy) | bishop_moves(square, occupancy)
-}
 
 pub fn rook_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    moves(Rook, square, occupancy)
+    Rook.magic_moves(square, occupancy)
 }
 
 pub fn bishop_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    moves(Bishop, square, occupancy)
-}
-
-fn moves(piece: impl Magic + Copy, square: Square, occupancy: Bitboard) -> Bitboard {
-    piece.attacks(square)[index(piece, square, occupancy)]
-}
-
-fn index(piece: impl Magic, square: Square, occupancy: Bitboard) -> usize {
-    let targets = piece.mask(square);
-    let (magic, index_bits) = piece.magic(square);
-    transform(targets & occupancy, magic, index_bits)
-}
-
-fn transform(occupied: Bitboard, magic: u64, index_bits: u8) -> usize {
-    (u64::from(occupied)
-        .wrapping_mul(magic)
-        .wrapping_shr(64 - index_bits as u32)) as usize
+    Bishop.magic_moves(square, occupancy)
 }
 
 pub trait Magic {
+    fn magic_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard {
+        self.attacks_array(square)[self.index(square, occupancy)]
+    }
+
+    fn index(&self, square: Square, occupancy: Bitboard) -> usize {
+        let targets = self.mask(square);
+        let (magic, index_bits) = self.magic(square);
+        transform(targets & occupancy, magic, index_bits)
+    }
+
+    fn find_magic(&self, square: Square, bits: Option<u8>, tries: u64) -> Option<u64> {
+        let mask = self.mask(square);
+        let bits = bits.unwrap_or_else(|| mask.count());
+
+        let occupancy_moves: Vec<(Bitboard, Bitboard)> = mask
+            .powerset()
+            .map(|occupancy| (occupancy, self.calc_moves(square, occupancy)))
+            .collect();
+
+        for _ in 0..tries {
+            // Small number of zeroes -> better magics
+            let magic = rand::random::<u64>() & rand::random::<u64>() & rand::random::<u64>();
+
+            if valid_magic(magic, mask, &occupancy_moves, bits) {
+                return Some(magic);
+            }
+        }
+
+        None
+    }
+
     fn mask(&self, square: Square) -> Bitboard;
-    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000];
+    fn attacks_array(&self, square: Square) -> &[Bitboard; 0x10000];
     fn magic(&self, square: Square) -> (u64, u8);
     fn calc_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard;
 }
@@ -48,7 +58,7 @@ impl Magic for Bishop {
         BISHOP_TARGETS[square]
     }
 
-    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000] {
+    fn attacks_array(&self, square: Square) -> &[Bitboard; 0x10000] {
         &BISHOP_ATTACKS[square]
     }
 
@@ -66,7 +76,7 @@ impl Magic for Rook {
         ROOK_TARGETS[square]
     }
 
-    fn attacks(&self, square: Square) -> &[Bitboard; 0x10000] {
+    fn attacks_array(&self, square: Square) -> &[Bitboard; 0x10000] {
         &ROOK_ATTACKS[square]
     }
 
@@ -79,25 +89,10 @@ impl Magic for Rook {
     }
 }
 
-pub fn find_magic(piece: impl Magic, square: Square, bits: Option<u8>, tries: u64) -> Option<u64> {
-    let mask = piece.mask(square);
-    let bits = bits.unwrap_or_else(|| piece.mask(square).count());
-
-    let occupancy_moves: Vec<(Bitboard, Bitboard)> = mask
-        .powerset()
-        .map(|occupancy| (occupancy, piece.calc_moves(square, occupancy)))
-        .collect();
-
-    for _ in 0..tries {
-        // Small number of zeroes -> better magics
-        let magic = rand::random::<u64>() & rand::random::<u64>() & rand::random::<u64>();
-
-        if valid_magic(magic, mask, &occupancy_moves, bits) {
-            return Some(magic);
-        }
-    }
-
-    None
+fn transform(occupied: Bitboard, magic: u64, index_bits: u8) -> usize {
+    (u64::from(occupied)
+        .wrapping_mul(magic)
+        .wrapping_shr(64 - index_bits as u32)) as usize
 }
 
 fn valid_magic(
@@ -124,11 +119,11 @@ fn valid_magic(
     true
 }
 
-trait SlideDirection: Sized {
+trait SlideDirection {
     fn bitboards(&self) -> (&SquareMap<Bitboard>, &SquareMap<Bitboard>);
 
     /// Slide a piece from the source square in the given direction.
-    fn slide(self, source: Square, occupancy: Bitboard) -> Bitboard {
+    fn slide(&self, source: Square, occupancy: Bitboard) -> Bitboard {
         let (positive_bitboard, negative_bitboard) = self.bitboards();
         let pos_movement = positive_bitboard[source];
         let mut blockers = pos_movement & occupancy;
@@ -340,8 +335,8 @@ lazy_static! {
     static ref ROOK_ATTACKS: SquareMap<Box<[Bitboard; 0x10000]>> =
         SquareMap::from(|square| {
             let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
-            for occupancy in ROOK_TARGETS[square].powerset() {
-                attacks[index(Rook, square, occupancy)] = Rook.calc_moves(square, occupancy);
+            for occupancy in Rook.mask(square).powerset() {
+                attacks[Rook.index(square, occupancy)] = Rook.calc_moves(square, occupancy);
             }
             attacks
         });
@@ -350,8 +345,8 @@ lazy_static! {
     static ref BISHOP_ATTACKS: SquareMap<Box<[Bitboard; 0x10000]>> =
         SquareMap::from(|square| {
             let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
-            for occupancy in BISHOP_TARGETS[square].powerset() {
-                attacks[index(Bishop, square, occupancy)] = Bishop.calc_moves(square, occupancy);
+            for occupancy in Bishop.mask(square).powerset() {
+                attacks[Bishop.index(square, occupancy)] = Bishop.calc_moves(square, occupancy);
             }
             attacks
         });

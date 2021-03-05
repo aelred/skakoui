@@ -1,5 +1,5 @@
+use crate::magic::Magic;
 use crate::{
-    magic,
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, BoardFlags, PieceType, Player, Square,
@@ -18,7 +18,7 @@ impl PieceTypeT for Bishop {
         _: impl Player,
         _: BoardFlags,
     ) -> Bitboard {
-        magic::bishop_moves(source, occupancy)
+        Bishop.magic_moves(source, occupancy)
     }
 }
 
