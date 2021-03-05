@@ -1,12 +1,13 @@
-use crate::move_generation::piece_type::SlideDirection;
+use crate::magic::Magic;
 use crate::{
-    move_generation::piece_type::{EastWest, MovesIter, NorthSouth, PieceT, PieceTypeT},
+    move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, BoardFlags, PieceType, Player, Square,
 };
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Rook;
+
 impl PieceTypeT for Rook {
     const PIECE_TYPE: PieceType = PieceType::Rook;
 
@@ -17,7 +18,7 @@ impl PieceTypeT for Rook {
         _: impl Player,
         _: BoardFlags,
     ) -> Bitboard {
-        NorthSouth.slide(source, occupancy) | EastWest.slide(source, occupancy)
+        Rook.magic_moves(source, occupancy)
     }
 }
 

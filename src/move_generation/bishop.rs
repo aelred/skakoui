@@ -1,11 +1,11 @@
-use crate::move_generation::piece_type::SlideDirection;
+use crate::magic::Magic;
 use crate::{
-    move_generation::piece_type::{AntiDiagonal, Diagonal, MovesIter, PieceT, PieceTypeT},
+    move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, BoardFlags, PieceType, Player, Square,
 };
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Bishop;
 
 impl PieceTypeT for Bishop {
@@ -18,7 +18,7 @@ impl PieceTypeT for Bishop {
         _: impl Player,
         _: BoardFlags,
     ) -> Bitboard {
-        Diagonal.slide(source, occupancy) | AntiDiagonal.slide(source, occupancy)
+        Bishop.magic_moves(source, occupancy)
     }
 }
 

@@ -21,6 +21,7 @@ pub use crate::{
     bitboard::{bitboards, Bitboard},
     board::{Board, BoardFlags},
     file::File,
+    move_generation::{magic, Bishop, King, Knight, Pawn, Queen, Rook},
     moves::{Move, PlayedMove},
     piece::{Piece, PieceType},
     player::{Black, Player, PlayerV, White},

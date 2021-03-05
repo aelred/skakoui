@@ -101,6 +101,25 @@ impl Bitboard {
     pub const fn is_empty(self) -> bool {
         self.0 == 0
     }
+
+    pub fn powerset(self) -> impl Iterator<Item = Bitboard> {
+        self.proper_powerset().chain(std::iter::once(self))
+    }
+
+    pub fn proper_powerset(self) -> impl Iterator<Item = Bitboard> {
+        let mut x = 0u64;
+
+        // idk how this works, but it does
+        std::iter::from_fn(move || {
+            let result = x;
+            x = x.wrapping_sub(self.0) & self.0;
+            if x != 0 {
+                Some(Bitboard(result))
+            } else {
+                None
+            }
+        })
+    }
 }
 
 pub struct SquareIterator(Bitboard);
@@ -334,6 +353,9 @@ pub mod bitboards {
     pub const ANTIDIAGONAL: Bitboard =
         Bitboard(0b_00000001_00000010_00000100_00001000_00010000_00100000_01000000_10000000);
 
+    pub const BORDER: Bitboard =
+        Bitboard(0b_11111111_10000001_10000001_10000001_10000001_10000001_10000001_11111111);
+
     lazy_static! {
         pub static ref DIAGONALS: SquareMap<Bitboard> = SquareMap::from(|square: Square| {
             let sq = square.to_index() as isize;
@@ -373,7 +395,6 @@ mod tests {
     #![allow(clippy::large_digit_groups)] // We have a lot of bitboards which clippy doesn't like
 
     use super::*;
-    use pretty_assertions::assert_eq;
     use std::collections::HashSet;
 
     #[test]
@@ -463,5 +484,24 @@ mod tests {
 
         bitboard = bitboard.shift_file(8);
         assert_eq!(bitboard, bitboards::EMPTY);
+    }
+
+    #[test]
+    fn can_get_powerset_of_bitboard() {
+        let bitboard = Bitboard(0b10101);
+
+        let powerset: HashSet<Bitboard> = bitboard.powerset().collect();
+
+        let mut expected = HashSet::new();
+        expected.insert(Bitboard(0b10101));
+        expected.insert(Bitboard(0b10100));
+        expected.insert(Bitboard(0b10001));
+        expected.insert(Bitboard(0b10000));
+        expected.insert(Bitboard(0b00101));
+        expected.insert(Bitboard(0b00100));
+        expected.insert(Bitboard(0b00001));
+        expected.insert(Bitboard(0b00000));
+
+        assert_eq!(powerset, expected);
     }
 }

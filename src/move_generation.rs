@@ -7,18 +7,19 @@ use piece_type::PieceTypeT;
 mod bishop;
 mod king;
 mod knight;
+pub mod magic;
 mod pawn;
 mod piece_type;
 mod queen;
 mod rook;
 
-use crate::move_generation::bishop::Bishop;
-use crate::move_generation::king::King;
-use crate::move_generation::knight::Knight;
-use crate::move_generation::pawn::Pawn;
+pub use crate::move_generation::bishop::Bishop;
+pub use crate::move_generation::king::King;
+pub use crate::move_generation::knight::Knight;
+pub use crate::move_generation::pawn::Pawn;
 use crate::move_generation::piece_type::PieceT;
-use crate::move_generation::queen::Queen;
-use crate::move_generation::rook::Rook;
+pub use crate::move_generation::queen::Queen;
+pub use crate::move_generation::rook::Rook;
 use std::iter::Chain;
 
 impl Board {
