@@ -13,11 +13,11 @@ pub fn queen_moves(square: Square, occupancy: Bitboard) -> Bitboard {
 }
 
 pub fn rook_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    ATTACKS[rook_index(square, occupancy)]
+    ROOK_ATTACKS[square][rook_index(square, occupancy)]
 }
 
 pub fn bishop_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    ATTACKS[bishop_index(square, occupancy)]
+    BISHOP_ATTACKS[square][bishop_index(square, occupancy)]
 }
 
 fn rook_index(square: Square, occupancy: Bitboard) -> usize {
@@ -129,13 +129,6 @@ fn valid_magic(
     }
 
     true
-}
-
-struct Magic {
-    magic: u64,
-    mask: Bitboard,
-    bits: u8,
-    offset: u16,
 }
 
 const ROOK_MAGICS: SquareMap<u64> = SquareMap::new([
@@ -290,25 +283,33 @@ lazy_static! {
         let rank = RANKS[sq.rank()] & !FILES[File::A] & !FILES[File::H];
         (file | rank) & !Bitboard::from(sq)
     });
+
     // BISHOP_TARGETS[x] == every square where a piece could block a bishop at square x
     static ref BISHOP_TARGETS: SquareMap<Bitboard> = SquareMap::from(|sq| {
         let border = RANKS[Rank::_1] | RANKS[Rank::_8] | FILES[File::A] | FILES[File::H];
         (DIAGONALS[sq] ^ ANTIDIAGONALS[sq]) & !border
     });
 
-    // Attack array shared by rooks and bishops, looked up by indices calculated using **MAGIC**
-    static ref ATTACKS: Box<[Bitboard; 0x10000]> = {
-        let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
-        for square in Square::all() {
+    // Attack arrays looked up by indices calculated using **MAGIC**
+
+    static ref ROOK_ATTACKS: SquareMap<Box<[Bitboard; 0x10000]>> =
+        SquareMap::from(|square| {
+            let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
             for occupancy in ROOK_TARGETS[square].powerset() {
                 attacks[rook_index(square, occupancy)] = MagicPiece::Rook.calc_moves(square, occupancy);
             }
+            attacks
+        });
+
+    // Attack array shared by rooks and bishops, looked up by indices calculated using **MAGIC**
+    static ref BISHOP_ATTACKS: SquareMap<Box<[Bitboard; 0x10000]>> =
+        SquareMap::from(|square| {
+            let mut attacks = Box::new([bitboards::EMPTY; 0x10000]);
             for occupancy in BISHOP_TARGETS[square].powerset() {
                 attacks[bishop_index(square, occupancy)] = MagicPiece::Bishop.calc_moves(square, occupancy);
             }
-        }
-        attacks
-    };
+            attacks
+        });
 }
 
 #[cfg(test)]
@@ -340,7 +341,7 @@ mod tests {
             . . . . . . . .
         };
 
-        assert_eq!(expected, rook_moves(Square::E4, occupancy));
+        assert_eq!(expected, rook_moves(Square::D4, occupancy));
     }
 
     #[test]
