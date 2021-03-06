@@ -7,14 +7,6 @@ use crate::{
 };
 use lazy_static::lazy_static;
 
-pub fn rook_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    Rook.magic_moves(square, occupancy)
-}
-
-pub fn bishop_moves(square: Square, occupancy: Bitboard) -> Bitboard {
-    Bishop.magic_moves(square, occupancy)
-}
-
 pub trait Magic {
     fn magic_moves(&self, square: Square, occupancy: Bitboard) -> Bitboard {
         self.attacks_array(square)[self.index(square, occupancy)]
@@ -372,14 +364,14 @@ mod tests {
             . . . . . . . .
         };
 
-        assert_eq!(expected, rook_moves(Square::D4, occupancy));
+        assert_eq!(expected, Rook.magic_moves(Square::D4, occupancy));
     }
 
     proptest! {
         #[test]
         fn rook_magics_are_correct(occupancy in arb_bitboard(), square in arb_square()) {
             let calculated = Rook.calc_moves(square, occupancy);
-            let magicked = rook_moves(square, occupancy);
+            let magicked = Rook.magic_moves(square, occupancy);
             assert_eq!(
                 calculated, magicked,
                 "Occupancy: {:?}\nSquare: {}",
@@ -390,7 +382,7 @@ mod tests {
         #[test]
         fn bishop_magics_are_correct(occupancy in arb_bitboard(), square in arb_square()) {
             let calculated = Bishop.calc_moves(square, occupancy);
-            let magicked = bishop_moves(square, occupancy);
+            let magicked = Bishop.magic_moves(square, occupancy);
             assert_eq!(
                 calculated, magicked,
                 "Occupancy: {:?}\nSquare: {}",
