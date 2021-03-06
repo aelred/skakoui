@@ -1,4 +1,4 @@
-use crate::{Board, BoardFlags, GameState, Move, Piece, PieceType, PlayerV};
+use crate::{Bitboard, Board, BoardFlags, GameState, Move, Piece, PieceType, PlayerV, Square};
 use arrayvec::ArrayVec;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
@@ -115,4 +115,12 @@ pub fn mate_in_1_board() -> impl Strategy<Value = (Board, Move)> {
 pub fn arb_board() -> impl Strategy<Value = Board> {
     (arb_pieces(), arb_player(), arb_flags())
         .prop_map(|(pieces, player, flags)| Board::new(pieces, player, flags))
+}
+
+pub fn arb_bitboard() -> impl Strategy<Value = Bitboard> {
+    (any::<u64>(), any::<u64>()).prop_map(|(x, y)| Bitboard::new(x & y))
+}
+
+pub fn arb_square() -> impl Strategy<Value = Square> {
+    (0..64u8).prop_map(Square::from_index)
 }

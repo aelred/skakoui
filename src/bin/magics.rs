@@ -1,5 +1,5 @@
 use skakoui::magic::Magic;
-use skakoui::{magic, Bishop, Rook, Square};
+use skakoui::{Bishop, Rook, Square};
 use std::borrow::Borrow;
 use structopt::StructOpt;
 

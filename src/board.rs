@@ -4,9 +4,9 @@ use crate::{
 };
 use anyhow::Error;
 use enum_map::EnumMap;
-use std::fmt::Formatter;
 use std::convert::TryFrom;
 use std::fmt;
+use std::fmt::Formatter;
 use std::ops::Index;
 use std::str::FromStr;
 

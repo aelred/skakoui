@@ -345,7 +345,8 @@ const BISHOP_MAGICS: SquareMap<(u8, u64)> = SquareMap::new([
 mod tests {
     use super::*;
     use crate::bitboard;
-    use rand::Rng;
+    use crate::strategies::*;
+    use proptest::proptest;
 
     #[test]
     fn rook_moves_works() {
@@ -374,12 +375,9 @@ mod tests {
         assert_eq!(expected, rook_moves(Square::D4, occupancy));
     }
 
-    #[test]
-    fn rook_magics_are_correct() {
-        for _ in 0..1000 {
-            let occupancy = Bitboard::new(rand::random());
-            let square = Square::from_index(rand::thread_rng().gen_range(0, 64));
-
+    proptest! {
+        #[test]
+        fn rook_magics_are_correct(occupancy in arb_bitboard(), square in arb_square()) {
             let calculated = Rook.calc_moves(square, occupancy);
             let magicked = rook_moves(square, occupancy);
             assert_eq!(
@@ -388,14 +386,9 @@ mod tests {
                 occupancy, square
             );
         }
-    }
 
-    #[test]
-    fn bishop_magics_are_correct() {
-        for _ in 0..1000 {
-            let occupancy = Bitboard::new(rand::random());
-            let square = Square::from_index(rand::thread_rng().gen_range(0, 64));
-
+        #[test]
+        fn bishop_magics_are_correct(occupancy in arb_bitboard(), square in arb_square()) {
             let calculated = Bishop.calc_moves(square, occupancy);
             let magicked = bishop_moves(square, occupancy);
             assert_eq!(
