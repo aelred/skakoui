@@ -1,7 +1,4 @@
-use crate::{
-    bitboards, typed_player, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, Player,
-    Square,
-};
+use crate::{bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, Player, Square};
 use piece_type::PieceTypeT;
 
 mod bishop;
@@ -63,7 +60,7 @@ impl Board {
             } else {
                 me.castle_queenside_through()
             };
-            let attacks = self.attacks_for(me.opponent());
+            let attacks = self.attacks(me.opponent());
 
             if !(through & attacks).is_empty() {
                 return false;
@@ -73,7 +70,7 @@ impl Board {
         // TODO: can we avoid actually making the move?
         let pmov = self.make_move(mov);
         let king_board = self.bitboard_piece(my_king);
-        let attacks = self.attacks_for(me.opponent());
+        let attacks = self.attacks(me.opponent());
         let out_of_check = (king_board & attacks).is_empty();
         self.unmake_move(pmov);
         out_of_check
@@ -95,11 +92,7 @@ impl Board {
         in_check && no_legal_moves()
     }
 
-    pub fn attacks(&self) -> Bitboard {
-        typed_player!(self.player(), |player| self.attacks_for(player))
-    }
-
-    pub fn attacks_for(&self, player: impl Player) -> Bitboard {
+    fn attacks(&self, player: impl Player) -> Bitboard {
         let king = self.attacks_for_piece(PieceT::new(player, King));
         let queen = self.attacks_for_piece(PieceT::new(player, Queen));
         let rook = self.attacks_for_piece(PieceT::new(player, Rook));
@@ -309,7 +302,7 @@ mod tests {
             X X X X X X X .
             . X X . X X . X
         };
-        let attacks = board.attacks();
+        let attacks = board.attacks(White);
         assert_eq!(
             attacks, expect,
             "\nAttacks:\n{}\nExpected:\n{}\nBoard:\n{}",
