@@ -2,7 +2,6 @@ use crate::File;
 use crate::Rank;
 use crate::Square;
 use std::fmt;
-use std::ops::Index;
 
 // TODO: it would be nice if bitboards were in the same order as FEN
 #[derive(
@@ -27,6 +26,10 @@ impl Bitboard {
         Bitboard(num)
     }
 
+    pub fn get(&self, square: Square) -> bool {
+        Self::from(square) & *self != bitboards::EMPTY
+    }
+
     pub fn set(&mut self, square: Square) {
         *self |= Self::from(square);
     }
@@ -40,8 +43,8 @@ impl Bitboard {
     /// This method assumes that `from` is already set and `to` is already reset. If this is not
     /// the case, the result is undefined.
     pub fn move_bit(&mut self, from: Square, to: Square) {
-        debug_assert!(self[from], "{:?} should be set: \n{}", from, self);
-        debug_assert!(!self[to], "{:?} should be unset: \n{}", to, self);
+        debug_assert!(self.get(from), "{:?} should be set: \n{}", from, self);
+        debug_assert!(!self.get(to), "{:?} should be unset: \n{}", to, self);
 
         let move_board = Self::from(from) | Self::from(to);
         *self ^= move_board;
@@ -107,23 +110,6 @@ impl Bitboard {
     }
 }
 
-impl Index<Square> for Bitboard {
-    type Output = bool;
-
-    #[inline]
-    fn index(&self, index: Square) -> &Self::Output {
-        if Self::from(index) & *self != bitboards::EMPTY {
-            &TRUE
-        } else {
-            &FALSE
-        }
-    }
-}
-
-// GLOBAL constants that we can borrow in Index<Square> for Bitboard
-const TRUE: bool = true;
-const FALSE: bool = false;
-
 pub struct SquareIterator(Bitboard);
 
 impl Iterator for SquareIterator {
@@ -160,7 +146,7 @@ impl fmt::Debug for Bitboard {
             write!(f, "\t")?;
             for file in File::VALUES.iter() {
                 let square = Square::new(*file, *rank);
-                let char = if self[square] { 'X' } else { '.' };
+                let char = if self.get(square) { 'X' } else { '.' };
                 write!(f, "{} ", char)?;
             }
             writeln!(f)?;
@@ -179,7 +165,7 @@ impl fmt::Display for Bitboard {
             for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
 
-                f.write_str(if self[square] { "X " } else { ". " })?;
+                f.write_str(if self.get(square) { "X " } else { ". " })?;
             }
             f.write_fmt(format_args!("{}\n", rank))?;
         }

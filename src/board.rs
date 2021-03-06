@@ -808,7 +808,7 @@ pub mod tests {
 
             for (bb_piece, piece_board) in board.piece_boards.iter() {
                 assert_eq!(
-                    piece_board[square],
+                    piece_board.get(square),
                     pt_at_square == Some(bb_piece),
                     "Failure at {} for {}\n{}\nMeant to be {:?}, but {} is {}",
                     square,
@@ -816,13 +816,13 @@ pub mod tests {
                     piece_board,
                     piece,
                     square,
-                    piece_board[square]
+                    piece_board.get(square)
                 );
             }
 
             for (player, player_board) in board.player_boards.iter() {
                 assert_eq!(
-                    player_board[square],
+                    player_board.get(square),
                     player_at_square == Some(player),
                     "Failure at {} for {}\n{}\nMeant to be {}, but {} is {}",
                     square,
@@ -830,7 +830,7 @@ pub mod tests {
                     player_board,
                     player,
                     square,
-                    player_board[square]
+                    player_board.get(square)
                 );
             }
         }
