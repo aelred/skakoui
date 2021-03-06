@@ -38,7 +38,7 @@ fn main() {
         } else {
             Rook.find_magic(square, bits, tries)
         };
-        let magic = result.expect("Couldn't find a magic!");
-        println!("{}: {:#x?}", square, magic);
+        let (bits, magic) = result.expect("Couldn't find a magic!");
+        println!("/*{}*/ ({}, {:#018x?}),", square, bits, magic);
     }
 }
