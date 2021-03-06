@@ -345,6 +345,7 @@ const BISHOP_MAGICS: SquareMap<(u8, u64)> = SquareMap::new([
 mod tests {
     use super::*;
     use crate::bitboard;
+    use rand::Rng;
 
     #[test]
     fn rook_moves_works() {
@@ -377,16 +378,15 @@ mod tests {
     fn rook_magics_are_correct() {
         for _ in 0..1000 {
             let occupancy = Bitboard::new(rand::random());
+            let square = Square::from_index(rand::thread_rng().gen_range(0, 64));
 
-            for square in Square::all() {
-                let calculated = Rook.calc_moves(square, occupancy);
-                let magicked = rook_moves(square, occupancy);
-                assert_eq!(
-                    calculated, magicked,
-                    "Occupancy: {:?}\nSquare: {}",
-                    occupancy, square
-                );
-            }
+            let calculated = Rook.calc_moves(square, occupancy);
+            let magicked = rook_moves(square, occupancy);
+            assert_eq!(
+                calculated, magicked,
+                "Occupancy: {:?}\nSquare: {}",
+                occupancy, square
+            );
         }
     }
 
@@ -394,16 +394,15 @@ mod tests {
     fn bishop_magics_are_correct() {
         for _ in 0..1000 {
             let occupancy = Bitboard::new(rand::random());
+            let square = Square::from_index(rand::thread_rng().gen_range(0, 64));
 
-            for square in Square::all() {
-                let calculated = Bishop.calc_moves(square, occupancy);
-                let magicked = bishop_moves(square, occupancy);
-                assert_eq!(
-                    calculated, magicked,
-                    "Occupancy: {:?}\nSquare: {}",
-                    occupancy, square
-                );
-            }
+            let calculated = Bishop.calc_moves(square, occupancy);
+            let magicked = bishop_moves(square, occupancy);
+            assert_eq!(
+                calculated, magicked,
+                "Occupancy: {:?}\nSquare: {}",
+                occupancy, square
+            );
         }
     }
 }
