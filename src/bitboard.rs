@@ -2,16 +2,23 @@ use crate::File;
 use crate::Rank;
 use crate::Square;
 use std::fmt;
-use std::ops::BitAnd;
-use std::ops::BitAndAssign;
-use std::ops::BitOr;
-use std::ops::BitOrAssign;
-use std::ops::BitXor;
-use std::ops::BitXorAssign;
-use std::ops::Not;
 
 // TODO: it would be nice if bitboards were in the same order as FEN
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Default,
+    derive_more::Not,
+    derive_more::BitAnd,
+    derive_more::BitAndAssign,
+    derive_more::BitOr,
+    derive_more::BitOrAssign,
+    derive_more::BitXor,
+    derive_more::BitXorAssign,
+)]
 pub struct Bitboard(u64);
 
 impl Bitboard {
@@ -151,64 +158,6 @@ impl From<Square> for Bitboard {
 impl From<Bitboard> for u64 {
     fn from(bitboard: Bitboard) -> Self {
         bitboard.0
-    }
-}
-
-impl Not for Bitboard {
-    type Output = Self;
-
-    fn not(self) -> Self {
-        Bitboard(!self.0)
-    }
-}
-
-impl BitAnd for Bitboard {
-    type Output = Self;
-
-    fn bitand(self, rhs: Self) -> Self {
-        Bitboard(self.0 & rhs.0)
-    }
-}
-
-impl BitAndAssign for Bitboard {
-    fn bitand_assign(&mut self, rhs: Self) {
-        self.0 &= rhs.0;
-    }
-}
-
-impl BitOr for Bitboard {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self {
-        Bitboard(self.0 | rhs.0)
-    }
-}
-
-impl BitOr<&Bitboard> for Bitboard {
-    type Output = Self;
-
-    fn bitor(self, rhs: &Self) -> Self {
-        Bitboard(self.0 | rhs.0)
-    }
-}
-
-impl BitOrAssign for Bitboard {
-    fn bitor_assign(&mut self, rhs: Self) {
-        self.0 |= rhs.0;
-    }
-}
-
-impl BitXor for Bitboard {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Self) -> Self {
-        Bitboard(self.0 ^ rhs.0)
-    }
-}
-
-impl BitXorAssign for Bitboard {
-    fn bitxor_assign(&mut self, rhs: Self) {
-        self.0 ^= rhs.0;
     }
 }
 
