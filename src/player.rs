@@ -125,7 +125,7 @@ impl Player for PlayerV {
     fn advance_bitboard(self, bitboard: Bitboard) -> Bitboard {
         match self {
             Self::White => bitboard.shift_rank(1),
-            Self::Black => bitboard.shift_rank_neg(1),
+            Self::Black => bitboard.shift_rank(-1),
         }
     }
 

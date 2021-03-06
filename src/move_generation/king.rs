@@ -25,13 +25,13 @@ impl PieceTypeT for King {
         let mut castles = bitboards::EMPTY;
 
         if flags.is_set(player.castle_kingside_flag())
-            && (player.castle_kingside_clear() & occupancy).is_empty()
+            && (player.castle_kingside_clear() & occupancy) == bitboards::EMPTY
         {
             castles.set(Square::new(File::KINGSIDE, player.back_rank()));
         }
 
         if flags.is_set(player.castle_queenside_flag())
-            && (player.castle_queenside_clear() & occupancy).is_empty()
+            && (player.castle_queenside_clear() & occupancy) == bitboards::EMPTY
         {
             castles.set(Square::new(File::QUEENSIDE, player.back_rank()));
         }
@@ -59,9 +59,9 @@ pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P
 lazy_static! {
     static ref KING_MOVES: SquareMap<Bitboard> = SquareMap::from(|square| {
         let king = Bitboard::from(square);
-        let attacks = king.shift_rank(1) | king.shift_rank_neg(1);
+        let attacks = king.shift_rank(1) | king.shift_rank(-1);
         let ranks = king | attacks;
-        attacks | ranks.shift_file(1) | ranks.shift_file_neg(1)
+        attacks | ranks.shift_file(1) | ranks.shift_file(-1)
     });
 }
 

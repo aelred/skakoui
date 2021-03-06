@@ -2,6 +2,7 @@ use crate::File;
 use crate::Rank;
 use crate::Square;
 use std::fmt;
+use std::ops::Index;
 
 // TODO: it would be nice if bitboards were in the same order as FEN
 #[derive(
@@ -26,10 +27,6 @@ impl Bitboard {
         Bitboard(num)
     }
 
-    pub fn get(self, square: Square) -> bool {
-        Self::from(square) & self != bitboards::EMPTY
-    }
-
     pub fn set(&mut self, square: Square) {
         *self |= Self::from(square);
     }
@@ -43,33 +40,34 @@ impl Bitboard {
     /// This method assumes that `from` is already set and `to` is already reset. If this is not
     /// the case, the result is undefined.
     pub fn move_bit(&mut self, from: Square, to: Square) {
-        debug_assert!(self.get(from), "{:?} should be set: \n{}", from, self);
-        debug_assert!(!self.get(to), "{:?} should be unset: \n{}", to, self);
+        debug_assert!(self[from], "{:?} should be set: \n{}", from, self);
+        debug_assert!(!self[to], "{:?} should be unset: \n{}", to, self);
 
         let move_board = Self::from(from) | Self::from(to);
         *self ^= move_board;
     }
 
     #[must_use]
-    pub fn shift_rank(self, offset: u32) -> Self {
-        Bitboard(self.0.checked_shl(offset * 8).unwrap_or(0))
+    #[inline]
+    pub fn shift_rank(self, offset: i32) -> Self {
+        let result = if offset > 0 {
+            self.0.checked_shl((offset * 8) as u32)
+        } else {
+            self.0.checked_shr((-offset * 8) as u32)
+        };
+        Bitboard(result.unwrap_or(0))
     }
 
     #[must_use]
-    pub fn shift_rank_neg(self, offset: u32) -> Self {
-        Bitboard(self.0.checked_shr(offset * 8).unwrap_or(0))
-    }
-
-    #[must_use]
-    pub fn shift_file(self, offset: u32) -> Self {
-        let mask = bitboards::FILES_FILLED[8 - offset as usize];
-        Bitboard((self & mask).0 << offset)
-    }
-
-    #[must_use]
-    pub fn shift_file_neg(self, offset: u32) -> Self {
-        let mask = !bitboards::FILES_FILLED[offset as usize];
-        Bitboard((self & mask).0 >> offset)
+    #[inline]
+    pub fn shift_file(self, offset: i32) -> Self {
+        if offset > 0 {
+            let mask = bitboards::FILES_FILLED[8 - offset as usize];
+            Bitboard((self & mask).0 << offset)
+        } else {
+            let mask = !bitboards::FILES_FILLED[-offset as usize];
+            Bitboard((self & mask).0 >> -offset)
+        }
     }
 
     /// Returns set squares in order from a1 to g8.
@@ -78,42 +76,22 @@ impl Bitboard {
     }
 
     pub fn first_set(self) -> Square {
-        Square::from_index(self.index_of_lsb_set())
+        Square::from_index(self.0.trailing_zeros() as u8)
     }
 
     pub fn last_set(self) -> Square {
-        Square::from_index(self.index_of_msb_set())
+        Square::from_index(63 - self.0.leading_zeros() as u8)
     }
 
     pub fn count(self) -> u8 {
         self.0.count_ones() as u8
     }
 
-    fn index_of_lsb_set(self) -> u8 {
-        self.0.trailing_zeros() as u8
-    }
-
-    fn index_of_msb_set(self) -> u8 {
-        63 - self.0.leading_zeros() as u8
-    }
-
-    fn reset_lsb(&mut self) {
-        self.0 &= self.0 - 1;
-    }
-
     pub const fn reverse(self) -> Self {
         Self(self.0.swap_bytes())
     }
 
-    pub const fn is_empty(self) -> bool {
-        self.0 == 0
-    }
-
     pub fn powerset(self) -> impl Iterator<Item = Bitboard> {
-        self.proper_powerset().chain(std::iter::once(self))
-    }
-
-    pub fn proper_powerset(self) -> impl Iterator<Item = Bitboard> {
         let mut x = 0u64;
 
         // idk how this works, but it does
@@ -125,9 +103,26 @@ impl Bitboard {
             } else {
                 None
             }
-        })
+        }).chain(std::iter::once(self))
     }
 }
+
+impl Index<Square> for Bitboard {
+    type Output = bool;
+
+    #[inline]
+    fn index(&self, index: Square) -> &Self::Output {
+        if Self::from(index) & *self != bitboards::EMPTY {
+            &TRUE
+        } else {
+            &FALSE
+        }
+    }
+}
+
+// GLOBAL constants that we can borrow in Index<Square> for Bitboard
+const TRUE: bool = true;
+const FALSE: bool = false;
 
 pub struct SquareIterator(Bitboard);
 
@@ -139,13 +134,9 @@ impl Iterator for SquareIterator {
             return None;
         }
 
-        let lsb_set = self.0.index_of_lsb_set();
-
-        self.0.reset_lsb();
-
-        let square = Square::from_index(lsb_set);
-
-        Some(square)
+        let first_square = self.0.first_set();
+        self.0.0 &= self.0.0 - 1;
+        Some(first_square)
     }
 }
 
@@ -169,7 +160,7 @@ impl fmt::Debug for Bitboard {
             write!(f, "\t")?;
             for file in File::VALUES.iter() {
                 let square = Square::new(*file, *rank);
-                let char = if self.get(square) { 'X' } else { '.' };
+                let char = if self[square] { 'X' } else { '.' };
                 write!(f, "{} ", char)?;
             }
             writeln!(f)?;
@@ -188,7 +179,7 @@ impl fmt::Display for Bitboard {
             for file in &File::VALUES {
                 let square = Square::new(*file, *rank);
 
-                f.write_str(if self.get(square) { "X " } else { ". " })?;
+                f.write_str(if self[square] { "X " } else { ". " })?;
             }
             f.write_fmt(format_args!("{}\n", rank))?;
         }
@@ -411,7 +402,7 @@ mod tests {
         bitboard = bitboard.shift_rank(1);
         assert_eq!(bitboard, Bitboard(0b11111111_01010101_00000000));
 
-        bitboard = bitboard.shift_rank_neg(2);
+        bitboard = bitboard.shift_rank(-2);
         assert_eq!(bitboard, Bitboard(0b_11111111));
 
         bitboard = bitboard.shift_rank(8);
@@ -428,7 +419,7 @@ mod tests {
         bitboard = bitboard.shift_file(1);
         assert_eq!(bitboard, Bitboard(0b00000000_10101010));
 
-        bitboard = bitboard.shift_file_neg(2);
+        bitboard = bitboard.shift_file(-2);
         assert_eq!(bitboard, Bitboard(0b00000000_00101010));
 
         bitboard = bitboard.shift_file(8);

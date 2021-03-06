@@ -209,7 +209,7 @@ fn capture_boards(
     }
     let pawns_forward = player.advance_bitboard(sources);
     (
-        pawns_forward.shift_file_neg(1) & targets,
+        pawns_forward.shift_file(-1) & targets,
         pawns_forward.shift_file(1) & targets,
     )
 }

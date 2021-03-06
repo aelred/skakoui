@@ -34,10 +34,10 @@ pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P
 lazy_static! {
     static ref KNIGHT_MOVES: SquareMap<Bitboard> = SquareMap::from(|square| {
         let knight = Bitboard::from(square);
-        let ranks = knight.shift_rank(2) | knight.shift_rank_neg(2);
-        let rank_attacks = ranks.shift_file(1) | ranks.shift_file_neg(1);
-        let files = knight.shift_file(2) | knight.shift_file_neg(2);
-        let file_attacks = files.shift_rank(1) | files.shift_rank_neg(1);
+        let ranks = knight.shift_rank(2) | knight.shift_rank(-2);
+        let rank_attacks = ranks.shift_file(1) | ranks.shift_file(-1);
+        let files = knight.shift_file(2) | knight.shift_file(-2);
+        let file_attacks = files.shift_rank(1) | files.shift_rank(-1);
         rank_attacks | file_attacks
     });
 }

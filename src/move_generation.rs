@@ -62,7 +62,7 @@ impl Board {
             };
             let attacks = self.attacks(me.opponent());
 
-            if !(through & attacks).is_empty() {
+            if through & attacks != bitboards::EMPTY {
                 return false;
             }
         }
@@ -71,7 +71,7 @@ impl Board {
         let pmov = self.make_move(mov);
         let king_board = self.bitboard_piece(my_king);
         let attacks = self.attacks(me.opponent());
-        let out_of_check = (king_board & attacks).is_empty();
+        let out_of_check = king_board & attacks == bitboards::EMPTY;
         self.unmake_move(pmov);
         out_of_check
     }
