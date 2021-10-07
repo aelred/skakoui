@@ -117,7 +117,7 @@ impl Board {
         king | queen | rook | bishop | knight | pawn
     }
 
-    fn attacks_for_piece<P: Player, PT: PieceType>(&self, piece: Piece<P, PT>) -> Bitboard {
+    fn attacks_for_piece(&self, piece: Piece<impl Player, impl PieceType>) -> Bitboard {
         let pt = &piece.piece_type;
         let mut attacks = bitboards::EMPTY;
         for source in self.bitboard_piece(piece).squares() {
