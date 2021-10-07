@@ -19,8 +19,8 @@ FROM python3-venv as lichess-bot-builder
 RUN apk add git
 RUN git clone https://github.com/ShailChoksi/lichess-bot.git /lcbot
 WORKDIR /lcbot
-# lichess-bot 1.1.5, but it's not tagged
-RUN git reset 724765b0849804bb222801c8ff8151084c366050 --hard
+# lichess-bot 1.2.0, but it's not tagged
+RUN git reset dfa846b376814e5dcd278729e8c6aa935a3de957 --hard
 RUN pip install -r requirements.txt
 
 FROM python3-venv as skakoui
