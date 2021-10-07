@@ -1,4 +1,7 @@
-use crate::{bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, Player, Square};
+use crate::{
+    bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, PlayedMove, Player,
+    Square,
+};
 use piece_type::PieceTypeT;
 
 mod bishop;
@@ -48,6 +51,16 @@ impl Board {
     }
 
     pub fn check_legal(&mut self, mov: Move) -> bool {
+        match self.make_if_legal(mov) {
+            None => false,
+            Some(pmov) => {
+                self.unmake_move(pmov);
+                true
+            }
+        }
+    }
+
+    pub fn make_if_legal(&mut self, mov: Move) -> Option<PlayedMove> {
         let me = self.player();
 
         let my_king = Piece::new(me, PieceType::King);
@@ -63,17 +76,21 @@ impl Board {
             let attacks = self.attacks(me.opponent());
 
             if through & attacks != bitboards::EMPTY {
-                return false;
+                return None;
             }
         }
 
-        // TODO: can we avoid actually making the move?
         let pmov = self.make_move(mov);
         let king_board = self.bitboard_piece(my_king);
         let attacks = self.attacks(me.opponent());
-        let out_of_check = king_board & attacks == bitboards::EMPTY;
-        self.unmake_move(pmov);
-        out_of_check
+        let in_check = king_board & attacks != bitboards::EMPTY;
+        if in_check {
+            // TODO: can we avoid actually making+unmaking the move in this case?
+            self.unmake_move(pmov);
+            None
+        } else {
+            Some(pmov)
+        }
     }
 
     pub fn check(&self, king_player: impl Player) -> bool {

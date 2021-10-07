@@ -285,14 +285,14 @@ impl<'a> ThreadSearcher<'a> {
             .filter(|mov| pv != Some(*mov));
 
         for mov in pv.into_iter().chain(other_moves) {
-            if !self.board.check_legal(mov) {
-                continue;
-            }
+            let pmov = match self.board.make_if_legal(mov) {
+                None => continue,
+                Some(pmov) => pmov,
+            };
 
             log_search!(self, depth, "{}:", mov);
 
             // Evaluate value of move for current player
-            let pmov = self.board.make_move(mov);
             let mov_value = -self.search(
                 player.opponent(),
                 depth - 1,
@@ -407,13 +407,13 @@ impl<'a> ThreadSearcher<'a> {
         let mut no_legal_moves = true;
 
         for mov in moves {
-            if !self.board.check_legal(mov) {
-                continue;
-            }
+            let pmov = match self.board.make_if_legal(mov) {
+                None => continue,
+                Some(pmov) => pmov,
+            };
             no_legal_moves = false;
 
             log_search!(self, depth, "trying {}", mov);
-            let pmov = self.board.make_move(mov);
             let mov_value = -self.quiesce(player.opponent(), -beta, -alpha, depth - 1);
             self.board.unmake_move(pmov);
 
