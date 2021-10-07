@@ -21,4 +21,4 @@ build:
 	docker build --tag $(image) .
 
 run: build
-	docker run -t -i -e LICHESS_API_TOKEN $(image)
+	docker run -t -i -e LICHESS_BOT_TOKEN $(image)
