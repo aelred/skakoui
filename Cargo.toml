@@ -30,9 +30,6 @@ strict = []
 log-search = []
 log-search2 = []
 
-[profile.release]
-debug = true
-
 [[bench]]
 name = "searcher"
 harness = false
