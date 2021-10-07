@@ -1,3 +1,4 @@
+#![allow(clippy::unusual_byte_groupings)] // Bitboards should be grouped by 8s for readability
 #![cfg_attr(feature = "strict", deny(warnings))]
 
 mod bitboard;

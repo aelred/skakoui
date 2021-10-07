@@ -81,7 +81,7 @@ impl FromStr for Rank {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let num: u8 = s.parse()?;
-        if num < 1 || num > 9 {
+        if !(1..=9).contains(&num) {
             Err(anyhow!("unrecognised rank"))
         } else {
             Ok(Rank::from_index(num - 1))

@@ -23,7 +23,7 @@ impl TranspositionTable {
     }
 
     pub fn get(&self, key: &Key) -> Option<Node> {
-        let hkey: u64 = hash_key(&key);
+        let hkey: u64 = hash_key(key);
         let index = hkey as usize % self.table.len();
         let hnode = self.table[index].1.load(Relaxed);
         if self.table[index].0.load(Relaxed) ^ hnode == hkey {
@@ -118,9 +118,9 @@ pub struct Node {
     pub value: i32,
 }
 
-impl Into<u64> for Node {
-    fn into(self) -> u64 {
-        self.value as u32 as u64 | (self.depth as u64) << 32 | (self.node_type as u64) << 48
+impl From<Node> for u64 {
+    fn from(n: Node) -> u64 {
+        n.value as u32 as u64 | (n.depth as u64) << 32 | (n.node_type as u64) << 48
     }
 }
 

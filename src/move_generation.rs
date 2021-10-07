@@ -21,7 +21,7 @@ use std::iter::Chain;
 
 impl Board {
     /// Lazy iterator of all legal moves
-    pub fn moves<'a>(&'a mut self) -> impl Iterator<Item = Move> + 'a {
+    pub fn moves(&mut self) -> impl Iterator<Item = Move> + '_ {
         self.pseudo_legal_moves()
             .filter(move |mov| self.check_legal(*mov))
     }

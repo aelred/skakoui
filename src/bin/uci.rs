@@ -8,7 +8,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use Command::{Go, IsReady, PonderHit, Position, Quit, Stop};
 use Info::PV;
-use Message::{BestMove, ReadyOK, UCIOK};
+use Message::{BestMove, ReadyOk, UciOk};
 use OptionType::{Button, Check, Combo, Spin, String};
 use ID::{Author, Name};
 
@@ -22,14 +22,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-struct UCI<W> {
+struct Uci<W> {
     output: W,
     board: Board,
     ponder: Option<Move>,
     searcher: Searcher,
 }
 
-impl<W: Write> UCI<W> {
+impl<W: Write> Uci<W> {
     fn run(&mut self, input: impl BufRead) -> Result<(), std::io::Error> {
         for try_line in input.lines() {
             let line = try_line?;
@@ -44,14 +44,14 @@ impl<W: Write> UCI<W> {
             };
 
             match command {
-                Command::UCI => {
+                Command::Uci => {
                     self.send(&Message::ID(Name, "skakoui"))?;
                     self.send(&Message::ID(Author, "Felix Chapman"))?;
                     self.send(&Message::option("Ponder", Check, "true"))?;
-                    self.send(&UCIOK)?;
+                    self.send(&UciOk)?;
                 }
                 IsReady => {
-                    self.send(&ReadyOK)?;
+                    self.send(&ReadyOk)?;
                 }
                 Quit => break,
                 Position { board, moves } => {
@@ -132,7 +132,7 @@ impl<W: Write> UCI<W> {
 }
 
 enum Command {
-    UCI,
+    Uci,
     IsReady,
     Quit,
     Position {
@@ -160,7 +160,7 @@ impl FromStr for Command {
         let command = arg("command name")?;
 
         let command = match command {
-            "uci" => Command::UCI,
+            "uci" => Command::Uci,
             "isready" => IsReady,
             "quit" => Quit,
             "position" => {
@@ -179,7 +179,7 @@ impl FromStr for Command {
 
                 let mut moves = vec![];
 
-                if args.peek() == Some(&&"moves") {
+                if args.peek() == Some(&"moves") {
                     args.next();
                     for arg in args {
                         moves.push(Move::from_str(arg)?);
@@ -231,8 +231,8 @@ impl FromStr for Command {
 
 enum Message<'a> {
     ID(ID, &'a str),
-    UCIOK,
-    ReadyOK,
+    UciOk,
+    ReadyOk,
     BestMove {
         mov: Option<Move>,
         ponder: Option<Move>,
@@ -255,8 +255,8 @@ impl<'a> fmt::Display for Message<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Message::ID(id, value) => write!(f, "{} {}", id, value)?,
-            UCIOK => write!(f, "uciok")?,
-            ReadyOK => write!(f, "readyok")?,
+            UciOk => write!(f, "uciok")?,
+            ReadyOk => write!(f, "readyok")?,
             BestMove { mov, ponder } => {
                 write!(f, "bestmove ")?;
                 match mov {
@@ -337,7 +337,7 @@ fn read_duration<'a>(args: &mut impl Iterator<Item = &'a str>) -> Result<Duratio
 }
 
 fn run<R: BufRead, W: Write>(input: R, output: &mut W) -> Result<(), std::io::Error> {
-    UCI {
+    Uci {
         output,
         board: Board::default(),
         ponder: None,

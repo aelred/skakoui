@@ -106,7 +106,8 @@ impl Bitboard {
             } else {
                 None
             }
-        }).chain(std::iter::once(self))
+        })
+        .chain(std::iter::once(self))
     }
 }
 
@@ -121,7 +122,7 @@ impl Iterator for SquareIterator {
         }
 
         let first_square = self.0.first_set();
-        self.0.0 &= self.0.0 - 1;
+        self.0 .0 &= self.0 .0 - 1;
         Some(first_square)
     }
 }
