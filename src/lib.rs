@@ -24,7 +24,7 @@ pub use crate::{
     file::File,
     move_generation::{magic, Bishop, King, Knight, Pawn, PieceTypeV, Queen, Rook},
     moves::{Move, PlayedMove},
-    piece::Piece,
+    piece::{Piece, PieceV},
     player::{Black, Player, PlayerV, White},
     rank::{Rank, RankMap},
     search::Searcher,

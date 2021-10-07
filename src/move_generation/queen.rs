@@ -1,6 +1,7 @@
 use crate::move_generation::piece_type::PieceType;
+use crate::piece::Piece;
 use crate::{
-    move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
+    move_generation::piece_type::{MovesIter, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
     Bishop, Bitboard, Board, BoardFlags, PieceTypeV, Player, Rook, Square,
 };
@@ -29,13 +30,13 @@ pub type Moves<P> = MovesIter<P, Queen, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Queen, CapturingMoves<P>>;
 
 pub fn moves<P: Player>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
-    MovesIter::new(board, PieceT::new(player, Queen), AllMoves(player), mask)
+    MovesIter::new(board, Piece::new(player, Queen), AllMoves(player), mask)
 }
 
 pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
     MovesIter::new(
         board,
-        PieceT::new(player, Queen),
+        Piece::new(player, Queen),
         CapturingMoves(player),
         mask,
     )

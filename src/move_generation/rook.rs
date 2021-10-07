@@ -1,12 +1,13 @@
 use crate::magic::Magic;
 use crate::move_generation::piece_type::{PieceType, PieceTypeT};
+use crate::piece::Piece;
 use crate::{
-    move_generation::piece_type::{MovesIter, PieceT},
+    move_generation::piece_type::MovesIter,
     move_generation::{AllMoves, CapturingMoves},
     Bitboard, Board, BoardFlags, PieceTypeV, Player, Square,
 };
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Eq, PartialEq, Debug)]
 pub struct Rook;
 
 impl PieceType for Rook {
@@ -31,13 +32,13 @@ pub type Moves<P> = MovesIter<P, Rook, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Rook, CapturingMoves<P>>;
 
 pub fn moves<P: Player>(player: P, board: &Board, mask: Bitboard) -> Moves<P> {
-    MovesIter::new(board, PieceT::new(player, Rook), AllMoves(player), mask)
+    MovesIter::new(board, Piece::new(player, Rook), AllMoves(player), mask)
 }
 
 pub fn attacks<P: Player>(player: P, board: &Board, mask: Bitboard) -> Attacks<P> {
     MovesIter::new(
         board,
-        PieceT::new(player, Rook),
+        Piece::new(player, Rook),
         CapturingMoves(player),
         mask,
     )

@@ -212,10 +212,10 @@ impl<T: PlayerT> Player for T {
     }
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
 pub struct White;
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, Eq, PartialEq, Debug)]
 pub struct Black;
 
 impl PlayerT for White {

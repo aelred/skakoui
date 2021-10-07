@@ -1,6 +1,15 @@
-use crate::{
-    bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PlayedMove, Player, Square,
-};
+use std::iter::Chain;
+
+pub use crate::move_generation::bishop::Bishop;
+pub use crate::move_generation::king::King;
+pub use crate::move_generation::knight::Knight;
+pub use crate::move_generation::pawn::Pawn;
+pub use crate::move_generation::piece_type::PieceType;
+pub use crate::move_generation::piece_type::PieceTypeV;
+pub use crate::move_generation::queen::Queen;
+pub use crate::move_generation::rook::Rook;
+pub use crate::piece::Piece;
+use crate::{bitboards, Bitboard, Board, BoardFlags, File, Move, PlayedMove, Player, Square};
 
 mod bishop;
 mod king;
@@ -10,16 +19,6 @@ mod pawn;
 mod piece_type;
 mod queen;
 mod rook;
-
-pub use crate::move_generation::bishop::Bishop;
-pub use crate::move_generation::king::King;
-pub use crate::move_generation::knight::Knight;
-pub use crate::move_generation::pawn::Pawn;
-use crate::move_generation::piece_type::PieceType;
-pub use crate::move_generation::piece_type::{PieceT, PieceTypeV};
-pub use crate::move_generation::queen::Queen;
-pub use crate::move_generation::rook::Rook;
-use std::iter::Chain;
 
 impl Board {
     /// Lazy iterator of all legal moves
@@ -62,10 +61,10 @@ impl Board {
     pub fn make_if_legal(&mut self, mov: Move) -> Option<PlayedMove> {
         let me = self.player();
 
-        let my_king = Piece::new(me, PieceTypeV::King);
+        let my_king = Piece::new(me, King);
         let piece = self[mov.from()].unwrap();
 
-        let castling = piece == my_king && (mov.from().file() - mov.to().file()).abs() == 2;
+        let castling = piece == my_king.value() && (mov.from().file() - mov.to().file()).abs() == 2;
         if castling {
             let through = if mov.to().file() == File::KINGSIDE {
                 me.castle_kingside_through()
@@ -93,7 +92,7 @@ impl Board {
     }
 
     pub fn check(&self, king_player: impl Player) -> bool {
-        let king = Piece::new(king_player, PieceTypeV::King);
+        let king = Piece::new(king_player, King);
         match self.bitboard_piece(king).squares().next() {
             Some(king_pos) => self
                 .pseudo_legal_moves_for(king_player.opponent())
@@ -109,19 +108,19 @@ impl Board {
     }
 
     fn attacks(&self, player: impl Player) -> Bitboard {
-        let king = self.attacks_for_piece(PieceT::new(player, King));
-        let queen = self.attacks_for_piece(PieceT::new(player, Queen));
-        let rook = self.attacks_for_piece(PieceT::new(player, Rook));
-        let bishop = self.attacks_for_piece(PieceT::new(player, Bishop));
-        let knight = self.attacks_for_piece(PieceT::new(player, Knight));
-        let pawn = self.attacks_for_piece(PieceT::new(player, Pawn));
+        let king = self.attacks_for_piece(Piece::new(player, King));
+        let queen = self.attacks_for_piece(Piece::new(player, Queen));
+        let rook = self.attacks_for_piece(Piece::new(player, Rook));
+        let bishop = self.attacks_for_piece(Piece::new(player, Bishop));
+        let knight = self.attacks_for_piece(Piece::new(player, Knight));
+        let pawn = self.attacks_for_piece(Piece::new(player, Pawn));
         king | queen | rook | bishop | knight | pawn
     }
 
-    fn attacks_for_piece<P: Player, PT: PieceType>(&self, piece: PieceT<P, PT>) -> Bitboard {
+    fn attacks_for_piece<P: Player, PT: PieceType>(&self, piece: Piece<P, PT>) -> Bitboard {
         let pt = &piece.piece_type;
         let mut attacks = bitboards::EMPTY;
-        for source in self.bitboard_piece(piece.value()).squares() {
+        for source in self.bitboard_piece(piece).squares() {
             attacks |= pt.attacks(source, self.occupancy(), piece.player, self.flags());
         }
         attacks
@@ -231,11 +230,14 @@ type Chain6<K, Q, R, B, N, P> = Chain<Chain<Chain<Chain<Chain<K, Q>, R>, B>, N>,
 #[cfg(test)]
 #[macro_use]
 mod tests {
-    use super::*;
+    use std::collections::HashSet;
+
+    use pretty_assertions::assert_eq;
+
     use crate::board::tests::fen;
     use crate::{bitboard, mov, White};
-    use pretty_assertions::assert_eq;
-    use std::collections::HashSet;
+
+    use super::*;
 
     #[macro_export]
     macro_rules! assert_moves {

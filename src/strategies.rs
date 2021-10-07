@@ -1,4 +1,4 @@
-use crate::{Bitboard, Board, BoardFlags, GameState, Move, Piece, PieceTypeV, PlayerV, Square};
+use crate::{Bitboard, Board, BoardFlags, GameState, Move, PieceTypeV, PieceV, PlayerV, Square};
 use arrayvec::ArrayVec;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
@@ -10,11 +10,11 @@ pub fn arb_player() -> impl Strategy<Value = PlayerV> {
     select(PLAYERS)
 }
 
-pub fn all_pieces() -> Vec<Option<Piece>> {
+pub fn all_pieces() -> Vec<Option<PieceV>> {
     Board::default().iter().map(|(_, piece)| *piece).collect()
 }
 
-pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
+pub fn arb_pieces() -> impl Strategy<Value = [[Option<PieceV>; 8]; 8]> {
     let all_pieces = all_pieces();
     let len = all_pieces.len();
 
@@ -27,14 +27,14 @@ pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
             pieces
                 .into_iter()
                 .zip(keep.into_iter())
-                .map(|(piece, keep)| piece.filter(|p| keep || p.piece_type() == PieceTypeV::King))
-                .collect::<Vec<Option<Piece>>>()
+                .map(|(piece, keep)| piece.filter(|p| keep || p.piece_type == PieceTypeV::King))
+                .collect::<Vec<Option<PieceV>>>()
         })
         .prop_map(|pieces| {
-            let arr: ArrayVec<[[Option<Piece>; 8]; 8]> = pieces
+            let arr: ArrayVec<[[Option<PieceV>; 8]; 8]> = pieces
                 .chunks(8)
                 .map(|slice| {
-                    let mut arrvec = ArrayVec::<[Option<Piece>; 8]>::new();
+                    let mut arrvec = ArrayVec::<[Option<PieceV>; 8]>::new();
                     arrvec.try_extend_from_slice(slice).unwrap();
                     arrvec.into_inner().unwrap()
                 })

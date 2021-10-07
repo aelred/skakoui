@@ -1,24 +1,13 @@
-use crate::{
-    bitboard::SquareIterator, bitboards, move_generation::Movement, Bishop, Bitboard, Board,
-    BoardFlags, King, Knight, Move, Pawn, Piece, Player, Queen, Rook, Square,
-};
 use enum_map::Enum;
 
-#[derive(Default)]
-pub struct PieceT<P, PT> {
-    pub player: P,
-    pub piece_type: PT,
-}
-
-impl<P: Player, PT: PieceType> PieceT<P, PT> {
-    pub(crate) fn new(player: P, piece_type: PT) -> Self {
-        Self { player, piece_type }
-    }
-
-    pub fn value(&self) -> Piece {
-        Piece::new(self.player.value(), self.piece_type.value())
-    }
-}
+use crate::piece::Piece;
+use crate::{
+    bitboard::SquareIterator, bitboards, move_generation::Movement, Bishop, Bitboard, Board,
+    BoardFlags, King, Knight, Move, Pawn, Player, Queen, Rook, Square,
+};
+use anyhow::Error;
+use std::fmt;
+use std::str::FromStr;
 
 pub trait PieceType: Copy + Clone {
     fn value(self) -> PieceTypeV;
@@ -63,6 +52,19 @@ pub enum PieceTypeV {
     Bishop,
     Knight,
     Pawn,
+}
+
+impl PieceTypeV {
+    pub fn to_char(self) -> char {
+        match self {
+            PieceTypeV::King => 'K',
+            PieceTypeV::Queen => 'Q',
+            PieceTypeV::Rook => 'R',
+            PieceTypeV::Bishop => 'B',
+            PieceTypeV::Knight => 'N',
+            PieceTypeV::Pawn => 'P',
+        }
+    }
 }
 
 impl PieceType for PieceTypeV {
@@ -122,6 +124,20 @@ impl PieceType for PieceTypeV {
     }
 }
 
+impl fmt::Display for PieceTypeV {
+    fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
+        f.write_str(&self.to_fen())
+    }
+}
+
+impl FromStr for PieceTypeV {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_fen(s)
+    }
+}
+
 /// Type-level representation of [PieceType].
 pub trait PieceTypeT: PieceType + Sized + Default {}
 
@@ -131,20 +147,20 @@ pub struct MovesIter<P, PT, M> {
     sources: SquareIterator,
     source: Square,
     targets: SquareIterator,
-    piece: PieceT<P, PT>,
+    piece: Piece<P, PT>,
     movement: M,
     flags: BoardFlags,
 }
 
 impl<P: Player, PT: PieceType, M: Movement> MovesIter<P, PT, M> {
-    pub(crate) fn new(board: &Board, piece: PieceT<P, PT>, movement: M, mask: Bitboard) -> Self {
+    pub(crate) fn new(board: &Board, piece: Piece<P, PT>, movement: M, mask: Bitboard) -> Self {
         // arbitrary source square with no targets to avoid empty case
         let source = Square::A1;
         let targets = bitboards::EMPTY.squares();
         Self {
             occupancy: board.occupancy(),
             mask,
-            sources: board.bitboard_piece(piece.value()).squares(),
+            sources: board.bitboard_piece(piece).squares(),
             source,
             targets,
             piece,

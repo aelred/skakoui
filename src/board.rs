@@ -1,9 +1,12 @@
+use crate::move_generation::PieceType;
+use crate::piece::Piece;
 use crate::{
-    moves::PlayedMove, typed_player, Bitboard, Black, File, Move, Piece, PieceTypeV,
-    PieceTypeV::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
+    moves::PlayedMove, piece, typed_player, Bitboard, Black, File, Move, PieceTypeV,
+    PieceTypeV::Pawn, PieceV, Player, PlayerV, Rank, Rook, Square, SquareColor, SquareMap, White,
 };
 use anyhow::Error;
 use enum_map::EnumMap;
+use piece::{BB, BK, BN, BP, BQ, BR, WB, WK, WN, WP, WQ, WR};
 use std::convert::TryFrom;
 use std::fmt;
 use std::fmt::Formatter;
@@ -16,7 +19,7 @@ pub struct Board {
     /// The player whose turn it is
     player: PlayerV,
     /// Square-wise representation: lookup what piece is on a particular square
-    pieces: SquareMap<Option<Piece>>,
+    pieces: SquareMap<Option<PieceV>>,
     /// Occupancy for each piece type
     piece_boards: EnumMap<PieceTypeV, Bitboard>,
     /// Occupancy for white and black
@@ -28,7 +31,7 @@ pub struct Board {
 impl Board {
     /// Create a new board from piece positions and player turn
     pub fn new(
-        pieces: [[Option<Piece>; 8]; 8],
+        pieces: [[Option<PieceV>; 8]; 8],
         player: impl Player,
         mut flags: BoardFlags,
     ) -> Self {
@@ -37,22 +40,22 @@ impl Board {
         });
 
         // Remove any impossible flags
-        if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::H1] != Some(Piece::WR) {
+        if pieces[Square::E1] != Some(WK.value()) || pieces[Square::H1] != Some(WR.value()) {
             flags.unset(White.castle_kingside_flag());
         }
-        if pieces[Square::E1] != Some(Piece::WK) || pieces[Square::A1] != Some(Piece::WR) {
+        if pieces[Square::E1] != Some(WK.value()) || pieces[Square::A1] != Some(WR.value()) {
             flags.unset(White.castle_queenside_flag());
         }
-        if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::H8] != Some(Piece::BR) {
+        if pieces[Square::E8] != Some(BK.value()) || pieces[Square::H8] != Some(BR.value()) {
             flags.unset(Black.castle_kingside_flag());
         }
-        if pieces[Square::E8] != Some(Piece::BK) || pieces[Square::A8] != Some(Piece::BR) {
+        if pieces[Square::E8] != Some(BK.value()) || pieces[Square::A8] != Some(BR.value()) {
             flags.unset(Black.castle_queenside_flag());
         }
         if let Some(file) = flags.en_passant_file() {
             let opp = player.opponent();
             let rank = opp.pawn_rank();
-            let pawn = Piece::new(opp, PieceTypeV::Pawn);
+            let pawn = Piece::newv(opp, Pawn);
             let pawn_square = Square::new(file, rank + opp.multiplier() * 2);
             let target_square = Square::new(file, rank + opp.multiplier());
             if pieces[pawn_square] != Some(pawn) || pieces[target_square].is_some() {
@@ -64,7 +67,7 @@ impl Board {
     }
 
     fn with_states(
-        pieces: SquareMap<Option<Piece>>,
+        pieces: SquareMap<Option<PieceV>>,
         player: impl Player,
         flags: BoardFlags,
     ) -> Self {
@@ -73,8 +76,8 @@ impl Board {
 
         for (square, piece) in pieces.iter() {
             if let Some(piece) = piece {
-                piece_boards[piece.piece_type()].set(square);
-                player_boards[piece.player()].set(square);
+                piece_boards[piece.piece_type].set(square);
+                player_boards[piece.player].set(square);
             }
         }
 
@@ -124,15 +127,15 @@ impl Board {
         let target = self[to];
 
         let (captured_piece_type, en_passant_capture) = if let Some(captured_piece) = target {
-            let cap_type = captured_piece.piece_type();
+            let cap_type = captured_piece.piece_type;
             self.piece_boards[cap_type].reset(to);
             self.player_boards[player.opponent().value()].reset(to);
             (Some(cap_type), false)
-        } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceTypeV::Pawn {
+        } else if self.en_passant_square() == Some(to) && piece.piece_type == PieceTypeV::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             match self[cap_square] {
                 Some(captured_piece) => {
-                    let cap_type = captured_piece.piece_type();
+                    let cap_type = captured_piece.piece_type;
                     self.piece_boards[cap_type].reset(cap_square);
                     self.player_boards[player.opponent().value()].reset(cap_square);
                     self.pieces[cap_square] = None;
@@ -147,12 +150,12 @@ impl Board {
         self.pieces[from] = None;
 
         if let Some(promotion_type) = mov.promoting() {
-            let promotion = Piece::new(player, promotion_type);
-            self.piece_boards[piece.piece_type()].reset(from);
+            let promotion = Piece::newv(player, promotion_type);
+            self.piece_boards[piece.piece_type].reset(from);
             self.piece_boards[promotion_type].set(to);
             self.pieces[to] = Some(promotion);
         } else {
-            self.piece_boards[piece.piece_type()].move_bit(from, to);
+            self.piece_boards[piece.piece_type].move_bit(from, to);
             self.pieces[to] = Some(piece);
         }
 
@@ -161,7 +164,7 @@ impl Board {
         let unset_flags = castle_flags(player, from) | castle_flags(player.opponent(), to);
         self.flags.unset(unset_flags);
 
-        if piece.piece_type() == PieceTypeV::King && from.file() == File::E {
+        if piece.piece_type == PieceTypeV::King && from.file() == File::E {
             let kingside_castling = to.file() == File::KINGSIDE;
             let queenside_castling = to.file() == File::QUEENSIDE;
 
@@ -176,7 +179,7 @@ impl Board {
                 let rook_from = Square::new(rook_from_file, from.rank());
                 let rook_to = Square::new(rook_to_file, to.rank());
 
-                let rook = Piece::new(player, PieceTypeV::Rook);
+                let rook = Piece::newv(player, Rook);
                 debug_assert_eq!(self.pieces[rook_from], Some(rook));
                 debug_assert_eq!(self.pieces[rook_to], None);
 
@@ -188,7 +191,7 @@ impl Board {
         }
 
         let en_passant_file =
-            if piece.piece_type() == PieceTypeV::Pawn && (from.rank() - to.rank()).abs() > 1 {
+            if piece.piece_type == PieceTypeV::Pawn && (from.rank() - to.rank()).abs() > 1 {
                 Some(from.file())
             } else {
                 None
@@ -221,7 +224,7 @@ impl Board {
         self.assert_can_move(player, to, from);
 
         let piece = if mov.promoting().is_some() {
-            Piece::new(player, Pawn)
+            Piece::newv(player, Pawn)
         } else {
             self[to].unwrap()
         };
@@ -230,10 +233,10 @@ impl Board {
         self.player = player.value();
 
         if let Some(promotion_type) = mov.promoting() {
-            self.piece_boards[piece.piece_type()].set(from);
+            self.piece_boards[piece.piece_type].set(from);
             self.piece_boards[promotion_type].reset(to);
         } else {
-            self.piece_boards[piece.piece_type()].move_bit(to, from);
+            self.piece_boards[piece.piece_type].move_bit(to, from);
         }
 
         self.pieces[from] = Some(piece);
@@ -243,7 +246,7 @@ impl Board {
         if let Some(captured_piece_type) = capture {
             let opp = player.opponent();
 
-            let captured_piece = Piece::new(opp, captured_piece_type);
+            let captured_piece = Piece::newv(opp, captured_piece_type);
 
             let captured_square = if en_passant_capture {
                 let ep_square = self
@@ -263,7 +266,7 @@ impl Board {
             self.pieces[to] = None;
         }
 
-        let maybe_castling = piece.piece_type() == PieceTypeV::King && from.file() == File::E;
+        let maybe_castling = piece.piece_type == PieceTypeV::King && from.file() == File::E;
 
         if maybe_castling {
             let kingside_castling = to.file() == File::KINGSIDE;
@@ -279,7 +282,7 @@ impl Board {
                 let rook_from = Square::new(rook_from_file, from.rank());
                 let rook_to = Square::new(rook_to_file, to.rank());
 
-                let rook = Piece::new(player, PieceTypeV::Rook);
+                let rook = Piece::newv(player, Rook);
                 debug_assert_eq!(
                     self.pieces[rook_to],
                     Some(rook),
@@ -301,7 +304,7 @@ impl Board {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (Square, &Option<Piece>)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Square, &Option<PieceV>)> {
         self.pieces.iter()
     }
 
@@ -313,8 +316,8 @@ impl Board {
         &self.player_boards
     }
 
-    pub fn bitboard_piece(&self, piece: Piece) -> Bitboard {
-        self.player_boards[piece.player()] & self.piece_boards[piece.piece_type()]
+    pub fn bitboard_piece(&self, piece: Piece<impl Player, impl PieceType>) -> Bitboard {
+        self.player_boards[piece.player.value()] & self.piece_boards[piece.piece_type.value()]
     }
 
     pub fn occupancy(&self) -> Bitboard {
@@ -334,22 +337,22 @@ impl Board {
     }
 
     pub fn eval(&self) -> i32 {
-        let white_centric_score = 200 * (self.ecount(Piece::WK) - self.ecount(Piece::BK))
-            + 9 * (self.ecount(Piece::WQ) - self.ecount(Piece::BQ))
-            + 5 * (self.ecount(Piece::WR) - self.ecount(Piece::BR))
-            + 3 * (self.ecount(Piece::WB) - self.ecount(Piece::BB))
-            + 3 * (self.ecount(Piece::WN) - self.ecount(Piece::BN))
-            + (self.ecount(Piece::WP) - self.ecount(Piece::BP));
+        let white_centric_score = 200 * (self.ecount(WK) - self.ecount(BK))
+            + 9 * (self.ecount(WQ) - self.ecount(BQ))
+            + 5 * (self.ecount(WR) - self.ecount(BR))
+            + 3 * (self.ecount(WB) - self.ecount(BB))
+            + 3 * (self.ecount(WN) - self.ecount(BN))
+            + (self.ecount(WP) - self.ecount(BP));
 
         white_centric_score * self.player.multiplier() as i32 * 100
         // TODO: mobility, isolated pawns, blah blah blah
     }
 
-    fn ecount(&self, piece: Piece) -> i32 {
+    fn ecount(&self, piece: Piece<impl Player, impl PieceType>) -> i32 {
         self.count(piece) as i32
     }
 
-    pub fn count(&self, piece: Piece) -> u8 {
+    pub fn count(&self, piece: Piece<impl Player, impl PieceType>) -> u8 {
         self.bitboard_piece(piece).count()
     }
 
@@ -363,7 +366,7 @@ impl Board {
     /// to a space without a friendly piece
     fn assert_can_move(&self, player: impl Player, from: Square, to: Square) {
         debug_assert_eq!(
-            self.pieces[from].map(Piece::player),
+            self.pieces[from].map(|p| p.player),
             Some(player.value()),
             "{} should have a {} piece, but was {:?}",
             from,
@@ -371,7 +374,7 @@ impl Board {
             self.pieces[from]
         );
         debug_assert_ne!(
-            self.pieces[to].map(Piece::player),
+            self.pieces[to].map(|p| p.player),
             Some(player.value()),
             "{} should not have a {} piece, but was {:?}",
             to,
@@ -383,30 +386,30 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        const __: Option<Piece> = None;
-        const WK: Option<Piece> = Some(Piece::WK);
-        const WQ: Option<Piece> = Some(Piece::WQ);
-        const WR: Option<Piece> = Some(Piece::WR);
-        const WB: Option<Piece> = Some(Piece::WB);
-        const WN: Option<Piece> = Some(Piece::WN);
-        const WP: Option<Piece> = Some(Piece::WP);
-        const BK: Option<Piece> = Some(Piece::BK);
-        const BQ: Option<Piece> = Some(Piece::BQ);
-        const BR: Option<Piece> = Some(Piece::BR);
-        const BB: Option<Piece> = Some(Piece::BB);
-        const BN: Option<Piece> = Some(Piece::BN);
-        const BP: Option<Piece> = Some(Piece::BP);
+        const __: Option<PieceV> = None;
+        let wk = Some(WK.value());
+        let wq = Some(WQ.value());
+        let wr = Some(WR.value());
+        let wb = Some(WB.value());
+        let wn = Some(WN.value());
+        let wp = Some(WP.value());
+        let bk = Some(BK.value());
+        let bq = Some(BQ.value());
+        let br = Some(BR.value());
+        let bb = Some(BB.value());
+        let bn = Some(BN.value());
+        let bp = Some(BP.value());
 
         Board::new(
             [
-                [WR, WN, WB, WQ, WK, WB, WN, WR],
-                [WP, WP, WP, WP, WP, WP, WP, WP],
+                [wr, wn, wb, wq, wk, wb, wn, wr],
+                [wp, wp, wp, wp, wp, wp, wp, wp],
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
                 [__, __, __, __, __, __, __, __],
-                [BP, BP, BP, BP, BP, BP, BP, BP],
-                [BR, BN, BB, BQ, BK, BB, BN, BR],
+                [bp, bp, bp, bp, bp, bp, bp, bp],
+                [br, bn, bb, bq, bk, bb, bn, br],
             ],
             White,
             BoardFlags::default(),
@@ -467,7 +470,7 @@ impl TryFrom<&str> for Board {
 }
 
 impl Index<Square> for Board {
-    type Output = Option<Piece>;
+    type Output = Option<PieceV>;
 
     fn index(&self, square: Square) -> &Self::Output {
         &self.pieces[square]
@@ -549,6 +552,7 @@ impl BoardFlags {
 pub mod tests {
     use super::*;
     use crate::mov;
+    use crate::piece::WP;
     use crate::strategies::*;
     use pretty_assertions::assert_eq;
     use proptest::proptest;
@@ -563,9 +567,9 @@ pub mod tests {
         let board = Board::default();
 
         // Check some known piece positions are right
-        assert_eq!(board[Square::A1], Some(Piece::WR));
-        assert_eq!(board[Square::A2], Some(Piece::WP));
-        assert_eq!(board[Square::E8], Some(Piece::BK));
+        assert_eq!(board[Square::A1], Some(WR.value()));
+        assert_eq!(board[Square::A2], Some(WP.value()));
+        assert_eq!(board[Square::E8], Some(BK.value()));
     }
 
     #[test]
@@ -803,8 +807,8 @@ pub mod tests {
     fn assert_invariants(board: &Board) {
         // Use `pieces` as the source-of-truth
         for (square, piece) in board.pieces.iter() {
-            let pt_at_square = piece.map(Piece::piece_type);
-            let player_at_square = piece.map(Piece::player);
+            let pt_at_square = piece.map(|p| p.piece_type);
+            let player_at_square = piece.map(|p| p.player);
 
             for (bb_piece, piece_board) in board.piece_boards.iter() {
                 assert_eq!(

@@ -1,4 +1,4 @@
-use crate::{Black, Board, BoardFlags, Piece, PieceTypeV, Player, PlayerV, Square, White};
+use crate::{piece, Black, Board, BoardFlags, PieceTypeV, PieceV, Player, PlayerV, Square, White};
 use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use std::borrow::Borrow;
@@ -13,9 +13,9 @@ impl Board {
         let pieces_str = fields.next().context("Expected pieces")?;
         let pieces_by_rank = pieces_str.split('/');
 
-        let mut pieces_vec = ArrayVec::<[[Option<Piece>; 8]; 8]>::new();
+        let mut pieces_vec = ArrayVec::<[[Option<PieceV>; 8]; 8]>::new();
         for rank in pieces_by_rank {
-            let mut rank_vec = ArrayVec::<[Option<Piece>; 8]>::new();
+            let mut rank_vec = ArrayVec::<[Option<PieceV>; 8]>::new();
             for c in rank.chars() {
                 let s = c.to_string();
                 if let Ok(empties) = s.parse::<usize>() {
@@ -24,7 +24,7 @@ impl Board {
                             .try_push(None)
                             .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
                     }
-                } else if let Ok(piece) = s.parse::<Piece>() {
+                } else if let Ok(piece) = s.parse::<PieceV>() {
                     rank_vec
                         .try_push(Some(piece))
                         .with_context(|| anyhow!("More than 8 squares in rank: {}", rank))?;
@@ -86,7 +86,7 @@ impl Board {
             }
         }
 
-        let mut array: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
+        let mut array: [[Option<PieceV>; 8]; 8] = [[None; 8]; 8];
 
         for (square, piece) in self.iter() {
             array[square.rank().to_index() as usize][square.file().to_index() as usize] = *piece;
@@ -166,10 +166,10 @@ impl PlayerV {
     }
 }
 
-impl Piece {
+impl PieceV {
     pub fn to_fen(self) -> String {
-        let c = self.piece_type().to_fen();
-        if self.player() == PlayerV::White {
+        let c = self.piece_type.to_fen();
+        if self.player == PlayerV::White {
             c.to_ascii_uppercase()
         } else {
             c.to_ascii_lowercase()
@@ -178,18 +178,18 @@ impl Piece {
 
     pub fn from_fen(str: &str) -> Result<Self, Error> {
         let piece = match str {
-            "♔" | "K" => Self::WK,
-            "♕" | "Q" => Self::WQ,
-            "♖" | "R" => Self::WR,
-            "♗" | "B" => Self::WB,
-            "♘" | "N" => Self::WN,
-            "♙" | "P" => Self::WP,
-            "♚" | "k" => Self::BK,
-            "♛" | "q" => Self::BQ,
-            "♜" | "r" => Self::BR,
-            "♝" | "b" => Self::BB,
-            "♞" | "n" => Self::BN,
-            "♟" | "p" => Self::BP,
+            "♔" | "K" => piece::WK.value(),
+            "♕" | "Q" => piece::WQ.value(),
+            "♖" | "R" => piece::WR.value(),
+            "♗" | "B" => piece::WB.value(),
+            "♘" | "N" => piece::WN.value(),
+            "♙" | "P" => piece::WP.value(),
+            "♚" | "k" => piece::BK.value(),
+            "♛" | "q" => piece::BQ.value(),
+            "♜" | "r" => piece::BR.value(),
+            "♝" | "b" => piece::BB.value(),
+            "♞" | "n" => piece::BN.value(),
+            "♟" | "p" => piece::BP.value(),
             x => return Err(anyhow!("Unexpected piece '{}'", x)),
         };
 

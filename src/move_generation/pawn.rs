@@ -1,7 +1,8 @@
 use crate::move_generation::piece_type::{PieceType, PieceTypeT};
+use crate::piece::Piece;
 use crate::{
-    bitboard::SquareIterator, bitboards, Bitboard, Black, Board, BoardFlags, Move, Piece,
-    PieceTypeV, Player, Square, White,
+    bitboard::SquareIterator, bitboards, Bitboard, Black, Board, BoardFlags, Move, PieceTypeV,
+    Player, Square, White,
 };
 use std::iter::FlatMap;
 
@@ -79,7 +80,7 @@ impl<P: Player> PawnMovesIter<P> {
     }
 
     fn from_board(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceTypeV::Pawn);
+        let piece = Piece::newv(player, Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
         Self::new(
@@ -128,7 +129,7 @@ impl<P: Player> PawnCapturesIter<P> {
     }
 
     fn from_board(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceTypeV::Pawn);
+        let piece = Piece::newv(player, Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
         Self::new(pawns, opponent_occupancy, player, board.flags())
