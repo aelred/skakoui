@@ -271,6 +271,51 @@ mod tests {
     }
 
     #[test]
+    fn when_checked_by_unprotected_adjacent_pc_then_king_can_move_capture_or_other_can_capture() {
+        let mut board = fen("n7/k7/BP6/8/8/8/8/8 b");
+        assert_moves!(board, [a7b8, a7a6, a7b6, a8b6]);
+    }
+
+    #[test]
+    fn when_checked_by_protected_adjacent_pc_then_king_can_move_or_other_can_capture() {
+        let mut board = fen("n7/k7/BP6/P7/8/8/8/8 b");
+        assert_moves!(board, [a7b8, a7a6, a8b6]);
+    }
+
+    #[test]
+    fn when_checked_by_distant_ray_piece_then_king_can_move_or_other_can_block_or_capture() {
+        let mut board = fen("kb6/8/8/8/8/8/R7/r7 b");
+        assert_moves!(board, [a8b7, b8a7, a1a2]);
+    }
+
+    #[test]
+    fn when_checked_by_knight_then_king_can_move_or_other_can_capture() {
+        let mut board = fen("k7/b7/1N6/8/8/8/8/8 b");
+        assert_moves!(board, [a8b8, a8b7, a7b6]);
+    }
+
+    #[test]
+    fn when_double_checked_by_distant_pieces_then_king_can_move() {
+        let mut board = fen("k1R5/8/2n5/R7/8/8/8/8 b");
+        assert_moves!(board, [a8b7]);
+    }
+
+    #[test]
+    fn when_double_checked_by_adjacent_unprotected_pieces_then_king_can_move_or_capture() {
+        let mut board = fen("kR6/1Bq5/8/8/8/8/8/8 b");
+        assert_moves!(board, [a8a7, a8b8]);
+    }
+
+    #[test]
+    fn absolute_pinned_pieces_can_only_move_along_pinned_ray() {
+        let mut board = fen("3R2Q1/1Q1r1q2/2n5/Rp1kb2R/8/3p1b2/8/3R3B b");
+        assert_moves!(
+            board,
+            [d7d8, d7d6, f7g8, f7e6, f3h1, f3g2, f3e4, d3d2, d5d6, d5e6, d5e4, d5d4, d5c4, d5c5]
+        );
+    }
+
+    #[test]
     fn capturing_moves_are_all_pseudo_legal_moves_that_capture_a_piece() {
         let mut board = fen("8/8/8/8/1b1N4/1Q6/p3n3/8 w");
         let capturing_moves: HashSet<Move> = board.capturing_moves(White).collect();
