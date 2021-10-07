@@ -80,6 +80,7 @@ impl Board {
 
         let pmov = self.make_move(mov);
         let king_board = self.bitboard_piece(my_king);
+        // TODO: this `attacks` check is the slowest part of move generation
         let attacks = self.attacks(me.opponent());
         let in_check = king_board & attacks != bitboards::EMPTY;
         if in_check {
