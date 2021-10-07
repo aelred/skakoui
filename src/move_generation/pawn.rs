@@ -1,13 +1,16 @@
+use crate::move_generation::piece_type::{PieceType, PieceTypeT};
 use crate::{
-    bitboard::SquareIterator, bitboards, move_generation::piece_type::PieceTypeT, Bitboard, Black,
-    Board, BoardFlags, Move, Piece, PieceType, Player, Square, White,
+    bitboard::SquareIterator, bitboards, Bitboard, Black, Board, BoardFlags, Move, Piece,
+    PieceTypeV, Player, Square, White,
 };
 use std::iter::FlatMap;
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Pawn;
-impl PieceTypeT for Pawn {
-    const PIECE_TYPE: PieceType = PieceType::Pawn;
+impl PieceType for Pawn {
+    fn value(self) -> PieceTypeV {
+        PieceTypeV::Pawn
+    }
 
     fn attacks(
         &self,
@@ -32,6 +35,8 @@ impl PieceTypeT for Pawn {
         pushes | double_pushes
     }
 }
+
+impl PieceTypeT for Pawn {}
 
 pub type Moves<P> = FlatMap<PawnMovesIter<P>, Promotions, fn(Move) -> Promotions>;
 pub type Attacks<P> = FlatMap<PawnCapturesIter<P>, Promotions, fn(Move) -> Promotions>;
@@ -74,7 +79,7 @@ impl<P: Player> PawnMovesIter<P> {
     }
 
     fn from_board(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceType::Pawn);
+        let piece = Piece::new(player.value(), PieceTypeV::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
         Self::new(
@@ -123,7 +128,7 @@ impl<P: Player> PawnCapturesIter<P> {
     }
 
     fn from_board(board: &Board, player: P) -> Self {
-        let piece = Piece::new(player.value(), PieceType::Pawn);
+        let piece = Piece::new(player.value(), PieceTypeV::Pawn);
         let pawns = board.bitboard_piece(piece);
         let opponent_occupancy = board.occupancy_player(player.opponent().value());
         Self::new(pawns, opponent_occupancy, player, board.flags())
@@ -148,18 +153,18 @@ impl<P: Player> Iterator for PawnCapturesIter<P> {
     }
 }
 
-const PROMOTIONS: [Option<PieceType>; 4] = [
-    Some(PieceType::Queen),
-    Some(PieceType::Rook),
-    Some(PieceType::Bishop),
-    Some(PieceType::Knight),
+const PROMOTIONS: [Option<PieceTypeV>; 4] = [
+    Some(PieceTypeV::Queen),
+    Some(PieceTypeV::Rook),
+    Some(PieceTypeV::Bishop),
+    Some(PieceTypeV::Knight),
 ];
 
-const NO_PROMOTION: [Option<PieceType>; 1] = [None];
+const NO_PROMOTION: [Option<PieceTypeV>; 1] = [None];
 
 pub struct Promotions {
     mov: Move,
-    promotions: std::slice::Iter<'static, Option<PieceType>>,
+    promotions: std::slice::Iter<'static, Option<PieceTypeV>>,
 }
 
 impl Promotions {

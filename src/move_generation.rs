@@ -1,8 +1,6 @@
 use crate::{
-    bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PieceType, PlayedMove, Player,
-    Square,
+    bitboards, Bitboard, Board, BoardFlags, File, Move, Piece, PlayedMove, Player, Square,
 };
-use piece_type::PieceTypeT;
 
 mod bishop;
 mod king;
@@ -17,7 +15,8 @@ pub use crate::move_generation::bishop::Bishop;
 pub use crate::move_generation::king::King;
 pub use crate::move_generation::knight::Knight;
 pub use crate::move_generation::pawn::Pawn;
-use crate::move_generation::piece_type::PieceT;
+use crate::move_generation::piece_type::PieceType;
+pub use crate::move_generation::piece_type::{PieceT, PieceTypeV};
 pub use crate::move_generation::queen::Queen;
 pub use crate::move_generation::rook::Rook;
 use std::iter::Chain;
@@ -63,10 +62,10 @@ impl Board {
     pub fn make_if_legal(&mut self, mov: Move) -> Option<PlayedMove> {
         let me = self.player();
 
-        let my_king = Piece::new(me, PieceType::King);
+        let my_king = Piece::new(me, PieceTypeV::King);
+        let piece = self[mov.from()].unwrap();
 
-        let king_move = self[mov.from()] == Some(my_king);
-        let castling = king_move && (mov.from().file() - mov.to().file()).abs() == 2;
+        let castling = piece == my_king && (mov.from().file() - mov.to().file()).abs() == 2;
         if castling {
             let through = if mov.to().file() == File::KINGSIDE {
                 me.castle_kingside_through()
@@ -94,7 +93,7 @@ impl Board {
     }
 
     pub fn check(&self, king_player: impl Player) -> bool {
-        let king = Piece::new(king_player, PieceType::King);
+        let king = Piece::new(king_player, PieceTypeV::King);
         match self.bitboard_piece(king).squares().next() {
             Some(king_pos) => self
                 .pseudo_legal_moves_for(king_player.opponent())
@@ -119,7 +118,7 @@ impl Board {
         king | queen | rook | bishop | knight | pawn
     }
 
-    fn attacks_for_piece<P: Player, PT: PieceTypeT>(&self, piece: PieceT<P, PT>) -> Bitboard {
+    fn attacks_for_piece<P: Player, PT: PieceType>(&self, piece: PieceT<P, PT>) -> Bitboard {
         let pt = &piece.piece_type;
         let mut attacks = bitboards::EMPTY;
         for source in self.bitboard_piece(piece.value()).squares() {
@@ -134,7 +133,7 @@ pub trait Movement: Copy {
 
     fn movement(
         &self,
-        piece_type: &impl PieceTypeT,
+        piece_type: &impl PieceType,
         source: Square,
         occupancy: Bitboard,
         flags: BoardFlags,
@@ -159,7 +158,7 @@ impl<P: Player> Movement for AllMoves<P> {
 
     fn movement(
         &self,
-        piece_type: &impl PieceTypeT,
+        piece_type: &impl PieceType,
         source: Square,
         occupancy: Bitboard,
         flags: BoardFlags,
@@ -201,7 +200,7 @@ impl<P: Player> Movement for CapturingMoves<P> {
 
     fn movement(
         &self,
-        piece_type: &impl PieceTypeT,
+        piece_type: &impl PieceType,
         source: Square,
         occupancy: Bitboard,
         flags: BoardFlags,

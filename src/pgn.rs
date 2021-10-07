@@ -1,4 +1,4 @@
-use crate::{Board, File, Move, Piece, PieceType, Rank, Square};
+use crate::{Board, File, Move, Piece, PieceTypeV, Rank, Square};
 use anyhow::{anyhow, Context, Error};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -10,12 +10,12 @@ use std::str::FromStr;
 #[derive(Copy, Clone)]
 pub enum Algebraic {
     Move {
-        piece_type: PieceType,
+        piece_type: PieceTypeV,
         source_file: Option<File>,
         source_rank: Option<Rank>,
         capturing: bool,
         target: Square,
-        promoting: Option<PieceType>,
+        promoting: Option<PieceTypeV>,
     },
     CastleKingside,
     CastleQueenside,
@@ -112,8 +112,8 @@ impl FromStr for Algebraic {
                 }
 
                 let piece_type = match c.name("pt") {
-                    Some(m) => m.as_str().parse::<PieceType>().unwrap(),
-                    None => PieceType::Pawn,
+                    Some(m) => m.as_str().parse::<PieceTypeV>().unwrap(),
+                    None => PieceTypeV::Pawn,
                 };
                 let source_file = c.name("sf").map(|m| m.as_str().parse::<File>().unwrap());
                 let source_rank = c.name("sr").map(|m| m.as_str().parse::<Rank>().unwrap());
@@ -125,7 +125,7 @@ impl FromStr for Algebraic {
                     .parse::<Square>()?;
                 let promoting = c
                     .name("pro")
-                    .map(|m| m.as_str().parse::<PieceType>().unwrap());
+                    .map(|m| m.as_str().parse::<PieceTypeV>().unwrap());
 
                 Ok(Self::Move {
                     piece_type,

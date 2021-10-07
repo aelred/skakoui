@@ -1,13 +1,16 @@
+use crate::move_generation::piece_type::PieceType;
 use crate::{
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
-    Bishop, Bitboard, Board, BoardFlags, PieceType, Player, Rook, Square,
+    Bishop, Bitboard, Board, BoardFlags, PieceTypeV, Player, Rook, Square,
 };
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Queen;
-impl PieceTypeT for Queen {
-    const PIECE_TYPE: PieceType = PieceType::Queen;
+impl PieceType for Queen {
+    fn value(self) -> PieceTypeV {
+        PieceTypeV::Queen
+    }
 
     fn attacks(
         &self,
@@ -19,6 +22,8 @@ impl PieceTypeT for Queen {
         Rook.attacks(source, occ, player, flags) | Bishop.attacks(source, occ, player, flags)
     }
 }
+
+impl PieceTypeT for Queen {}
 
 pub type Moves<P> = MovesIter<P, Queen, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Queen, CapturingMoves<P>>;

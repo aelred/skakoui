@@ -1,15 +1,18 @@
+use crate::move_generation::piece_type::{PieceType, PieceTypeT};
 use crate::{
     bitboards,
-    move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
+    move_generation::piece_type::{MovesIter, PieceT},
     move_generation::{AllMoves, CapturingMoves},
-    Bitboard, Board, BoardFlags, File, PieceType, Player, Square, SquareMap,
+    Bitboard, Board, BoardFlags, File, PieceTypeV, Player, Square, SquareMap,
 };
 use lazy_static::lazy_static;
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct King;
-impl PieceTypeT for King {
-    const PIECE_TYPE: PieceType = PieceType::King;
+impl PieceType for King {
+    fn value(self) -> PieceTypeV {
+        PieceTypeV::King
+    }
 
     fn attacks(&self, source: Square, _: Bitboard, _: impl Player, _: BoardFlags) -> Bitboard {
         KING_MOVES[source]
@@ -39,6 +42,8 @@ impl PieceTypeT for King {
         castles
     }
 }
+
+impl PieceTypeT for King {}
 
 pub type Moves<P> = MovesIter<P, King, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, King, CapturingMoves<P>>;

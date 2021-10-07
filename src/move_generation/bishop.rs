@@ -1,15 +1,18 @@
 use crate::magic::Magic;
+use crate::move_generation::piece_type::PieceType;
 use crate::{
     move_generation::piece_type::{MovesIter, PieceT, PieceTypeT},
     move_generation::{AllMoves, CapturingMoves},
-    Bitboard, Board, BoardFlags, PieceType, Player, Square,
+    Bitboard, Board, BoardFlags, PieceTypeV, Player, Square,
 };
 
 #[derive(Default, Copy, Clone)]
 pub struct Bishop;
 
-impl PieceTypeT for Bishop {
-    const PIECE_TYPE: PieceType = PieceType::Bishop;
+impl PieceType for Bishop {
+    fn value(self) -> PieceTypeV {
+        PieceTypeV::Bishop
+    }
 
     fn attacks(
         &self,
@@ -21,6 +24,8 @@ impl PieceTypeT for Bishop {
         Bishop.magic_moves(source, occupancy)
     }
 }
+
+impl PieceTypeT for Bishop {}
 
 pub type Moves<P> = MovesIter<P, Bishop, AllMoves<P>>;
 pub type Attacks<P> = MovesIter<P, Bishop, CapturingMoves<P>>;

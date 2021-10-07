@@ -1,4 +1,4 @@
-use crate::{BoardFlags, File, PieceType, Player, Square};
+use crate::{BoardFlags, File, PieceTypeV, Player, Square};
 use anyhow::{anyhow, Error};
 use std::fmt;
 use std::str::FromStr;
@@ -7,7 +7,7 @@ use std::str::FromStr;
 pub struct Move {
     from: Square,
     to: Square,
-    promoting: Option<PieceType>,
+    promoting: Option<PieceTypeV>,
 }
 
 impl Move {
@@ -19,7 +19,7 @@ impl Move {
         }
     }
 
-    pub fn new_promoting(from: Square, to: Square, promoting: PieceType) -> Self {
+    pub fn new_promoting(from: Square, to: Square, promoting: PieceTypeV) -> Self {
         Self {
             from,
             to,
@@ -51,11 +51,11 @@ impl Move {
         self.to
     }
 
-    pub fn promoting(self) -> Option<PieceType> {
+    pub fn promoting(self) -> Option<PieceTypeV> {
         self.promoting
     }
 
-    pub fn mut_promoting(&mut self) -> &mut Option<PieceType> {
+    pub fn mut_promoting(&mut self) -> &mut Option<PieceTypeV> {
         &mut self.promoting
     }
 }
@@ -95,7 +95,7 @@ impl FromStr for Move {
             if promoting_str.is_empty() {
                 None
             } else {
-                Some(promoting_str.parse::<PieceType>()?)
+                Some(promoting_str.parse::<PieceTypeV>()?)
             }
         } else {
             None
@@ -120,7 +120,7 @@ macro_rules! mov {
 #[derive(Debug, Copy, Clone)]
 pub struct PlayedMove {
     pub mov: Move,
-    pub capture: Option<PieceType>,
+    pub capture: Option<PieceTypeV>,
     pub en_passant_capture: bool,
     pub flags: BoardFlags,
 }
@@ -128,7 +128,7 @@ pub struct PlayedMove {
 impl PlayedMove {
     pub fn new(
         mov: Move,
-        capture: Option<PieceType>,
+        capture: Option<PieceTypeV>,
         en_passant_capture: bool,
         flags: BoardFlags,
     ) -> Self {
@@ -144,7 +144,7 @@ impl PlayedMove {
         self.mov
     }
 
-    pub fn capture(self) -> Option<PieceType> {
+    pub fn capture(self) -> Option<PieceTypeV> {
         self.capture
     }
 }
@@ -164,10 +164,10 @@ mod tests {
 
     #[test]
     fn can_create_a_promoting_move() {
-        let mov = Move::new_promoting(Square::A2, Square::A3, PieceType::Knight);
+        let mov = Move::new_promoting(Square::A2, Square::A3, PieceTypeV::Knight);
         assert_eq!(mov.from(), Square::A2);
         assert_eq!(mov.to(), Square::A3);
-        assert_eq!(mov.promoting(), Some(PieceType::Knight));
+        assert_eq!(mov.promoting(), Some(PieceTypeV::Knight));
     }
 
     #[test]

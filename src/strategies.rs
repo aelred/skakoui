@@ -1,4 +1,4 @@
-use crate::{Bitboard, Board, BoardFlags, GameState, Move, Piece, PieceType, PlayerV, Square};
+use crate::{Bitboard, Board, BoardFlags, GameState, Move, Piece, PieceTypeV, PlayerV, Square};
 use arrayvec::ArrayVec;
 use proptest::bool::weighted;
 use proptest::collection::{vec, SizeRange};
@@ -27,7 +27,7 @@ pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
             pieces
                 .into_iter()
                 .zip(keep.into_iter())
-                .map(|(piece, keep)| piece.filter(|p| keep || p.piece_type() == PieceType::King))
+                .map(|(piece, keep)| piece.filter(|p| keep || p.piece_type() == PieceTypeV::King))
                 .collect::<Vec<Option<Piece>>>()
         })
         .prop_map(|pieces| {
@@ -43,17 +43,17 @@ pub fn arb_pieces() -> impl Strategy<Value = [[Option<Piece>; 8]; 8]> {
         })
 }
 
-pub fn arb_piece_type() -> impl Strategy<Value = PieceType> {
-    let mut pawns = std::iter::repeat(PieceType::Pawn).take(8).collect();
+pub fn arb_piece_type() -> impl Strategy<Value = PieceTypeV> {
+    let mut pawns = std::iter::repeat(PieceTypeV::Pawn).take(8).collect();
     let mut types = vec![
-        PieceType::King,
-        PieceType::Queen,
-        PieceType::Rook,
-        PieceType::Rook,
-        PieceType::Bishop,
-        PieceType::Bishop,
-        PieceType::Knight,
-        PieceType::Knight,
+        PieceTypeV::King,
+        PieceTypeV::Queen,
+        PieceTypeV::Rook,
+        PieceTypeV::Rook,
+        PieceTypeV::Bishop,
+        PieceTypeV::Bishop,
+        PieceTypeV::Knight,
+        PieceTypeV::Knight,
     ];
     types.append(&mut pawns);
     select(types)

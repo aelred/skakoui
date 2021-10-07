@@ -1,5 +1,5 @@
 use crate::search::LOW_SCORE;
-use crate::{Bitboard, Board, BoardFlags, Move, PieceType, PlayerV};
+use crate::{Bitboard, Board, BoardFlags, Move, PieceTypeV, PlayerV};
 use enum_map::EnumMap;
 use serde::Serialize;
 use std::collections::hash_map::DefaultHasher;
@@ -99,7 +99,7 @@ impl TranspositionTable {
 }
 
 pub type Key = (
-    EnumMap<PieceType, Bitboard>,
+    EnumMap<PieceTypeV, Bitboard>,
     EnumMap<PlayerV, Bitboard>,
     PlayerV,
     BoardFlags,

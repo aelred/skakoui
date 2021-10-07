@@ -1,76 +1,66 @@
-use crate::{Player, PlayerV};
+use crate::move_generation::PieceT;
+use crate::{PieceTypeV, Player, PlayerV};
 use anyhow::Error;
-use enum_map::Enum;
 use std::fmt;
 use std::str::FromStr;
 
 #[derive(PartialEq, Eq, Copy, Clone, Hash, Ord, PartialOrd)]
 pub struct Piece {
     player: PlayerV,
-    piece_type: PieceType,
-}
-
-#[derive(Debug, Eq, PartialEq, Enum, Copy, Clone, Ord, PartialOrd, Hash)]
-pub enum PieceType {
-    King,
-    Queen,
-    Rook,
-    Bishop,
-    Knight,
-    Pawn,
+    piece_type: PieceTypeV,
 }
 
 impl Piece {
     pub const WK: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::King,
+        piece_type: PieceTypeV::King,
     };
     pub const WQ: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::Queen,
+        piece_type: PieceTypeV::Queen,
     };
     pub const WR: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::Rook,
+        piece_type: PieceTypeV::Rook,
     };
     pub const WB: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::Bishop,
+        piece_type: PieceTypeV::Bishop,
     };
     pub const WN: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::Knight,
+        piece_type: PieceTypeV::Knight,
     };
     pub const WP: Self = Self {
         player: PlayerV::White,
-        piece_type: PieceType::Pawn,
+        piece_type: PieceTypeV::Pawn,
     };
     pub const BK: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::King,
+        piece_type: PieceTypeV::King,
     };
     pub const BQ: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::Queen,
+        piece_type: PieceTypeV::Queen,
     };
     pub const BR: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::Rook,
+        piece_type: PieceTypeV::Rook,
     };
     pub const BB: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::Bishop,
+        piece_type: PieceTypeV::Bishop,
     };
     pub const BN: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::Knight,
+        piece_type: PieceTypeV::Knight,
     };
     pub const BP: Self = Self {
         player: PlayerV::Black,
-        piece_type: PieceType::Pawn,
+        piece_type: PieceTypeV::Pawn,
     };
 
-    pub fn new(player: impl Player, piece_type: PieceType) -> Self {
+    pub fn new(player: impl Player, piece_type: PieceTypeV) -> Self {
         Self {
             player: player.value(),
             piece_type,
@@ -81,8 +71,12 @@ impl Piece {
         self.player
     }
 
-    pub fn piece_type(self) -> PieceType {
+    pub fn piece_type(self) -> PieceTypeV {
         self.piece_type
+    }
+
+    pub fn typed(self) -> PieceT<PlayerV, PieceTypeV> {
+        PieceT::new(self.player, self.piece_type)
     }
 }
 
@@ -106,20 +100,20 @@ impl fmt::Display for Piece {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let symbol = match self.player {
             PlayerV::White => match self.piece_type {
-                PieceType::King => "♔",
-                PieceType::Queen => "♕",
-                PieceType::Rook => "♖",
-                PieceType::Bishop => "♗",
-                PieceType::Knight => "♘",
-                PieceType::Pawn => "♙",
+                PieceTypeV::King => "♔",
+                PieceTypeV::Queen => "♕",
+                PieceTypeV::Rook => "♖",
+                PieceTypeV::Bishop => "♗",
+                PieceTypeV::Knight => "♘",
+                PieceTypeV::Pawn => "♙",
             },
             PlayerV::Black => match self.piece_type {
-                PieceType::King => "♚",
-                PieceType::Queen => "♛",
-                PieceType::Rook => "♜",
-                PieceType::Bishop => "♝",
-                PieceType::Knight => "♞",
-                PieceType::Pawn => "♟",
+                PieceTypeV::King => "♚",
+                PieceTypeV::Queen => "♛",
+                PieceTypeV::Rook => "♜",
+                PieceTypeV::Bishop => "♝",
+                PieceTypeV::Knight => "♞",
+                PieceTypeV::Pawn => "♟",
             },
         };
 
@@ -127,26 +121,26 @@ impl fmt::Display for Piece {
     }
 }
 
-impl PieceType {
+impl PieceTypeV {
     pub fn to_char(self) -> char {
         match self {
-            PieceType::King => 'K',
-            PieceType::Queen => 'Q',
-            PieceType::Rook => 'R',
-            PieceType::Bishop => 'B',
-            PieceType::Knight => 'N',
-            PieceType::Pawn => 'P',
+            PieceTypeV::King => 'K',
+            PieceTypeV::Queen => 'Q',
+            PieceTypeV::Rook => 'R',
+            PieceTypeV::Bishop => 'B',
+            PieceTypeV::Knight => 'N',
+            PieceTypeV::Pawn => 'P',
         }
     }
 }
 
-impl fmt::Display for PieceType {
+impl fmt::Display for PieceTypeV {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         f.write_str(&self.to_fen())
     }
 }
 
-impl FromStr for PieceType {
+impl FromStr for PieceTypeV {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -184,12 +178,12 @@ mod tests {
 
     #[test]
     fn can_get_type_for_a_piece() {
-        assert_eq!(Piece::WK.piece_type(), PieceType::King);
-        assert_eq!(Piece::BB.piece_type(), PieceType::Bishop);
+        assert_eq!(Piece::WK.piece_type(), PieceTypeV::King);
+        assert_eq!(Piece::BB.piece_type(), PieceTypeV::Bishop);
     }
 
     #[test]
     fn can_create_piece_from_player_and_type() {
-        assert_eq!(Piece::new(Black, PieceType::Rook), Piece::BR);
+        assert_eq!(Piece::new(Black, PieceTypeV::Rook), Piece::BR);
     }
 }

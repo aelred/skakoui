@@ -1,6 +1,6 @@
 use crate::{
-    moves::PlayedMove, typed_player, Bitboard, Black, File, Move, Piece, PieceType,
-    PieceType::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
+    moves::PlayedMove, typed_player, Bitboard, Black, File, Move, Piece, PieceTypeV,
+    PieceTypeV::Pawn, Player, PlayerV, Rank, Square, SquareColor, SquareMap, White,
 };
 use anyhow::Error;
 use enum_map::EnumMap;
@@ -18,7 +18,7 @@ pub struct Board {
     /// Square-wise representation: lookup what piece is on a particular square
     pieces: SquareMap<Option<Piece>>,
     /// Occupancy for each piece type
-    piece_boards: EnumMap<PieceType, Bitboard>,
+    piece_boards: EnumMap<PieceTypeV, Bitboard>,
     /// Occupancy for white and black
     player_boards: EnumMap<PlayerV, Bitboard>,
     /// Castling rights
@@ -52,7 +52,7 @@ impl Board {
         if let Some(file) = flags.en_passant_file() {
             let opp = player.opponent();
             let rank = opp.pawn_rank();
-            let pawn = Piece::new(opp, PieceType::Pawn);
+            let pawn = Piece::new(opp, PieceTypeV::Pawn);
             let pawn_square = Square::new(file, rank + opp.multiplier() * 2);
             let target_square = Square::new(file, rank + opp.multiplier());
             if pieces[pawn_square] != Some(pawn) || pieces[target_square].is_some() {
@@ -68,7 +68,7 @@ impl Board {
         player: impl Player,
         flags: BoardFlags,
     ) -> Self {
-        let mut piece_boards = EnumMap::<PieceType, Bitboard>::new();
+        let mut piece_boards = EnumMap::<PieceTypeV, Bitboard>::new();
         let mut player_boards = EnumMap::<PlayerV, Bitboard>::new();
 
         for (square, piece) in pieces.iter() {
@@ -128,7 +128,7 @@ impl Board {
             self.piece_boards[cap_type].reset(to);
             self.player_boards[player.opponent().value()].reset(to);
             (Some(cap_type), false)
-        } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceType::Pawn {
+        } else if self.en_passant_square() == Some(to) && piece.piece_type() == PieceTypeV::Pawn {
             let cap_square = to.shift_rank(self.player.opponent().multiplier());
             match self[cap_square] {
                 Some(captured_piece) => {
@@ -161,7 +161,7 @@ impl Board {
         let unset_flags = castle_flags(player, from) | castle_flags(player.opponent(), to);
         self.flags.unset(unset_flags);
 
-        if piece.piece_type() == PieceType::King && from.file() == File::E {
+        if piece.piece_type() == PieceTypeV::King && from.file() == File::E {
             let kingside_castling = to.file() == File::KINGSIDE;
             let queenside_castling = to.file() == File::QUEENSIDE;
 
@@ -176,19 +176,19 @@ impl Board {
                 let rook_from = Square::new(rook_from_file, from.rank());
                 let rook_to = Square::new(rook_to_file, to.rank());
 
-                let rook = Piece::new(player, PieceType::Rook);
+                let rook = Piece::new(player, PieceTypeV::Rook);
                 debug_assert_eq!(self.pieces[rook_from], Some(rook));
                 debug_assert_eq!(self.pieces[rook_to], None);
 
                 self.pieces[rook_from] = None;
                 self.pieces[rook_to] = Some(rook);
-                self.piece_boards[PieceType::Rook].move_bit(rook_from, rook_to);
+                self.piece_boards[PieceTypeV::Rook].move_bit(rook_from, rook_to);
                 self.player_boards[player.value()].move_bit(rook_from, rook_to);
             }
         }
 
         let en_passant_file =
-            if piece.piece_type() == PieceType::Pawn && (from.rank() - to.rank()).abs() > 1 {
+            if piece.piece_type() == PieceTypeV::Pawn && (from.rank() - to.rank()).abs() > 1 {
                 Some(from.file())
             } else {
                 None
@@ -263,7 +263,7 @@ impl Board {
             self.pieces[to] = None;
         }
 
-        let maybe_castling = piece.piece_type() == PieceType::King && from.file() == File::E;
+        let maybe_castling = piece.piece_type() == PieceTypeV::King && from.file() == File::E;
 
         if maybe_castling {
             let kingside_castling = to.file() == File::KINGSIDE;
@@ -279,7 +279,7 @@ impl Board {
                 let rook_from = Square::new(rook_from_file, from.rank());
                 let rook_to = Square::new(rook_to_file, to.rank());
 
-                let rook = Piece::new(player, PieceType::Rook);
+                let rook = Piece::new(player, PieceTypeV::Rook);
                 debug_assert_eq!(
                     self.pieces[rook_to],
                     Some(rook),
@@ -295,7 +295,7 @@ impl Board {
 
                 self.pieces[rook_from] = Some(rook);
                 self.pieces[rook_to] = None;
-                self.piece_boards[PieceType::Rook].move_bit(rook_to, rook_from);
+                self.piece_boards[PieceTypeV::Rook].move_bit(rook_to, rook_from);
                 self.player_boards[player.value()].move_bit(rook_to, rook_from);
             }
         }
@@ -305,7 +305,7 @@ impl Board {
         self.pieces.iter()
     }
 
-    pub fn piece_boards(&self) -> &EnumMap<PieceType, Bitboard> {
+    pub fn piece_boards(&self) -> &EnumMap<PieceTypeV, Bitboard> {
         &self.piece_boards
     }
 
@@ -614,7 +614,7 @@ pub mod tests {
     fn can_make_a_promoting_move_on_board() {
         let mut board = fen("rnbqkb1r/ppppp1Pp/8/5p2/6n1/8/PPPPP1PP/RNBQKBNR w");
 
-        let mov = Move::new_promoting(Square::G7, Square::G8, PieceType::Queen);
+        let mov = Move::new_promoting(Square::G7, Square::G8, PieceTypeV::Queen);
 
         board.make_move(mov);
 
@@ -628,7 +628,7 @@ pub mod tests {
 
         let expected_board = board.clone();
 
-        let mov1 = Move::new_promoting(Square::G7, Square::H8, PieceType::Queen);
+        let mov1 = Move::new_promoting(Square::G7, Square::H8, PieceTypeV::Queen);
         let mov2 = Move::new(Square::H7, Square::H5);
         let mov3 = Move::new(Square::H8, Square::H5);
 

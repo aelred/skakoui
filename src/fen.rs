@@ -1,4 +1,4 @@
-use crate::{Black, Board, BoardFlags, Piece, PieceType, Player, PlayerV, Square, White};
+use crate::{Black, Board, BoardFlags, Piece, PieceTypeV, Player, PlayerV, Square, White};
 use anyhow::{anyhow, Context, Error};
 use arrayvec::ArrayVec;
 use std::borrow::Borrow;
@@ -197,7 +197,7 @@ impl Piece {
     }
 }
 
-impl PieceType {
+impl PieceTypeV {
     pub fn to_fen(self) -> String {
         self.to_char().to_string()
     }
