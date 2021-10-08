@@ -46,7 +46,7 @@ impl<P: Player, PT: PieceType> fmt::Debug for Piece<P, PT> {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'a>) -> fmt::Result {
         let player_char = self.player.char();
         let piece_char = self.piece_type.value().to_char();
-        f.write_fmt(format_args!("piece::{}{}", player_char, piece_char))
+        f.write_fmt(format_args!("{}{}", player_char, piece_char))
     }
 }
 
