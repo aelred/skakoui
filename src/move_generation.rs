@@ -94,18 +94,33 @@ impl Board {
 
     pub fn check(&self, king_player: impl Player) -> bool {
         let king = Piece::new(king_player, King);
-        match self.bitboard_piece(king).squares().next() {
-            Some(king_pos) => self
-                .pseudo_legal_moves_for(king_player.opponent())
-                .any(|mov| mov.to() == king_pos),
-            None => false,
-        }
+        self.bitboard_piece(king)
+            .squares()
+            .any(|pos| self.is_square_attacked(king_player.opponent(), pos))
     }
 
     pub fn checkmate(&mut self) -> bool {
         let in_check = self.check(self.player());
         let mut no_legal_moves = || self.moves().next().is_none();
         in_check && no_legal_moves()
+    }
+
+    fn is_square_attacked(&self, attacker: impl Player, sq: Square) -> bool {
+        let other = attacker.opponent();
+        let occ = self.occupancy();
+        // Chess attacks are all symmetrical (except en passant?)
+        // e.g. "WQ at square X attacks square Y == BQ at square Y attacks square X"
+        // So we just imagine what a piece could attack if it were at this square.
+        let queens = self.bitboard_piece(Piece::new(attacker, Queen));
+        let rooks = self.bitboard_piece(Piece::new(attacker, Rook));
+        let bishops = self.bitboard_piece(Piece::new(attacker, Bishop));
+        let knights = self.bitboard_piece(Piece::new(attacker, Knight));
+        let pawns = self.bitboard_piece(Piece::new(attacker, Pawn));
+        let rook_attacks = Rook.attacks(sq, occ, other, self.flags()) & (rooks | queens);
+        let bishop_attacks = Bishop.attacks(sq, occ, other, self.flags()) & (bishops | queens);
+        let knight_attacks = Knight.attacks(sq, occ, other, self.flags()) & knights;
+        let pawn_attacks = Pawn.attacks(sq, occ, other, self.flags()) & pawns;
+        (rook_attacks | bishop_attacks | knight_attacks | pawn_attacks) != bitboards::EMPTY
     }
 
     fn attacks(&self, player: impl Player) -> Bitboard {
