@@ -1,45 +1,46 @@
+use crate::piece::{BK, WK};
 use crate::{Bitboard, Board, BoardFlags, GameState, Move, PieceTypeV, PieceV, PlayerV, Square};
-use arrayvec::ArrayVec;
-use proptest::bool::weighted;
+use proptest::bits;
 use proptest::collection::{vec, SizeRange};
 use proptest::prelude::*;
-use proptest::sample::{select, Index};
+use proptest::sample::{select, subsequence, Index};
 
 pub fn arb_player() -> impl Strategy<Value = PlayerV> {
     const PLAYERS: &[PlayerV] = &[PlayerV::White, PlayerV::Black];
     select(PLAYERS)
 }
 
-pub fn all_pieces() -> Vec<Option<PieceV>> {
-    Board::default().iter().map(|(_, piece)| *piece).collect()
-}
-
 pub fn arb_pieces() -> impl Strategy<Value = [[Option<PieceV>; 8]; 8]> {
-    let all_pieces = all_pieces();
-    let len = all_pieces.len();
+    let non_king_pieces: Vec<PieceV> = Board::default()
+        .iter()
+        .flat_map(|(_, piece)| *piece)
+        .filter(|piece| piece.piece_type != PieceTypeV::King)
+        .collect();
 
-    // odds are chosen per-board instead of per-piece, so we get boards with many pieces and some with few
-    let keep_pieces = (0.0..=1.0).prop_flat_map(move |keep_odds| vec(weighted(keep_odds), len));
+    let all_squares: Vec<Square> = Square::all().collect();
+    let squares = Just(all_squares).prop_shuffle().no_shrink();
 
-    let shuffled_pieces = Just(all_pieces).prop_shuffle();
-    (shuffled_pieces, keep_pieces)
-        .prop_map(|(pieces, keep)| {
-            pieces
-                .into_iter()
-                .zip(keep.into_iter())
-                .map(|(piece, keep)| piece.filter(|p| keep || p.piece_type == PieceTypeV::King))
-                .collect::<Vec<Option<PieceV>>>()
+    (Just(non_king_pieces), squares)
+        .prop_flat_map(|(non_king_pieces, squares)| {
+            let (king_sq, non_king_sq) = squares.split_at(2);
+            let wk = king_sq[0];
+            let bk = king_sq[1];
+            let zipped: Vec<(Square, PieceV)> =
+                non_king_sq.iter().copied().zip(non_king_pieces).collect();
+            let len = zipped.len();
+            // This 0..=len means proptest will shrink by removing pieces
+            subsequence(zipped, 0..=len).prop_map(move |mut pieces| {
+                pieces.push((wk, WK.value()));
+                pieces.push((bk, BK.value()));
+                pieces
+            })
         })
         .prop_map(|pieces| {
-            let arr: ArrayVec<[[Option<PieceV>; 8]; 8]> = pieces
-                .chunks(8)
-                .map(|slice| {
-                    let mut arrvec = ArrayVec::<[Option<PieceV>; 8]>::new();
-                    arrvec.try_extend_from_slice(slice).unwrap();
-                    arrvec.into_inner().unwrap()
-                })
-                .collect();
-            arr.into_inner().unwrap()
+            let mut arr: [[Option<PieceV>; 8]; 8] = Default::default();
+            for (sq, piece) in pieces {
+                arr[sq.rank().to_index() as usize][sq.file().to_index() as usize] = Some(piece);
+            }
+            arr
         })
 }
 
@@ -60,7 +61,7 @@ pub fn arb_piece_type() -> impl Strategy<Value = PieceTypeV> {
 }
 
 pub fn arb_flags() -> impl Strategy<Value = BoardFlags> {
-    any::<u8>().prop_map(BoardFlags::new)
+    bits::u8::ANY.prop_map(BoardFlags::new)
 }
 
 pub fn legal_game_state(num_moves: impl Into<SizeRange>) -> impl Strategy<Value = GameState> {
@@ -118,7 +119,7 @@ pub fn arb_board() -> impl Strategy<Value = Board> {
 }
 
 pub fn arb_bitboard() -> impl Strategy<Value = Bitboard> {
-    (any::<u64>(), any::<u64>()).prop_map(|(x, y)| Bitboard::new(x & y))
+    (bits::u64::ANY, bits::u64::ANY).prop_map(|(x, y)| Bitboard::new(x & y))
 }
 
 pub fn arb_square() -> impl Strategy<Value = Square> {
