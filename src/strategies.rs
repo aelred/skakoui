@@ -61,7 +61,7 @@ pub fn arb_piece_type() -> impl Strategy<Value = PieceTypeV> {
 }
 
 pub fn arb_flags() -> impl Strategy<Value = BoardFlags> {
-    bits::u8::ANY.prop_map(BoardFlags::new)
+    bits::u16::ANY.prop_map(BoardFlags::new)
 }
 
 pub fn legal_game_state(num_moves: impl Into<SizeRange>) -> impl Strategy<Value = GameState> {

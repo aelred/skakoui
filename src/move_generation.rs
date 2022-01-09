@@ -92,7 +92,7 @@ impl Board {
         }
     }
 
-    pub fn check(&self, king_player: impl Player) -> bool {
+    pub fn in_check(&self, king_player: impl Player) -> bool {
         let king = Piece::new(king_player, King);
         self.bitboard_piece(king)
             .squares()
@@ -100,7 +100,7 @@ impl Board {
     }
 
     pub fn checkmate(&mut self) -> bool {
-        let in_check = self.check(self.player());
+        let in_check = self.in_check(self.player());
         let mut no_legal_moves = || self.moves().next().is_none();
         in_check && no_legal_moves()
     }

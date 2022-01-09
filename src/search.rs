@@ -369,7 +369,7 @@ impl<'a> ThreadSearcher<'a> {
 
         let moves: Vec<Move>;
 
-        if self.board.check(player) {
+        if self.board.in_check(player) {
             // We don't want to use the "standing pat" if we're in check, because it may well be
             // that ANY move is worse than the current state.
             log_search!(

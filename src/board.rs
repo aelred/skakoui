@@ -1,8 +1,9 @@
 use crate::move_generation::PieceType;
 use crate::piece::Piece;
 use crate::{
-    moves::PlayedMove, piece, typed_player, Bitboard, Black, File, Move, PieceTypeV,
-    PieceTypeV::Pawn, PieceV, Player, PlayerV, Rank, Rook, Square, SquareColor, SquareMap, White,
+    bitboards, moves::PlayedMove, piece, typed_player, Bitboard, Black, File, King, Move,
+    PieceTypeV, PieceTypeV::Pawn, PieceV, Player, PlayerV, Rank, Rook, Square, SquareColor,
+    SquareMap, White,
 };
 use anyhow::Error;
 use enum_map::EnumMap;
@@ -63,7 +64,15 @@ impl Board {
             }
         }
 
-        Self::with_states(pieces, player, flags)
+        let mut board = Self::with_states(pieces, player, flags);
+
+        if board.in_check(player) {
+            board.flags.set(BoardFlags::CHECK);
+        } else {
+            board.flags.unset(BoardFlags::CHECK);
+        }
+
+        board
     }
 
     fn with_states(
@@ -101,7 +110,7 @@ impl Board {
     }
 
     fn make_move_for(&mut self, mov: Move, player: impl Player) -> PlayedMove {
-        fn castle_flags(player: impl Player, square: Square) -> u8 {
+        fn castle_flags(player: impl Player, square: Square) -> u16 {
             if player.back_rank() == square.rank() {
                 match square.file() {
                     File::E => player.castle_flags(),
@@ -197,6 +206,17 @@ impl Board {
                 None
             };
         self.flags.set_en_passant_file(en_passant_file);
+
+        // Set in-check flag
+        let new_attacks = piece
+            .piece_type
+            .attacks(to, self.occupancy(), self.player, self.flags);
+        let enemy_king = self.bitboard_piece(Piece::new(self.player.opponent(), King));
+        if new_attacks & enemy_king != bitboards::EMPTY {
+            self.flags.set(BoardFlags::CHECK);
+        } else {
+            self.flags.unset(BoardFlags::CHECK);
+        }
 
         self.player = self.player.opponent();
 
@@ -477,8 +497,9 @@ impl Index<Square> for Board {
     }
 }
 
-/// Bits: 0bKQkq_eEEE
+/// Bits: 0b0000_000c_KQkq_eEEE
 ///
+/// c = In check
 /// K = White can castle kingside
 /// Q = White can castle queenside
 /// k = Black can castle kingside
@@ -486,7 +507,7 @@ impl Index<Square> for Board {
 /// e = en-passant file is set
 /// E = en-passant file
 #[derive(Eq, PartialEq, Hash, Copy, Clone)]
-pub struct BoardFlags(u8);
+pub struct BoardFlags(u16);
 
 impl Default for BoardFlags {
     fn default() -> Self {
@@ -501,22 +522,23 @@ impl fmt::Debug for BoardFlags {
 }
 
 impl BoardFlags {
-    const EN_PASSANT: u8 = 0b00001000;
-    const EN_PASSANT_FILE: u8 = 0b00000111;
+    const EN_PASSANT: u16 = 0b0000_0000_1000;
+    const EN_PASSANT_FILE: u16 = 0b0000_0000_0111;
+    const CHECK: u16 = 0b_0001_0000_0000;
 
-    pub fn new(x: u8) -> Self {
+    pub fn new(x: u16) -> Self {
         BoardFlags(x)
     }
 
-    pub fn is_set(self, mask: u8) -> bool {
+    pub fn is_set(self, mask: u16) -> bool {
         self.0 & mask != 0
     }
 
-    pub fn set(&mut self, mask: u8) {
+    pub fn set(&mut self, mask: u16) {
         self.0 |= mask;
     }
 
-    pub fn unset(&mut self, mask: u8) {
+    pub fn unset(&mut self, mask: u16) {
         self.0 &= !mask;
     }
 
@@ -529,7 +551,7 @@ impl BoardFlags {
 
     pub fn en_passant_file(self) -> Option<File> {
         if self.is_set(Self::EN_PASSANT) {
-            Some(File::from_index(self.0 & Self::EN_PASSANT_FILE))
+            Some(File::from_index((self.0 & Self::EN_PASSANT_FILE) as u8))
         } else {
             None
         }
@@ -539,7 +561,7 @@ impl BoardFlags {
         if let Some(file) = file {
             self.set(Self::EN_PASSANT);
             self.unset(Self::EN_PASSANT_FILE);
-            let index = file.to_index();
+            let index = file.to_index() as u16;
             debug_assert!(index < 8); // we should never set the upper bits
             self.set(index);
         } else {
@@ -781,7 +803,7 @@ pub mod tests {
         fn legal_moves_never_leave_king_in_check((mut board, mov) in board_and_move(arb_board())) {
             let me = board.player();
             board.make_move(mov);
-            assert!(!board.check(me));
+            assert!(!board.in_check(me));
         }
 
         #[test]
@@ -838,5 +860,13 @@ pub mod tests {
                 );
             }
         }
+
+        let in_check = board.in_check(board.player);
+        let flag = board.flags.is_set(BoardFlags::CHECK);
+        assert_eq!(
+            in_check, flag,
+            "Expected in-check flag to be {}, but was {}",
+            in_check, flag
+        );
     }
 }

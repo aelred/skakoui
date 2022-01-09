@@ -15,9 +15,9 @@ pub trait Player: Sized + Copy {
     fn castle_queenside_clear(self) -> Bitboard;
     fn castle_kingside_through(self) -> Bitboard;
     fn castle_queenside_through(self) -> Bitboard;
-    fn castle_kingside_flag(self) -> u8;
-    fn castle_queenside_flag(self) -> u8;
-    fn castle_flags(self) -> u8 {
+    fn castle_kingside_flag(self) -> u16;
+    fn castle_queenside_flag(self) -> u16;
+    fn castle_flags(self) -> u16 {
         self.castle_kingside_flag() | self.castle_queenside_flag()
     }
     fn multiplier(self) -> i8;
@@ -101,14 +101,14 @@ impl Player for PlayerV {
         }
     }
 
-    fn castle_kingside_flag(self) -> u8 {
+    fn castle_kingside_flag(self) -> u16 {
         match self {
             Self::White => 0b1000_0000,
             Self::Black => 0b0010_0000,
         }
     }
 
-    fn castle_queenside_flag(self) -> u8 {
+    fn castle_queenside_flag(self) -> u16 {
         match self {
             Self::White => 0b0100_0000,
             Self::Black => 0b0001_0000,
@@ -191,11 +191,11 @@ impl<T: PlayerT> Player for T {
         Self::PLAYER.castle_queenside_through()
     }
 
-    fn castle_kingside_flag(self) -> u8 {
+    fn castle_kingside_flag(self) -> u16 {
         Self::PLAYER.castle_kingside_flag()
     }
 
-    fn castle_queenside_flag(self) -> u8 {
+    fn castle_queenside_flag(self) -> u16 {
         Self::PLAYER.castle_queenside_flag()
     }
 
