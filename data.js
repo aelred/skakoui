@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1633701790346,
+  "lastUpdate": 1641772517119,
   "repoUrl": "https://github.com/aelred/skakoui",
   "entries": {
     "Benchmark": [
@@ -4415,6 +4415,102 @@ window.BENCHMARK_DATA = {
             "name": "mate/in3",
             "value": 1603861279,
             "range": "± 25662183",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "aelred717@gmail.com",
+            "name": "Felix Chapman",
+            "username": "aelred"
+          },
+          "committer": {
+            "email": "aelred717@gmail.com",
+            "name": "Felix Chapman",
+            "username": "aelred"
+          },
+          "distinct": true,
+          "id": "3af1043cbee024b1be591e089f4f3863295c6fb8",
+          "message": "Add kubernetes manifest",
+          "timestamp": "2022-01-09T23:46:22Z",
+          "tree_id": "4655374e43cfe23c321c026f799ba3863ebb07c4",
+          "url": "https://github.com/aelred/skakoui/commit/3af1043cbee024b1be591e089f4f3863295c6fb8"
+        },
+        "date": 1641772515005,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "perft_init/1",
+            "value": 2355,
+            "range": "± 50",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/2",
+            "value": 50715,
+            "range": "± 1061",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/3",
+            "value": 1110489,
+            "range": "± 26453",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/4",
+            "value": 24770581,
+            "range": "± 489340",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_init/5",
+            "value": 587316469,
+            "range": "± 6586168",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_kiwipete/1",
+            "value": 5287,
+            "range": "± 152",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_kiwipete/2",
+            "value": 241293,
+            "range": "± 3939",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_kiwipete/3",
+            "value": 11078029,
+            "range": "± 169954",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "perft_kiwipete/4",
+            "value": 485826481,
+            "range": "± 4166516",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in1",
+            "value": 85377158,
+            "range": "± 2132378",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in2",
+            "value": 1184859368,
+            "range": "± 4696714",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "mate/in3",
+            "value": 1607224963,
+            "range": "± 13176477",
             "unit": "ns/iter"
           }
         ]
