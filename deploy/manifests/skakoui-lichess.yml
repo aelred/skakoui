@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skakoui
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: skakoui
+  template:
+    metadata:
+      labels:
+        app: skakoui
+    spec:
+      containers:
+        - name: skakoui
+          image: docker.io/aelred/skakoui:master-a84648f0-1633701477 # {"$imagepolicy": "flux-system:skakoui"}
+          env:
+            - name: LICHESS_BOT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: lichess-api-token
+                  key: value
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+---
+# lichess-bot seems to disconnect from Lichess within 1-2 days
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: skakoui-periodic-restart
+  namespace: default
+spec:
+  concurrencyPolicy: Forbid
+  schedule: '@midnight'
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: kubectl
+              image: bitnami/kubectl
+              command: ['kubectl', 'rollout', 'restart', 'deployment/skakoui']
