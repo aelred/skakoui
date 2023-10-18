@@ -1,0 +1,5 @@
+services:
+  skakoui:
+    image: aelred/skakoui
+    environment:
+      - LICHESS_BOT_TOKEN
